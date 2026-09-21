@@ -103,6 +103,7 @@ def _desired(outlet_id: int) -> list[dict]:
     return out
 
 
+@inv._retry_on_conflict  # the dashboard and the alert bell both refresh lazily, so two requests can evaluate at once (1020)
 def evaluate(outlet_id: int) -> dict:
     """Recompute the true conditions; open the missing ones and close those that no longer hold. Idempotent."""
     desired = {d["dedupe_key"]: d for d in _desired(outlet_id) if settings.get_bool(outlet_id, f"alert.{d['alert_type']}.enabled")}
