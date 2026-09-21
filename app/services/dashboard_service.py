@@ -29,7 +29,8 @@ def kitchen_daily_summary(outlet_id: int, day: date) -> dict:
             flags.append("waste_exceeds_prepared")
         rows.append({"menu_item_id": r["menu_item_id"], "name": r["name"], "forecast_qty": r["forecast_qty"],
                      "recommended_qty": r["recommended_qty"], "final_qty": r["final_qty"], "status": r["status"],
-                     "prepared": r["prepared_so_far"], "served": r["served_so_far"], "wasted": wasted, "flags": flags})
+                     "prepared": r["prepared_so_far"], "served": r["served_so_far"], "wasted": wasted, "flags": flags,
+                     "is_available": r["is_available"]})
     return {"date": day.isoformat(), "items": rows}
 
 

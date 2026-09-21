@@ -11,13 +11,23 @@
           <li class="nav-item"><button class="nav-link" :class="{ active: tab === 'in' }" type="button" @click="tab = 'in'; errors = {}">Stock in</button></li>
           <li class="nav-item"><button class="nav-link" :class="{ active: tab === 'out' }" type="button" @click="tab = 'out'; errors = {}">Stock out</button></li>
           <li class="nav-item"><button class="nav-link" :class="{ active: tab === 'wastage' }" type="button" @click="tab = 'wastage'; errors = {}">Wastage</button></li>
+          <li class="nav-item"><button class="nav-link" :class="{ active: tab === 'adjust' }" type="button" @click="tab = 'adjust'; errors = {}">Adjustment</button></li>
         </ul>
         <div class="mb-2"><label class="form-label" for="m-ing">Ingredient</label>
           <select id="m-ing" class="form-select" v-model.number="form.ingredient_id"><option v-for="i in ingredients" :key="i.id" :value="i.id">[[ i.name ]] ([[ i.unit ]])</option></select>
           <sr-field-error :errors="errors" name="ingredient_id"></sr-field-error></div>
-        <div class="mb-2"><label class="form-label" for="m-qty">Quantity [[ unit ? '(' + unit + ')' : '' ]]</label>
+        <div v-if="tab !== 'adjust'" class="mb-2"><label class="form-label" for="m-qty">Quantity [[ unit ? '(' + unit + ')' : '' ]]</label>
           <input id="m-qty" class="form-control" inputmode="decimal" v-model="form.quantity"><sr-field-error :errors="errors" name="quantity"></sr-field-error></div>
-        <template v-if="tab === 'in'">
+        <template v-if="tab === 'adjust'">
+          <div class="mb-2"><label class="form-label" for="m-counted">Counted quantity [[ unit ? '(' + unit + ')' : '' ]]</label>
+            <input id="m-counted" class="form-control" inputmode="decimal" v-model="form.counted_quantity"><sr-field-error :errors="errors" name="counted_quantity"></sr-field-error>
+            <div class="form-text" v-if="onHand !== null">System on hand: [[ ui.qty(onHand, unit) ]]<span v-if="adjustDiff !== null"> &middot; difference [[ adjustDiff > 0 ? '+' : '' ]][[ ui.num(adjustDiff, 3) ]]</span>. On hand includes expired stock.</div></div>
+          <div class="row g-2 mb-2">
+            <div class="col-6"><label class="form-label" for="m-adate">Date</label><input id="m-adate" type="date" class="form-control" v-model="form.movement_date"><sr-field-error :errors="errors" name="movement_date"></sr-field-error></div>
+            <div class="col-12"><label class="form-label" for="m-note">Reason (required)</label><input id="m-note" class="form-control" maxlength="255" v-model="form.note" placeholder="e.g. stock take, spillage found"><sr-field-error :errors="errors" name="note"></sr-field-error></div>
+          </div>
+        </template>
+        <template v-else-if="tab === 'in'">
           <div class="row g-2 mb-2">
             <div class="col-6"><label class="form-label" for="m-rec">Date received</label><input id="m-rec" type="date" class="form-control" v-model="form.received_date"><sr-field-error :errors="errors" name="received_date"></sr-field-error></div>
             <div class="col-6"><label class="form-label" for="m-exp">Expiry date</label><input id="m-exp" type="date" class="form-control" v-model="form.expiry_date"><sr-field-error :errors="errors" name="expiry_date"></sr-field-error></div>

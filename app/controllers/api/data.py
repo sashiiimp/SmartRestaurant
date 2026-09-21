@@ -36,7 +36,7 @@ def set_availability(item_id):
     flag = json_body().get("is_available")
     if not isinstance(flag, bool):
         raise ValidationError("Please fix the highlighted fields.", {"is_available": "must be true or false"})
-    return ok(dm.menu_item_dict(dm.set_availability(current_outlet_id(), item_id, flag)))
+    return ok(dm.menu_item_dict(dm.set_availability(current_outlet_id(), item_id, flag, current_user.id)))
 
 
 @bp.route("/menu-items/<int:item_id>/recipe")

@@ -14,7 +14,7 @@
       <div class="col-6 col-md-2"><label class="form-label" for="f-unit">Unit</label><input id="f-unit" class="form-control" v-model="form.unit"><sr-field-error :errors="errors" name="unit"></sr-field-error></div>
       <div class="col-6 col-md-3"><label class="form-label" for="f-cat">Category</label><input id="f-cat" class="form-control" v-model="form.category"></div>
       <div class="col-6 col-md-3"><label class="form-label" for="f-sup">Default supplier</label>
-        <select id="f-sup" class="form-select" v-model="form.default_supplier_id"><option value="">None</option><option v-for="s in suppliers" :key="s.id" :value="s.id">[[ s.name ]]</option></select></div>
+        <select id="f-sup" class="form-select" v-model="form.default_supplier_id"><option value="">None</option><option v-for="s in supplierOptions" :key="s.id" :value="s.id">[[ s.name ]][[ s.is_active ? '' : ' (inactive)' ]]</option></select></div>
       <div class="col-6 col-md-2"><label class="form-label" for="f-min">Minimum stock</label><input id="f-min" class="form-control" inputmode="decimal" v-model="form.min_stock"><sr-field-error :errors="errors" name="min_stock"></sr-field-error></div>
       <div class="col-6 col-md-2"><label class="form-label" for="f-ro">Reorder level</label><input id="f-ro" class="form-control" inputmode="decimal" v-model="form.reorder_level"><sr-field-error :errors="errors" name="reorder_level"></sr-field-error></div>
       <div class="col-6 col-md-2"><label class="form-label" for="f-pack">Pack size</label><input id="f-pack" class="form-control" inputmode="decimal" v-model="form.pack_size"><sr-field-error :errors="errors" name="pack_size"></sr-field-error></div>

@@ -246,6 +246,7 @@ def get_reorder_suggestions(outlet_id: int, start: date | None = None) -> list[d
         suggested = max(_ceil_div(raw, pack) * pack, _ceil_div(ing.reorder_qty, pack) * pack)
         out.append({"ingredient_id": ing.id, "name": ing.name, "unit": ing.unit,
                     "supplier": ing.default_supplier.name if ing.default_supplier else None,
+                    "supplier_id": ing.default_supplier_id,
                     "lead_time_days": lead, "need_over_lead_time": float(need_l), "safety_stock": float(ing.min_stock),
                     "usable_stock": float(have), "on_order": float(ordered), "raw_qty": float(raw),
                     "pack_size": float(pack), "min_order_qty": float(ing.reorder_qty),

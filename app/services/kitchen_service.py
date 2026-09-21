@@ -2,13 +2,15 @@
 from datetime import datetime
 
 from app.extensions import db
-from app.models import FoodWaste, PreparationRecord, SalesRecord
+from app.models import FoodWaste, MenuItem, PreOrder, PreparationRecord, Recommendation, SalesRecord
 from app.models.base import utcnow
 from app.models.kitchen import WASTE_REASONS
+from app.models.sales import PREORDER_STATUSES
 from app.services import audit
 from app.services import data_management_service as dm
-from app.services.errors import ConflictError, ValidationError
+from app.services.errors import ConflictError, NotFoundError, ValidationError
 from app.services.validation import Fields
+from app.utils.dates import today
 
 
 def bulk_load_history(outlet_id: int, prep_rows: list[dict], waste_rows: list[dict], source: str = "synthetic") -> dict:
@@ -117,3 +119,94 @@ def record_waste(outlet_id: int, data: dict, actor_id: int | None = None) -> dic
     if total > prepared:
         warnings.append(f"Waste for {item.name} today ({total}) is higher than prepared ({prepared}).")
     return {"menu_item_id": item.id, "date": day.isoformat(), "added": qty, "total_waste": total, "warnings": warnings}
+
+
+# ---- pre-orders (K10) ---------------------------------------------------------------------------
+# Only confirmed pre-orders count in the preparation quantity (recommendation_service reads them). "Cancelled" is final.
+def pre_order_dict(p: PreOrder, item_name: str) -> dict:
+    return {"id": p.id, "menu_item_id": p.menu_item_id, "item": item_name, "target_date": p.target_date.isoformat(),
+            "quantity": p.quantity, "status": p.status, "customer_note": p.customer_note}
+
+
+def _decision_warning(outlet_id: int, item_id: int, day) -> list[str]:
+    """Editing a pre-order after the manager has already accepted or overridden the plan needs a second look (K10)."""
+    if Recommendation.query.filter_by(outlet_id=outlet_id, menu_item_id=item_id, target_date=day).first():
+        return ["A decision was already made for this item and date. Open the Prep plan to check the recommendation."]
+    return []
+
+
+def get_pre_order(outlet_id: int, pre_order_id: int) -> PreOrder:
+    p = PreOrder.query.filter_by(id=pre_order_id, outlet_id=outlet_id).first()
+    if not p:
+        raise NotFoundError("Pre-order not found.")
+    return p
+
+
+def list_pre_orders(outlet_id: int, start=None, end=None, status: str | None = None, item_id: int | None = None) -> list[dict]:
+    q = db.session.query(PreOrder, MenuItem.name).join(MenuItem, MenuItem.id == PreOrder.menu_item_id).filter(
+        PreOrder.outlet_id == outlet_id)
+    if start:
+        q = q.filter(PreOrder.target_date >= start)
+    if end:
+        q = q.filter(PreOrder.target_date <= end)
+    if status:
+        if status not in PREORDER_STATUSES:
+            raise ValidationError("Please fix the highlighted fields.", {"status": "unknown status"})
+        q = q.filter(PreOrder.status == status)
+    if item_id:
+        q = q.filter(PreOrder.menu_item_id == item_id)
+    return [pre_order_dict(p, name) for p, name in q.order_by(PreOrder.target_date, PreOrder.id).all()]
+
+
+def create_pre_order(outlet_id: int, data: dict, actor_id: int | None = None) -> dict:
+    f = Fields(data)
+    item_id = f.integer("menu_item_id", gt=0)
+    day = f.date("target_date")
+    qty = f.integer("quantity", gt=0)
+    note = f.text("customer_note", required=False, max_len=255)
+    status = f.choice("status", ("pending", "confirmed"), default="pending")
+    if day and day < today():
+        f.error("target_date", "cannot be in the past")
+    f.check()
+    item = dm.get_menu_item(outlet_id, item_id)
+    if not item.is_active:
+        raise ValidationError("That menu item is not active.", {"menu_item_id": "is not active"})
+    p = PreOrder(outlet_id=outlet_id, menu_item_id=item.id, target_date=day, quantity=qty, status=status,
+                 customer_note=note, created_by=actor_id)
+    db.session.add(p)
+    db.session.flush()
+    audit.record(outlet_id, actor_id, "preorder.create", "pre_order", p.id,
+                 {"item": item.name, "date": day.isoformat(), "quantity": qty, "status": status})
+    db.session.commit()
+    return {**pre_order_dict(p, item.name), "warnings": _decision_warning(outlet_id, item.id, day) if status == "confirmed" else []}
+
+
+def update_pre_order(outlet_id: int, pre_order_id: int, data: dict, actor_id: int | None = None) -> dict:
+    """Edit quantity, date or note, or confirm / cancel. Past-dated and cancelled pre-orders are history."""
+    p = get_pre_order(outlet_id, pre_order_id)
+    if p.status == "cancelled":
+        raise ConflictError("A cancelled pre-order cannot be changed.")
+    if p.target_date < today():
+        raise ConflictError("A pre-order for a past date cannot be changed.")
+    merged = {"quantity": p.quantity, "target_date": p.target_date, "customer_note": p.customer_note, "status": p.status}
+    merged.update({k: data[k] for k in merged if k in data})
+    f = Fields(merged)
+    qty = f.integer("quantity", gt=0)
+    day = f.date("target_date")
+    note = f.text("customer_note", required=False, max_len=255)
+    status = f.choice("status", PREORDER_STATUSES)
+    if day and day < today():
+        f.error("target_date", "cannot be in the past")
+    f.check()
+    before = (p.quantity, p.target_date, p.status)
+    old_day, old_status = p.target_date, p.status
+    p.quantity, p.target_date, p.customer_note, p.status = qty, day, note, status
+    audit.record(outlet_id, actor_id, "preorder.update", "pre_order", p.id,
+                 {"from": [before[0], before[1].isoformat(), before[2]], "to": [qty, day.isoformat(), status]})
+    warnings = []
+    if "confirmed" in (old_status, status):     # only confirmed pre-orders change the plan
+        warnings = _decision_warning(outlet_id, p.menu_item_id, day)
+        if old_day != day:
+            warnings += _decision_warning(outlet_id, p.menu_item_id, old_day)
+    db.session.commit()
+    return {**pre_order_dict(p, db.session.get(MenuItem, p.menu_item_id).name), "warnings": warnings}

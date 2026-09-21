@@ -30,3 +30,8 @@ def record():
 @bp.route("/requirements")
 def requirements():
     return render_template("kitchen/requirements.html")
+
+
+@bp.route("/orders")
+def orders():
+    return render_template("kitchen/orders.html")

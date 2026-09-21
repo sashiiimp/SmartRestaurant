@@ -94,3 +94,25 @@ Screenshots of every page are in `docs/screenshots/`.
 | 4 | Backfilled forecasts were made with the model refit on all history, so their accuracy was flattering (MAE 7.9 vs hold-out 9.4) | backfill uses the train-only copy; accuracy now 9.46, matching the hold-out; documented |
 | 5 | Vue pages loaded without Chart.js | added to the base template; browser test asserts no console errors |
 | 6 | Feature importance showed a single one-hot column (`item_7`, 91%) | item columns are reported together as "which item" |
+
+## 7. Tier 1 of the proposal-completion work (21 Sep 2026)
+
+Scope: `PLAN.md` section 3A, functions 1 to 6 (suppliers, stock adjustment, purchase orders, food availability, pre-orders,
+admin inventory overview). Developed and tested on `smartrest_work` (a clone of the demo database) and `smartrest_test`;
+the live demo database was not touched and needs no schema change for Tier 1.
+
+| Check | Result |
+|---|---|
+| Automated suite without the perf tests (`pytest -q -m "not perf"`, includes the MariaDB tests) | 190 passed |
+| New tests: `test_supplier_service`, `test_stock_adjustment`, `test_purchase_orders`, `test_pre_orders`, `tests/api/test_tier1_api.py` | pass |
+| Hand-calculated cases: adjustment of 23 kg on hand to 20 / 12 / 30 kg (batch order and new batch); purchase order R1 and R3 (25 kg suggested, 10 kg on order gives 15, 25 kg on order gives none); pre-order 58 with forecast 40, buffer 10 %, batch 6 gives 60 (48 while pending or cancelled) | pass |
+| Concurrency on MariaDB: two parallel receipts of 20 kg against a 25 kg order, exactly one succeeds | pass |
+| RBAC: route x role matrix and new explicit tests (writes inventory-only or kitchen-only; admin read-only where stated; other roles 403 on every new page) | pass |
+| Movement-sum invariant after adjustment, purchase-order receipt and partial receipt | holds |
+| Browser check on the work copy (Chromium, three roles, 36 assertions incl. 360 px width) | pass; the only console errors are the deliberate 403/422 responses |
+
+Defect found by the new tests and fixed: pre-order validation reported the "date in the past" error only after the other
+field errors were cleared, so a request with several problems showed only some of them; the rule now joins the same pass.
+
+Not yet done for Tier 1: the perf tests were not run (they write to the live demo database); the live server still runs the
+previous code until the final deployment step.

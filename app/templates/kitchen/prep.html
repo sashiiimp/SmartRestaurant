@@ -14,7 +14,7 @@
       <div class="card card-item h-100" :class="it.status">
         <div class="card-body">
           <div class="d-flex justify-content-between align-items-start">
-            <h2 class="h6 mb-1">[[ it.name ]]</h2>
+            <h2 class="h6 mb-1">[[ it.name ]] <span v-if="!it.is_available" class="sr-badge sr-badge-danger ms-1">Unavailable</span></h2>
             <sr-status-badge :status="it.status"></sr-status-badge>
           </div>
           <template v-if="it.status === 'no_forecast'">
@@ -24,6 +24,7 @@
             <dl class="row mb-2 small">
               <dt class="col-7 fw-normal text-muted">Forecast</dt><dd class="col-5 text-end mb-0">[[ ui.num(it.forecast_qty, 1) ]]</dd>
               <dt class="col-7 fw-normal text-muted">Safety buffer</dt><dd class="col-5 text-end mb-0">+[[ it.buffer_pct ]]%</dd>
+              <dt class="col-7 fw-normal text-muted">Confirmed pre-orders</dt><dd class="col-5 text-end mb-0">[[ it.preorder_qty ]]</dd>
               <dt class="col-7 fw-normal text-muted">Batch size</dt><dd class="col-5 text-end mb-0">[[ it.batch_size ]]</dd>
             </dl>
             <div class="d-flex justify-content-between align-items-baseline border-top pt-2">
@@ -52,6 +53,10 @@
               <button class="btn btn-warning btn-lg-touch w-100 mt-2" type="button" :disabled="st(it.menu_item_id).busy" @click="decide(it, 'override')">Save override</button>
             </div>
           </template>
+          <div class="border-top pt-2 mt-2 d-flex justify-content-between align-items-center small">
+            <span>Menu availability</span>
+            <button class="btn btn-sm" :class="it.is_available ? 'btn-outline-danger' : 'btn-outline-success'" type="button" :disabled="st(it.menu_item_id).busy" @click="toggleAvailable(it)">[[ it.is_available ? 'Mark unavailable' : 'Mark available' ]]</button>
+          </div>
           <div class="border-top pt-2 mt-2">
             <div class="d-flex justify-content-between small"><span>Prepared so far</span><strong>[[ it.prepared_so_far ]]</strong></div>
             <div v-if="!isPast || true" class="input-group mt-1">

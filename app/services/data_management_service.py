@@ -72,9 +72,13 @@ def update_menu_item(outlet_id: int, item_id: int, data: dict, actor_id: int | N
     return item
 
 
-def set_availability(outlet_id: int, item_id: int, is_available: bool) -> MenuItem:
+def set_availability(outlet_id: int, item_id: int, is_available: bool, actor_id: int | None = None) -> MenuItem:
+    """K13: the manager marks an item available or unavailable. One persistent flag; it does not change the forecast."""
     item = get_menu_item(outlet_id, item_id)
+    if not item.is_active:
+        raise ValidationError("That menu item is not active.", {"menu_item_id": "is not active"})
     item.is_available = bool(is_available)
+    audit.record(outlet_id, actor_id, "menu.availability", "menu_item", item.id, {"is_available": item.is_available})
     db.session.commit()
     return item
 

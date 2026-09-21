@@ -110,7 +110,7 @@ CHECK on sign: `stock_in` > 0; `stock_out` and `wastage` < 0; `adjustment` <> 0.
 Allowed `reason`: stock_out = `issued_to_kitchen`, `other`; wastage = `expired`, `damaged`, `spoiled`, `other`; adjustment = mandatory free text in `note`.
 One movement row per batch touched: a stock-out that spans two batches writes two rows.
 
-**purchase_orders** (S). `outlet_id`, `supplier_id`, `po_number` UNIQUE per outlet, `status` CHECK in (`draft`,`sent`,`partially_received`,`received`,`cancelled`), `order_date`, `expected_date`, `notes`, `created_by`. **purchase_order_lines**: `purchase_order_id`, `ingredient_id`, `qty_ordered` > 0, `qty_received` >= 0, `unit_cost` NULL. *On order* for an ingredient = `SUM(qty_ordered - qty_received)` over lines of `draft`/`sent`/`partially_received` POs; it is 0 until POs exist, so the reorder formula (ML_PLAN B3) needs no change when POs arrive.
+**purchase_orders** (S). `outlet_id`, `supplier_id`, `po_number` UNIQUE per outlet, `status` CHECK in (`draft`,`sent`,`partially_received`,`received`,`cancelled`), `order_date`, `expected_date`, `notes`, `created_by`. **purchase_order_lines**: `purchase_order_id`, `ingredient_id`, `qty_ordered` > 0, `qty_received` >= 0, `unit_cost` NULL. *On order* for an ingredient = `SUM(qty_ordered - qty_received)` over lines of `draft`/`sent`/`partially_received` POs; it is 0 until POs exist, so the reorder formula (ML_PLAN B3) needs no change when POs arrive. Built 21 Sep 2026: `po_number` is `PO-YYYYMMDD-NN` (NN counts orders of that day); a receipt creates one `stock_batches` row (`purchase_order_id` set, `batch_no` defaults to the PO number) and one `stock_in` movement (`reference_type = 'purchase_order'`, `reference_id` = the order) per received line, and a line can never receive more than `qty_ordered - qty_received`.
 
 ### 2.5 Kitchen operations
 
@@ -167,7 +167,7 @@ SQLite does not enforce `SELECT ... FOR UPDATE`; concurrency behaviour is theref
 | `stock_in` (I5) | Insert batch (`qty_received = qty_remaining = q`) and one `stock_in` movement (+q). |
 | `stock_out` (I6) | Lock usable batches ordered by `expiry_date` (NULLs last), then `received_date`. Reject with 422 if `sum(usable) < q`. Deduct batch by batch; one `stock_out` movement (negative) per batch touched. |
 | `wastage` (I13) | Same as stock-out but may draw from **any** batch, including expired ones (that is its purpose); reason required. |
-| `adjustment` (I14, S) | Manager enters the counted quantity; the difference is posted. Negative difference: FEFO like a stock-out. Positive difference: a new batch `ADJ-<date>` with no expiry, plus a `+` movement. Note is mandatory. |
+| `adjustment` (I14, built 21 Sep 2026; compares with on-hand including expired stock, a shortfall is drawn from the earliest-expiry batches first, expired ones included) | Manager enters the counted quantity; the difference is posted. Negative difference: FEFO like a stock-out. Positive difference: a new batch `ADJ-<date>` with no expiry, plus a `+` movement. Note is mandatory. |
 | PO receipt (I11, S) | One `stock_in` per received line, `reference_type = purchase_order`; updates `qty_received`. |
 
 ## 5. Seed and synthetic data

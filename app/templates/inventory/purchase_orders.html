@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Purchase orders - SmartRestaurant{% endblock %}
+{% block content %}
+<div id="app" v-cloak>
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <h1 class="h4 m-0">Purchase orders</h1>
+    <div class="d-flex gap-2 align-items-center">
+      <label for="po-status" class="form-label m-0 small">Show</label>
+      <select id="po-status" class="form-select form-select-sm" style="max-width: 12rem" v-model="status" @change="load">
+        <option value="">All orders</option><option value="draft">Draft</option><option value="sent">Sent</option><option value="partially_received">Partially received</option><option value="received">Received</option><option value="cancelled">Cancelled</option></select>
+      <button class="btn btn-primary" type="button" @click="startNew">New purchase order</button>
+    </div>
+  </div>
+  <p class="text-muted small">Orders are internal records. "Sent" is marked by hand; nothing is transmitted to the supplier. Receiving stock creates the batches and stock-in records and lowers "on order" on the Reorder page.</p>
+  <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
+
+  <div v-if="form" class="card mb-3"><div class="card-body">
+    <h2 class="h6">New purchase order</h2>
+    <div class="row g-2 mb-2">
+      <div class="col-12 col-md-4"><label class="form-label" for="n-sup">Supplier</label>
+        <select id="n-sup" class="form-select" v-model.number="form.supplier_id"><option value="">Choose a supplier</option><option v-for="s in suppliers" :key="s.id" :value="s.id">[[ s.name ]]</option></select>
+        <sr-field-error :errors="errors" name="supplier_id"></sr-field-error></div>
+      <div class="col-6 col-md-3"><label class="form-label" for="n-exp">Expected date (optional)</label><input id="n-exp" type="date" class="form-control" v-model="form.expected_date"><sr-field-error :errors="errors" name="expected_date"></sr-field-error></div>
+      <div class="col-12 col-md-5"><label class="form-label" for="n-notes">Notes (optional)</label><input id="n-notes" class="form-control" maxlength="255" v-model="form.notes"></div>
+    </div>
+    <div class="row g-2 mb-2 align-items-center small text-muted d-none d-md-flex"><div class="col-5">Ingredient</div><div class="col-2">Quantity</div><div class="col-2">Unit cost (optional)</div></div>
+    <div class="row g-2 mb-2 align-items-center" v-for="(l, n) in form.lines" :key="n">
+      <div class="col-12 col-md-5"><select class="form-select" :aria-label="'Ingredient ' + (n + 1)" v-model.number="l.ingredient_id"><option value="">Choose an ingredient</option><option v-for="g in ingredients" :key="g.id" :value="g.id">[[ g.name ]] ([[ g.unit ]])</option></select></div>
+      <div class="col-5 col-md-2"><input class="form-control" inputmode="decimal" :aria-label="'Quantity ' + (n + 1)" v-model="l.qty_ordered"></div>
+      <div class="col-5 col-md-2"><input class="form-control" inputmode="decimal" :aria-label="'Unit cost ' + (n + 1)" v-model="l.unit_cost"></div>
+      <div class="col-2 col-md-2"><button class="btn btn-sm btn-outline-danger" type="button" @click="form.lines.splice(n, 1)">Remove</button></div>
+      <div class="col-12"><sr-field-error :errors="errors" :name="'lines[' + n + ']'"></sr-field-error></div>
+    </div>
+    <sr-field-error :errors="errors" name="lines"></sr-field-error>
+    <div class="d-flex gap-2 mt-2"><button class="btn btn-outline-primary" type="button" @click="form.lines.push({ ingredient_id: '', qty_ordered: '', unit_cost: '' })">Add ingredient</button>
+      <button class="btn btn-primary" type="button" :disabled="saving" @click="create">Save as draft</button>
+      <button class="btn btn-outline-secondary" type="button" @click="form = null">Cancel</button></div>
+  </div></div>
+
+  <div v-if="po" class="card mb-3"><div class="card-body">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+      <div><h2 class="h6 mb-1">[[ po.po_number ]] <sr-status-badge :status="po.status"></sr-status-badge></h2>
+        <div class="small text-muted">[[ po.supplier ]] &middot; ordered [[ ui.date(po.order_date) ]]<span v-if="po.expected_date"> &middot; expected [[ ui.date(po.expected_date) ]]</span><span v-if="po.notes"> &middot; [[ po.notes ]]</span></div></div>
+      <div class="d-flex gap-2">
+        <button v-if="po.status === 'draft'" class="btn btn-outline-primary" type="button" :disabled="busy" @click="send">Mark as sent</button>
+        <button v-if="canReceive" class="btn btn-primary" type="button" @click="startReceive">Receive stock</button>
+        <button v-if="canCancel" class="btn btn-outline-danger" type="button" :disabled="busy" @click="cancel">Cancel order</button>
+        <button class="btn btn-outline-secondary" type="button" @click="po = null; recv = null">Close</button></div>
+    </div>
+    <div class="table-responsive"><table class="table table-sm align-middle mb-0">
+      <thead><tr><th>Ingredient</th><th class="text-end">Ordered</th><th class="text-end">Received</th><th class="text-end">Outstanding</th><th class="text-end">Unit cost</th></tr></thead>
+      <tbody><tr v-for="l in po.lines" :key="l.id"><td>[[ l.ingredient ]]</td><td class="text-end">[[ ui.qty(l.qty_ordered, l.unit) ]]</td><td class="text-end">[[ ui.qty(l.qty_received, l.unit) ]]</td>
+        <td class="text-end" :class="l.qty_outstanding > 0 ? 'fw-semibold' : 'text-muted'">[[ ui.qty(l.qty_outstanding, l.unit) ]]</td><td class="text-end">[[ l.unit_cost === null ? '' : ui.money(l.unit_cost) ]]</td></tr></tbody></table></div>
+    <div v-if="recv" class="border rounded p-3 mt-3">
+      <h3 class="h6">Receive stock</h3>
+      <div class="row g-2 mb-2"><div class="col-6 col-md-3"><label class="form-label" for="r-date">Date received</label><input id="r-date" type="date" class="form-control" v-model="recv.received_date"><sr-field-error :errors="recvErrors" name="received_date"></sr-field-error></div></div>
+      <div class="row g-2 mb-1 small text-muted d-none d-md-flex"><div class="col-3">Ingredient</div><div class="col-2">Quantity received</div><div class="col-2">Expiry date</div><div class="col-2">Batch number</div><div class="col-2">Unit cost</div></div>
+      <div v-for="(l, n) in recv.lines" :key="l.line_id" class="row g-2 mb-2 align-items-center">
+        <div class="col-12 col-md-3">[[ l.ingredient ]] <span class="text-muted small">(outstanding [[ ui.qty(l.outstanding, l.unit) ]])</span></div>
+        <div class="col-6 col-md-2"><input class="form-control" inputmode="decimal" :aria-label="'Quantity received for ' + l.ingredient" v-model="l.quantity"></div>
+        <div class="col-6 col-md-2"><input type="date" class="form-control" :aria-label="'Expiry date for ' + l.ingredient" v-model="l.expiry_date"></div>
+        <div class="col-6 col-md-2"><input class="form-control" maxlength="60" :aria-label="'Batch number for ' + l.ingredient" v-model="l.batch_no" :placeholder="po.po_number"></div>
+        <div class="col-6 col-md-2"><input class="form-control" inputmode="decimal" :aria-label="'Unit cost for ' + l.ingredient" v-model="l.unit_cost"></div>
+        <div class="col-12"><sr-field-error :errors="recvErrors" :name="'lines[' + n + ']'"></sr-field-error></div></div>
+      <sr-field-error :errors="recvErrors" name="lines"></sr-field-error>
+      <div class="d-flex gap-2"><button class="btn btn-primary" type="button" :disabled="busy" @click="receive">Record receipt</button><button class="btn btn-outline-secondary" type="button" @click="recv = null">Cancel</button></div>
+      <div class="form-text">Leave the quantity empty (or 0) for a line that has not arrived.</div>
+    </div>
+  </div></div>
+
+  <sr-loading v-if="loading"></sr-loading>
+  <sr-empty v-else-if="!rows.length" message="No purchase orders yet. Create one here, or from the Reorder page." icon="clipboard"></sr-empty>
+  <div v-else class="table-responsive"><table class="table table-sm align-middle">
+    <thead><tr><th>Order</th><th>Supplier</th><th>Status</th><th>Ordered</th><th>Expected</th><th class="text-end">Lines</th><th class="text-end">Still to arrive</th><th></th></tr></thead>
+    <tbody><tr v-for="r in rows" :key="r.id" :class="po && po.id === r.id ? 'table-active' : ''">
+      <td class="text-nowrap">[[ r.po_number ]]</td><td>[[ r.supplier ]]</td><td><sr-status-badge :status="r.status"></sr-status-badge></td>
+      <td>[[ ui.date(r.order_date) ]]</td><td>[[ ui.date(r.expected_date) ]]</td><td class="text-end">[[ r.line_count ]]</td><td class="text-end">[[ r.outstanding_lines ]]</td>
+      <td><button class="btn btn-sm btn-outline-secondary" type="button" @click="open(r.id)">Open</button></td></tr></tbody></table></div>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/pages/inventory_purchase_orders.js') }}"></script>{% endblock %}

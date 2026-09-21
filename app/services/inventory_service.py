@@ -4,33 +4,89 @@ from decimal import Decimal as _D
 
 from app.extensions import db
 from app.models import Ingredient, PurchaseOrder, PurchaseOrderLine, StockBatch, StockMovement, Supplier
-from app.models.inventory import MOVEMENT_TYPES
+from app.models.inventory import MOVEMENT_TYPES, PO_STATUSES
 from app.services import audit
-from app.services.errors import NotFoundError, ValidationError
+from app.services.errors import ConflictError, NotFoundError, ValidationError
 from app.services.validation import Fields
 from app.utils.dates import today
 
 
 # ---- suppliers (I10) -------------------------------------------------------------------------
-def create_supplier(outlet_id: int, data: dict, actor_id: int | None = None) -> Supplier:
+def _supplier_fields(data: dict) -> dict:
     f = Fields(data)
     f.text("name", max_len=120)
     f.text("contact_person", required=False, max_len=120)
     f.text("phone", required=False, max_len=40)
     f.text("email", required=False, max_len=160)
-    f.integer("lead_time_days", required=False, min=0, default=2)
+    f.integer("lead_time_days", min=0, default=2)
     f.text("notes", required=False)
-    v = f.check()
-    if Supplier.query.filter_by(outlet_id=outlet_id, name=v["name"]).first():
+    return f.check()
+
+
+def get_supplier(outlet_id: int, supplier_id: int) -> Supplier:
+    supplier = Supplier.query.filter_by(id=supplier_id, outlet_id=outlet_id).first()
+    if not supplier:
+        raise NotFoundError("Supplier not found.")
+    return supplier
+
+
+def _supplier_name_taken(outlet_id: int, name: str, exclude_id: int | None = None) -> bool:
+    q = Supplier.query.filter(Supplier.outlet_id == outlet_id, Supplier.name == name)
+    if exclude_id:
+        q = q.filter(Supplier.id != exclude_id)
+    return q.first() is not None
+
+
+def create_supplier(outlet_id: int, data: dict, actor_id: int | None = None) -> Supplier:
+    v = _supplier_fields(data)
+    if _supplier_name_taken(outlet_id, v["name"]):
         raise ValidationError("Please fix the highlighted fields.", {"name": "already exists"})
     supplier = Supplier(outlet_id=outlet_id, **v)
     db.session.add(supplier)
+    db.session.flush()
+    audit.record(outlet_id, actor_id, "supplier.create", "supplier", supplier.id)
     db.session.commit()
     return supplier
 
 
-def list_suppliers(outlet_id: int) -> list[Supplier]:
-    return Supplier.query.filter_by(outlet_id=outlet_id).order_by(Supplier.name).all()
+def update_supplier(outlet_id: int, supplier_id: int, data: dict, actor_id: int | None = None) -> Supplier:
+    """Edit details or (de)activate. Deactivating keeps every existing reference (ingredients, orders, batches)."""
+    supplier = get_supplier(outlet_id, supplier_id)
+    keys = ("name", "contact_person", "phone", "email", "lead_time_days", "notes")
+    merged = {k: getattr(supplier, k) for k in keys}
+    merged.update({k: data[k] for k in keys if k in data})
+    v = _supplier_fields(merged)
+    if _supplier_name_taken(outlet_id, v["name"], exclude_id=supplier.id):
+        raise ValidationError("Please fix the highlighted fields.", {"name": "already exists"})
+    for k, val in v.items():
+        setattr(supplier, k, val)
+    if "is_active" in data:
+        flag = Fields(data).boolean("is_active")
+        if flag is None:
+            raise ValidationError("Please fix the highlighted fields.", {"is_active": "must be true or false"})
+        supplier.is_active = flag
+    audit.record(outlet_id, actor_id, "supplier.update", "supplier", supplier.id,
+                 {"is_active": supplier.is_active})
+    db.session.commit()
+    return supplier
+
+
+def list_suppliers(outlet_id: int, active_only: bool = False) -> list[Supplier]:
+    q = Supplier.query.filter_by(outlet_id=outlet_id)
+    if active_only:
+        q = q.filter_by(is_active=True)
+    return q.order_by(Supplier.name).all()
+
+
+def usable_supplier(outlet_id: int, supplier_id, field: str, current_id=None) -> None:
+    """A supplier must exist, and be active unless it is the one already on the record (existing links are kept)."""
+    if not supplier_id:
+        return
+    s = Supplier.query.filter_by(id=supplier_id, outlet_id=outlet_id).first()
+    if not s:
+        raise ValidationError("Please fix the highlighted fields.", {field: "unknown supplier"})
+    if not s.is_active and supplier_id != current_id:
+        raise ValidationError("Please fix the highlighted fields.", {field: "supplier is inactive"})
 
 
 # ---- ingredients (I2, I4) --------------------------------------------------------------------
@@ -66,9 +122,8 @@ def get_ingredient(outlet_id: int, ingredient_id: int) -> Ingredient:
     return ing
 
 
-def _check_supplier(outlet_id: int, supplier_id):
-    if supplier_id and not Supplier.query.filter_by(id=supplier_id, outlet_id=outlet_id).first():
-        raise ValidationError("Please fix the highlighted fields.", {"default_supplier_id": "unknown supplier"})
+def _check_supplier(outlet_id: int, supplier_id, current_id=None):
+    usable_supplier(outlet_id, supplier_id, "default_supplier_id", current_id)
 
 
 def create_ingredient(outlet_id: int, data: dict, actor_id: int | None = None) -> Ingredient:
@@ -98,7 +153,7 @@ def update_ingredient(outlet_id: int, ingredient_id: int, data: dict, actor_id: 
                                     Ingredient.id != ing.id).first()
     if clash:
         raise ValidationError("Please fix the highlighted fields.", {"name": "already exists"})
-    _check_supplier(outlet_id, v.get("default_supplier_id"))
+    _check_supplier(outlet_id, v.get("default_supplier_id"), ing.default_supplier_id)
     for k, val in v.items():
         setattr(ing, k, val)
     if "is_active" in data:
@@ -212,6 +267,22 @@ def _lock_batches(outlet_id: int, ingredient_id: int, day: _date | None, usable_
                        StockBatch.id).with_for_update().all())
 
 
+def _add_stock_batch(outlet_id, ing, qty, received, expiry, batch_no, cost, supplier_id, actor_id,
+                     purchase_order_id=None) -> StockBatch:
+    """One batch plus its stock_in movement (the caller commits). A purchase-order receipt links both to the order."""
+    batch = StockBatch(outlet_id=outlet_id, ingredient_id=ing.id, batch_no=batch_no or f"{received:%Y%m%d}-{ing.id}",
+                       received_date=received, expiry_date=expiry, qty_received=qty, qty_remaining=qty,
+                       unit_cost=cost, supplier_id=supplier_id or ing.default_supplier_id,
+                       purchase_order_id=purchase_order_id)
+    db.session.add(batch)
+    db.session.flush()
+    db.session.add(StockMovement(outlet_id=outlet_id, ingredient_id=ing.id, batch_id=batch.id, movement_type="stock_in",
+                                 quantity=qty, movement_date=received, reason=None, created_by=actor_id,
+                                 reference_type="purchase_order" if purchase_order_id else None,
+                                 reference_id=purchase_order_id))
+    return batch
+
+
 def record_stock_in(outlet_id: int, data: dict, actor_id: int | None = None) -> dict:
     f = Fields(data)
     ing_id = f.integer("ingredient_id", gt=0)
@@ -225,15 +296,8 @@ def record_stock_in(outlet_id: int, data: dict, actor_id: int | None = None) -> 
     if expiry and received and expiry < received:
         raise ValidationError("Please fix the highlighted fields.", {"expiry_date": "cannot be before the received date"})
     ing = get_ingredient(outlet_id, ing_id)
-    if supplier_id and not Supplier.query.filter_by(id=supplier_id, outlet_id=outlet_id).first():
-        raise ValidationError("Please fix the highlighted fields.", {"supplier_id": "unknown supplier"})
-    batch = StockBatch(outlet_id=outlet_id, ingredient_id=ing.id, batch_no=batch_no or f"{received:%Y%m%d}-{ing.id}",
-                       received_date=received, expiry_date=expiry, qty_received=qty, qty_remaining=qty,
-                       unit_cost=cost, supplier_id=supplier_id or ing.default_supplier_id)
-    db.session.add(batch)
-    db.session.flush()
-    db.session.add(StockMovement(outlet_id=outlet_id, ingredient_id=ing.id, batch_id=batch.id, movement_type="stock_in",
-                                 quantity=qty, movement_date=received, reason=None, created_by=actor_id))
+    usable_supplier(outlet_id, supplier_id, "supplier_id")
+    batch = _add_stock_batch(outlet_id, ing, qty, received, expiry, batch_no, cost, supplier_id, actor_id)
     db.session.commit()
     return {"ingredient_id": ing.id, "batch_id": batch.id, "quantity": float(qty), "unit": ing.unit,
             "usable": float(usable_map(outlet_id).get(ing.id, ZERO))}
@@ -305,6 +369,219 @@ def record_wastage(outlet_id: int, data: dict, actor_id: int | None = None) -> d
     used = _draw_down(outlet_id, ing, batches, qty, "wastage", day, reason, note, actor_id)
     db.session.commit()
     return {"ingredient_id": ing.id, "quantity": float(qty), "unit": ing.unit, "batches": used}
+
+
+@_retry_on_conflict
+def record_adjustment(outlet_id: int, data: dict, actor_id: int | None = None) -> dict:
+    """I14: the manager enters the counted quantity; the signed difference to the on-hand stock is posted.
+
+    On-hand includes expired stock, because the count is of what is physically there. A shortfall is drawn from the
+    earliest-expiry batches first (expired ones first); a surplus becomes a new batch with no expiry. The movement is
+    immutable like every other, and a note is mandatory."""
+    f = Fields(data)
+    ing_id = f.integer("ingredient_id", gt=0)
+    counted = f.decimal("counted_quantity", min=0)
+    day = f.date("movement_date", not_future=True, default=today())
+    note = f.text("note", max_len=255)
+    f.check()
+    counted = counted.quantize(_D("0.001"))
+    ing = get_ingredient(outlet_id, ing_id)
+    batches = _lock_batches(outlet_id, ing.id, None, usable_only=False)
+    on_hand = sum((b.qty_remaining for b in batches), ZERO)
+    diff = counted - on_hand
+    if diff == 0:
+        db.session.rollback()
+        raise ValidationError("Please fix the highlighted fields.",
+                              {"counted_quantity": "is the same as the system quantity, so there is nothing to adjust"})
+    if diff < 0:
+        used = _draw_down(outlet_id, ing, batches, -diff, "adjustment", day, None, note, actor_id)
+    else:
+        batch = StockBatch(outlet_id=outlet_id, ingredient_id=ing.id, batch_no=f"ADJ-{day:%Y%m%d}",
+                           received_date=day, expiry_date=None, qty_received=diff, qty_remaining=diff)
+        db.session.add(batch)
+        db.session.flush()
+        db.session.add(StockMovement(outlet_id=outlet_id, ingredient_id=ing.id, batch_id=batch.id,
+                                     movement_type="adjustment", quantity=diff, movement_date=day, note=note,
+                                     created_by=actor_id))
+        used = [{"batch_id": batch.id, "quantity": float(diff)}]
+    audit.record(outlet_id, actor_id, "stock.adjust", "ingredient", ing.id,
+                 {"on_hand": float(on_hand), "counted": float(counted), "difference": float(diff)})
+    db.session.commit()
+    return {"ingredient_id": ing.id, "unit": ing.unit, "on_hand_before": float(on_hand), "counted": float(counted),
+            "difference": float(diff), "batches": used, "usable": float(usable_map(outlet_id).get(ing.id, ZERO))}
+
+
+# ---- purchase orders (I11) ---------------------------------------------------------------------
+# An internal record only: "sent" is marked by hand, nothing is transmitted to a supplier.
+RECEIVABLE = ("draft", "sent", "partially_received")
+_Q3 = _D("0.001")
+
+
+def _next_po_number(outlet_id: int) -> str:
+    prefix = f"PO-{today():%Y%m%d}-"
+    n = PurchaseOrder.query.filter(PurchaseOrder.outlet_id == outlet_id,
+                                   PurchaseOrder.po_number.like(prefix + "%")).count()
+    return f"{prefix}{n + 1:02d}"
+
+
+def get_purchase_order(outlet_id: int, po_id: int, lock: bool = False) -> PurchaseOrder:
+    q = PurchaseOrder.query.filter_by(id=po_id, outlet_id=outlet_id)
+    po = (q.with_for_update() if lock else q).first()
+    if not po:
+        raise NotFoundError("Purchase order not found.")
+    return po
+
+
+def purchase_order_dict(po: PurchaseOrder, detail: bool = True) -> dict:
+    supplier = db.session.get(Supplier, po.supplier_id)
+    ings = {i.id: i for i in Ingredient.query.filter(Ingredient.id.in_([l.ingredient_id for l in po.lines]))} if po.lines else {}
+    lines = [{"id": l.id, "ingredient_id": l.ingredient_id, "ingredient": ings[l.ingredient_id].name,
+              "unit": ings[l.ingredient_id].unit, "qty_ordered": float(l.qty_ordered), "qty_received": float(l.qty_received),
+              "qty_outstanding": float(l.qty_ordered - l.qty_received),
+              "unit_cost": float(l.unit_cost) if l.unit_cost is not None else None} for l in po.lines]
+    out = {"id": po.id, "po_number": po.po_number, "supplier_id": po.supplier_id,
+           "supplier": supplier.name if supplier else None, "status": po.status,
+           "order_date": po.order_date.isoformat() if po.order_date else None,
+           "expected_date": po.expected_date.isoformat() if po.expected_date else None, "notes": po.notes,
+           "line_count": len(lines), "outstanding_lines": sum(1 for l in lines if l["qty_outstanding"] > 0)}
+    if detail:
+        out["lines"] = lines
+    return out
+
+
+def list_purchase_orders(outlet_id: int, status: str | None = None) -> list[dict]:
+    q = PurchaseOrder.query.filter_by(outlet_id=outlet_id)
+    if status:
+        if status not in PO_STATUSES:
+            raise ValidationError("Please fix the highlighted fields.", {"status": "unknown status"})
+        q = q.filter_by(status=status)
+    return [purchase_order_dict(po, detail=False) for po in q.order_by(PurchaseOrder.id.desc()).all()]
+
+
+def create_purchase_order(outlet_id: int, data: dict, actor_id: int | None = None) -> dict:
+    f = Fields(data)
+    supplier_id = f.integer("supplier_id", gt=0)
+    expected = f.date("expected_date", required=False)
+    notes = f.text("notes", required=False, max_len=255)
+    f.check()
+    if expected and expected < today():
+        raise ValidationError("Please fix the highlighted fields.", {"expected_date": "cannot be in the past"})
+    usable_supplier(outlet_id, supplier_id, "supplier_id")
+    raw_lines = data.get("lines")
+    if not isinstance(raw_lines, list) or not raw_lines:
+        raise ValidationError("Please fix the highlighted fields.", {"lines": "add at least one ingredient"})
+    lines, errors, seen = [], {}, set()
+    for i, raw in enumerate(raw_lines):
+        lf = Fields(raw if isinstance(raw, dict) else {})
+        ing_id = lf.integer("ingredient_id", gt=0)
+        qty = lf.decimal("qty_ordered", gt=0)
+        cost = lf.decimal("unit_cost", required=False, min=0)
+        if lf.errors:
+            errors[f"lines[{i}]"] = "; ".join(f"{k} {m}" for k, m in lf.errors.items())
+            continue
+        ing = Ingredient.query.filter_by(id=ing_id, outlet_id=outlet_id, is_active=True).first()
+        if not ing:
+            errors[f"lines[{i}]"] = "unknown or inactive ingredient"
+        elif ing_id in seen:
+            errors[f"lines[{i}]"] = "ingredient appears twice"
+        else:
+            seen.add(ing_id)
+            lines.append(PurchaseOrderLine(ingredient_id=ing_id, qty_ordered=qty.quantize(_Q3), qty_received=ZERO,
+                                           unit_cost=cost))
+    if errors:
+        raise ValidationError("Please fix the highlighted fields.", errors)
+    po = PurchaseOrder(outlet_id=outlet_id, supplier_id=supplier_id, po_number=_next_po_number(outlet_id),
+                       status="draft", order_date=today(), expected_date=expected, notes=notes, created_by=actor_id)
+    po.lines = lines
+    db.session.add(po)
+    db.session.flush()
+    audit.record(outlet_id, actor_id, "purchase_order.create", "purchase_order", po.id, {"po_number": po.po_number})
+    db.session.commit()
+    return purchase_order_dict(po)
+
+
+def send_purchase_order(outlet_id: int, po_id: int, actor_id: int | None = None) -> dict:
+    """Marks the order as sent by hand (I11). Nothing is transmitted to the supplier."""
+    po = get_purchase_order(outlet_id, po_id, lock=True)
+    if po.status != "draft":
+        db.session.rollback()
+        raise ConflictError("Only a draft order can be marked as sent.")
+    po.status, po.order_date = "sent", today()
+    audit.record(outlet_id, actor_id, "purchase_order.send", "purchase_order", po.id)
+    db.session.commit()
+    return purchase_order_dict(po)
+
+
+def cancel_purchase_order(outlet_id: int, po_id: int, actor_id: int | None = None) -> dict:
+    po = get_purchase_order(outlet_id, po_id, lock=True)
+    if po.status not in ("draft", "sent") or any(l.qty_received > 0 for l in po.lines):
+        db.session.rollback()
+        raise ConflictError("Only an order with nothing received can be cancelled.")
+    po.status = "cancelled"
+    audit.record(outlet_id, actor_id, "purchase_order.cancel", "purchase_order", po.id)
+    db.session.commit()
+    return purchase_order_dict(po)
+
+
+@_retry_on_conflict
+def receive_purchase_order(outlet_id: int, po_id: int, data: dict, actor_id: int | None = None) -> dict:
+    """I11: receive all or part of an order. Each received line becomes a batch and a stock_in movement linked to the
+    order; a line can never receive more than is still outstanding."""
+    po = get_purchase_order(outlet_id, po_id, lock=True)
+    if po.status not in RECEIVABLE:
+        db.session.rollback()
+        raise ConflictError(f"A {po.status.replace('_', ' ')} order cannot receive stock.")
+    f = Fields(data)
+    received = f.date("received_date", not_future=True, default=today())
+    f.check()
+    raw_lines = data.get("lines")
+    if not isinstance(raw_lines, list) or not raw_lines:
+        db.session.rollback()
+        raise ValidationError("Please fix the highlighted fields.", {"lines": "enter a quantity for at least one line"})
+    by_id = {l.id: l for l in po.lines}
+    plan, errors, seen = [], {}, set()
+    for i, raw in enumerate(raw_lines):
+        lf = Fields(raw if isinstance(raw, dict) else {})
+        line_id = lf.integer("line_id", gt=0)
+        qty = lf.decimal("quantity", gt=0)
+        expiry = lf.date("expiry_date", required=False)
+        batch_no = lf.text("batch_no", required=False, max_len=60)
+        cost = lf.decimal("unit_cost", required=False, min=0)
+        key = f"lines[{i}]"
+        if lf.errors:
+            errors[key] = "; ".join(f"{k} {m}" for k, m in lf.errors.items())
+            continue
+        line = by_id.get(line_id)
+        qty = qty.quantize(_Q3)
+        if line is None:
+            errors[key] = "not a line of this order"
+        elif line_id in seen:
+            errors[key] = "line appears twice"
+        elif qty > line.qty_ordered - line.qty_received:
+            errors[key] = f"only {(line.qty_ordered - line.qty_received).normalize():f} can still be received"
+        elif expiry and expiry < received:
+            errors[key] = "expiry date cannot be before the received date"
+        else:
+            seen.add(line_id)
+            plan.append((line, qty, expiry, batch_no, cost))
+    if errors:
+        db.session.rollback()
+        raise ValidationError("Please fix the highlighted fields.", errors)
+    got = []
+    for line, qty, expiry, batch_no, cost in plan:
+        ing = db.session.get(Ingredient, line.ingredient_id)
+        batch = _add_stock_batch(outlet_id, ing, qty, received, expiry, batch_no or po.po_number,
+                                 cost if cost is not None else line.unit_cost, po.supplier_id, actor_id, po.id)
+        line.qty_received = line.qty_received + qty
+        if cost is not None:
+            line.unit_cost = cost
+        got.append({"ingredient_id": ing.id, "ingredient": ing.name, "quantity": float(qty), "unit": ing.unit,
+                    "batch_id": batch.id})
+    po.status = "received" if all(l.qty_received >= l.qty_ordered for l in po.lines) else "partially_received"
+    audit.record(outlet_id, actor_id, "purchase_order.receive", "purchase_order", po.id,
+                 {"lines": len(got), "status": po.status})
+    db.session.commit()
+    return {"purchase_order": purchase_order_dict(po), "received": got}
 
 
 def list_batches(outlet_id: int, ingredient_id: int | None = None, expiring_within_days: int | None = None) -> list[dict]:

@@ -54,9 +54,9 @@ Tier here is the tier of the page; the service behind it may be built earlier.
 | `/kitchen/prep` | **The core screen.** One card per item: forecast, buffer, pre-orders, recommended, Accept / Override (qty and reason), and "prepared so far" with a quick add | K3, K5 | M1 | `recommendations/prep`, `.../decisions`, `kitchen/prepared` |
 | `/kitchen/record` | End-of-day entry: served quantity per item; record waste (item, qty, reason) | K6, K7 | M1 | `kitchen/daily-summary`, `sales/served`, `kitchen/waste` |
 | `/kitchen/requirements` | Ingredient requirements for the day, shortage rows highlighted, "cannot compute" list | K9 | M1 | `recommendations/requirements` |
-| `/kitchen/pre-orders` | List, add, confirm, cancel | K10 | S | `kitchen/pre-orders` |
+| `/kitchen/orders` | Pre-orders: list with date, status and item filters; add, edit, confirm, cancel. One page for pre-orders and (Tier 3) daily orders, as tabs. Only confirmed pre-orders count in the prep quantity. | K10 | S (built 21 Sep) | `kitchen/pre-orders` |
 
-Availability toggle (K13) and "report shortage" (K12) are small controls on `/kitchen/prep` and `/kitchen/requirements` (S).
+The availability toggle (K13, built 21 Sep) is a *Mark unavailable / available* button and an *Unavailable* badge on each `/kitchen/prep` card, and the badge shows in the dashboard plan table. "Report shortage" (K12) will be a small control on `/kitchen/requirements`.
 
 ### 3.2 Inventory (`/inventory`, desktop-first)
 
@@ -64,10 +64,12 @@ Availability toggle (K13) and "report shortage" (K12) are small controls on `/ki
 |---|---|---|---|---|
 | `/inventory` | Dashboard: status counts (OK, low, out), open alerts, 7-day need vs stock, top reorder suggestions, expiring-soon batches | I1, I8 | M1 | `dashboards/inventory`, `alerts` |
 | `/inventory/stock` | Stock levels table (on hand, usable, status, last movement) with search and status filter; add or edit ingredient (modal) including min stock, reorder level, pack size | I2, I3, I4 | M1 | `stock/levels`, `ingredients` |
-| `/inventory/movements` | Three forms (stock-in, stock-out, wastage) in tabs, and a movement history table with filters. Adjustment tab added under S (I14). | I5, I6, I13 | M1 | `stock/in`, `.../out`, `.../wastage`, `stock/movements`, `stock/batches` |
+| `/inventory/movements` | Three forms (stock-in, stock-out, wastage) in tabs, and a movement history table with filters. **Adjustment** is a fourth tab (I14, built 21 Sep): counted quantity, date and a required reason, with the system on-hand and the difference shown live. | I5, I6, I13 | M1 | `stock/in`, `.../out`, `.../wastage`, `stock/movements`, `stock/batches` |
 | `/inventory/forecast` | Ingredient demand for the next 7 days per ingredient, days of cover, "unknown" items | I7 | M1 | `recommendations/ingredient-forecast` |
 | `/inventory/reorder` | Reorder suggestions with all terms of the calculation | I9 | M1 | `recommendations/reorder` |
-| `/inventory/suppliers`, `/inventory/purchase-orders`, `/inventory/expiry` | Suppliers, POs (create from a reorder row, receive), expiry list | I10-I12 | S | see API 3.2 |
+| `/inventory/suppliers` | List, add, edit, deactivate suppliers; inactive ones cannot be chosen for new ingredients or orders | I10 | S (built 21 Sep) | `suppliers` |
+| `/inventory/purchase-orders` | Order list with status filter; new order form; order detail with *Mark as sent*, *Receive stock* (per-line quantity, expiry, batch, cost; partial receipts) and *Cancel*. `/inventory/reorder` gains row tick-boxes and *Create purchase order* (one draft per supplier). | I11 | S (built 21 Sep) | `purchase-orders`, `recommendations/reorder` |
+| `/inventory/expiry` | Expiry list (batches by expiry date) | I12 | S | `stock/batches` (page not built; batches are listed on `/inventory/movements` and the dashboard) |
 
 ### 3.3 Admin (`/admin`, desktop-first)
 
@@ -77,6 +79,7 @@ Availability toggle (K13) and "report shortage" (K12) are small controls on `/ki
 | `/admin/users` | User list, create, edit role, deactivate | A2, A3 | M2 | `users` |
 | `/admin/catalog` | Menu items table with edit modal; "Recipe" button opens a recipe editor (ingredient rows with quantity, unit shown read-only) | A4, A5 | M2 | `menu-items`, `.../recipe`, `ingredients` |
 | `/admin/data` | Tabs: Sales import, Holidays, Weather, Promotions. Import tabs use `sr-csv-import`; promotions use a form and a list | A14, A15 | M2 | `sales/import`, `holidays`, `weather`, `promotions` |
+| `/admin/inventory` | Read-only inventory overview with tabs: Stock levels (status tiles and table), Ingredient demand (7 days), Batches and expiry, Recent movements (filters). Same endpoints as the inventory pages, so numbers match. | A10 | S (built 21 Sep) | `stock/levels`, `recommendations/ingredient-forecast`, `stock/batches`, `stock/movements` |
 | `/admin/models` | Active model card (algorithm, trained date, hold-out metrics vs baseline), version list with Activate, **Train** and **Run forecast now** buttons, forecast run history with status and reason | A16, A9 | M2 | `model-versions`, `forecast-runs` |
 | `/admin/monitor` | Tabs: **Sales** (A8, bar by day plus table), **Forecast** (A9, forecast vs actual line plus MAE/WAPE/bias table), **Waste** (A11, food and ingredient sections). Date range filter shared by all tabs. | A8, A9, A11 | M2 | `reports/sales`, `forecasts/accuracy`, `reports/waste` |
 | `/admin/settings`, `/admin/inventory`, CSV buttons | Settings and alert configuration; read-only inventory overview; "Download CSV" on each monitor tab | A6, A7, A10, A13 | S | see API |

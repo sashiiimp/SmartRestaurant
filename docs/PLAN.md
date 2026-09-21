@@ -66,12 +66,12 @@ Basis: audit of the implementation against `docs/proposal.pdf` and the role func
 
 | # | Function | Role | Tier | h | Status |
 |---|---|---|---|---|---|
-| 1 | Manage Suppliers | Inventory | 1 | 2.0 | todo |
-| 2 | Stock Adjustment | Inventory | 1 | 2.5 | todo |
-| 3 | Manage Purchase Orders | Inventory | 1 | 7.0 | todo |
-| 4 | Manage Food Availability (toggle on the prep page) | Kitchen | 1 | 1.5 | todo |
-| 5 | Manage Pre-Order | Kitchen | 1 | 4.0 | todo |
-| 6 | Inventory Monitoring and Inventory Demand Forecast Monitoring (admin page) | Admin | 1 | 2.0 | todo |
+| 1 | Manage Suppliers | Inventory | 1 | 2.0 | done 21 Sep (tested on the work copy) |
+| 2 | Stock Adjustment | Inventory | 1 | 2.5 | done 21 Sep (tested on the work copy) |
+| 3 | Manage Purchase Orders | Inventory | 1 | 7.0 | done 21 Sep (tested on the work copy) |
+| 4 | Manage Food Availability (toggle on the prep page) | Kitchen | 1 | 1.5 | done 21 Sep (tested on the work copy) |
+| 5 | Manage Pre-Order | Kitchen | 1 | 4.0 | done 21 Sep (tested on the work copy) |
+| 6 | Inventory Monitoring and Inventory Demand Forecast Monitoring (admin page) | Admin | 1 | 2.0 | done 21 Sep (tested on the work copy) |
 | 7 | Request Kitchen Stock and Manage Kitchen Stock Requests | Kitchen, Inventory | 2 | 8.0 | todo |
 | 8 | Validate Inventory Data (consistency check) | Inventory | 2 | 1.5 | todo |
 | 9 | Food Demand Forecast Monitoring (admin forecast tab) | Admin | 2 | 2.0 | todo |

@@ -26,7 +26,7 @@
           <div class="table-responsive"><table class="table table-sm align-middle mb-0">
             <thead><tr><th>Item</th><th class="text-end">Forecast</th><th class="text-end">Recommended</th><th class="text-end">Final</th><th class="text-end">Prepared</th><th>Status</th></tr></thead>
             <tbody><tr v-for="r in d.plan" :key="r.menu_item_id">
-              <td>[[ r.name ]]</td><td class="text-end">[[ ui.num(r.forecast_qty, 1) ]]</td><td class="text-end">[[ r.recommended_qty ]]</td>
+              <td>[[ r.name ]] <span v-if="!r.is_available" class="sr-badge sr-badge-danger ms-1">Unavailable</span></td><td class="text-end">[[ ui.num(r.forecast_qty, 1) ]]</td><td class="text-end">[[ r.recommended_qty ]]</td>
               <td class="text-end">[[ r.final_qty === null ? '-' : r.final_qty ]]</td><td class="text-end">[[ r.prepared ]]</td>
               <td><sr-status-badge :status="r.status"></sr-status-badge></td></tr></tbody></table></div>
         </div></div>

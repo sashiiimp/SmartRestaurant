@@ -30,3 +30,13 @@ def forecast():
 @bp.route("/reorder")
 def reorder():
     return render_template("inventory/reorder.html")
+
+
+@bp.route("/suppliers")
+def suppliers():
+    return render_template("inventory/suppliers.html")
+
+
+@bp.route("/purchase-orders")
+def purchase_orders():
+    return render_template("inventory/purchase_orders.html")

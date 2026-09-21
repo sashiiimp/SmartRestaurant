@@ -40,3 +40,8 @@ def monitor():
 @bp.route("/settings")
 def settings():
     return render_template("admin/settings.html")
+
+
+@bp.route("/inventory")
+def inventory():
+    return render_template("admin/inventory.html")

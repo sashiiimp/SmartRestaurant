@@ -32,8 +32,20 @@ def update_ingredient(ingredient_id):
 @bp.route("/suppliers")
 @roles_required("admin", "inventory")
 def list_suppliers():
-    rows = inv.list_suppliers(current_outlet_id())
+    rows = inv.list_suppliers(current_outlet_id(), active_only=bool_arg("active"))
     return ok([inv.supplier_dict(s) for s in rows], {"total": len(rows)})
+
+
+@bp.route("/suppliers", methods=["POST"])
+@roles_required("inventory")
+def create_supplier():
+    return ok(inv.supplier_dict(inv.create_supplier(current_outlet_id(), json_body(), current_user.id)), status=201)
+
+
+@bp.route("/suppliers/<int:supplier_id>", methods=["PATCH"])
+@roles_required("inventory")
+def update_supplier(supplier_id):
+    return ok(inv.supplier_dict(inv.update_supplier(current_outlet_id(), supplier_id, json_body(), current_user.id)))
 
 
 @bp.route("/stock/levels")
@@ -77,3 +89,46 @@ def stock_out():
 @roles_required("inventory")
 def stock_wastage():
     return ok(inv.record_wastage(current_outlet_id(), json_body(), current_user.id), status=201)
+
+
+@bp.route("/stock/adjustments", methods=["POST"])
+@roles_required("inventory")
+def stock_adjustment():
+    return ok(inv.record_adjustment(current_outlet_id(), json_body(), current_user.id), status=201)
+
+
+@bp.route("/purchase-orders")
+@roles_required("admin", "inventory")
+def list_purchase_orders():
+    rows = inv.list_purchase_orders(current_outlet_id(), request.args.get("status"))
+    return ok(rows, {"total": len(rows)})
+
+
+@bp.route("/purchase-orders", methods=["POST"])
+@roles_required("inventory")
+def create_purchase_order():
+    return ok(inv.create_purchase_order(current_outlet_id(), json_body(), current_user.id), status=201)
+
+
+@bp.route("/purchase-orders/<int:po_id>")
+@roles_required("admin", "inventory")
+def get_purchase_order(po_id):
+    return ok(inv.purchase_order_dict(inv.get_purchase_order(current_outlet_id(), po_id)))
+
+
+@bp.route("/purchase-orders/<int:po_id>/send", methods=["POST"])
+@roles_required("inventory")
+def send_purchase_order(po_id):
+    return ok(inv.send_purchase_order(current_outlet_id(), po_id, current_user.id))
+
+
+@bp.route("/purchase-orders/<int:po_id>/receive", methods=["POST"])
+@roles_required("inventory")
+def receive_purchase_order(po_id):
+    return ok(inv.receive_purchase_order(current_outlet_id(), po_id, json_body(), current_user.id))
+
+
+@bp.route("/purchase-orders/<int:po_id>/cancel", methods=["POST"])
+@roles_required("inventory")
+def cancel_purchase_order(po_id):
+    return ok(inv.cancel_purchase_order(current_outlet_id(), po_id, current_user.id))

@@ -44,8 +44,8 @@ window.SR = (function () {
     'sr-status-badge': {
       props: ['status'],
       computed: {
-        cls() { return { ok: 'success', sufficient: 'success', accepted: 'success', low: 'warning', warning: 'warning', suggested: 'accent', overridden: 'warning', short: 'danger', out: 'danger', critical: 'danger', open: 'danger', no_forecast: 'neutral', acknowledged: 'neutral' }[this.status] || 'neutral'; },
-        text() { const t = { no_forecast: 'no forecast' }[this.status] || String(this.status || ''); return t.charAt(0).toUpperCase() + t.slice(1); },
+        cls() { return { ok: 'success', sufficient: 'success', accepted: 'success', low: 'warning', warning: 'warning', suggested: 'accent', overridden: 'warning', short: 'danger', out: 'danger', critical: 'danger', open: 'danger', no_forecast: 'neutral', acknowledged: 'neutral', draft: 'neutral', sent: 'accent', partially_received: 'warning', received: 'success', cancelled: 'neutral' }[this.status] || 'neutral'; },
+        text() { const t = { no_forecast: 'no forecast' }[this.status] || String(this.status || '').replace(/_/g, ' '); return t.charAt(0).toUpperCase() + t.slice(1); },
       },
       template: '<span :class="\'sr-badge sr-badge-\' + cls">[[ text ]]</span>',
     },

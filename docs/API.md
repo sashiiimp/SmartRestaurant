@@ -78,9 +78,16 @@ Abbreviations: **A** admin, **K** kitchen, **I** inventory. **(R)** means read-o
 | `POST /stock/in` | I | M1 | I5 | `{ingredient_id, quantity, received_date, expiry_date?, batch_no?, unit_cost?, supplier_id?}` |
 | `POST /stock/out` | I | M1 | I6 | `{ingredient_id, quantity, movement_date, reason}`; 422 `insufficient_stock` with `available` |
 | `POST /stock/wastage` | I | M1 | I13 | `{ingredient_id, quantity, movement_date, reason, batch_id?}` |
-| `POST /stock/adjustments` | I | S | I14 | `{ingredient_id, counted_quantity, movement_date, note}` |
-| `GET/POST/PATCH /suppliers` | I | S | I10 | |
-| `GET/POST /purchase-orders`, `POST /purchase-orders/{id}/send`, `/receive`, `/cancel` | I | S | I11 | `POST` body can be built from a reorder row |
+| `POST /stock/adjustments` | I | S | I14 | `{ingredient_id, counted_quantity, movement_date?, note}`; `note` required. Posts `counted - on_hand` (on hand includes expired stock): a shortfall is drawn from the earliest-expiry batches first, a surplus becomes batch `ADJ-<date>` with no expiry. 422 when the difference is 0. Returns `on_hand_before`, `counted`, `difference`, `usable`. |
+| `GET /suppliers?active=` | A I | M1 | I10 | `active=true` lists only active suppliers |
+| `POST /suppliers` | I | S | I10 | `name, contact_person?, phone?, email?, lead_time_days?, notes?`; name unique |
+| `PATCH /suppliers/{id}` | I | S | I10 | any of the above plus `is_active`; an inactive supplier cannot be chosen for new ingredients or purchase orders, existing links stay |
+| `GET /purchase-orders?status=` | A I | S | I11 | list, newest first |
+| `GET /purchase-orders/{id}` | A I | S | I11 | header and lines (`qty_ordered`, `qty_received`, `qty_outstanding`) |
+| `POST /purchase-orders` | I | S | I11 | `{supplier_id, expected_date?, notes?, lines: [{ingredient_id, qty_ordered, unit_cost?}]}`; status `draft`; number `PO-YYYYMMDD-NN`; an inactive supplier or ingredient is rejected. The body can be built from reorder rows |
+| `POST /purchase-orders/{id}/send` | I | S | I11 | draft to sent, marked by hand; nothing is transmitted to the supplier |
+| `POST /purchase-orders/{id}/receive` | I | S | I11 | `{received_date?, lines: [{line_id, quantity, expiry_date?, batch_no?, unit_cost?}]}`; creates a batch and a `stock_in` movement per line (linked to the order); a line cannot receive more than is outstanding (422, nothing saved); allowed from draft, sent or partially received; the status becomes partially received or received |
+| `POST /purchase-orders/{id}/cancel` | I | S | I11 | draft or sent with nothing received, else 409 |
 
 ### 3.3 Sales, context, forecasting, models
 
@@ -111,7 +118,9 @@ Abbreviations: **A** admin, **K** kitchen, **I** inventory. **(R)** means read-o
 | `POST /kitchen/prepared` | K | M1 | K5 | `{menu_item_id, date, quantity}`; returns the new running total |
 | `POST /kitchen/waste` | K | M1 | K7 | `{menu_item_id, date, quantity, reason, note?}`; 200 with `warnings` when waste exceeds prepared |
 | `GET /kitchen/daily-summary?date=` | A(R) K | M1 | K1, K5-K7, S6 | per item: forecast, recommended, final, prepared, served, wasted |
-| `GET/POST/PATCH /kitchen/pre-orders` | K | S | K10 | |
+| `GET /kitchen/pre-orders?from=&to=&status=&menu_item_id=` | A(R) K | S | K10 | `from` defaults to today; ordered by date |
+| `POST /kitchen/pre-orders` | K | S | K10 | `{menu_item_id, target_date, quantity, customer_note?, status?}`; `status` is `pending` (default) or `confirmed`; date cannot be in the past; `meta.warnings` when a decision already exists for that item and date |
+| `PATCH /kitchen/pre-orders/{id}` | K | S | K10 | any of `quantity, target_date, customer_note, status` (`pending`, `confirmed`, `cancelled`); cancelled and past-dated pre-orders are read-only (409); only confirmed pre-orders count in the recommendation |
 | `POST /kitchen/shortage-reports` | K | S | K12 | creates a `manual_shortage` alert |
 
 ### 3.5 Alerts, dashboards, reports

@@ -44,9 +44,11 @@ SR.createApp({
       } catch (e) { s.errors = e.fields || {}; s.message = ui.errorText(e); } finally { s.busy = false; }
     },
     async toggleAvailable(item) {
+      const flag = !item.is_available;
       try {
-        await api.patch('/menu-items/' + item.menu_item_id + '/availability', { is_available: !item.is_available });
+        await api.patch('/menu-items/' + item.menu_item_id + '/availability', { is_available: flag });
         await this.refresh();
+        ui.toast(item.name + (flag ? ' is available again.' : ' is marked unavailable.'));
       } catch (e) { ui.toast(ui.errorText(e), 'danger'); }
     },
   },

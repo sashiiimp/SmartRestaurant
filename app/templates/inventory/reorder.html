@@ -5,11 +5,16 @@
   <h1 class="h4 mb-1">Reorder suggestions</h1>
   <p class="text-muted small">Suggested = need over the supplier lead time + safety stock (minimum stock) - usable stock - already on order, rounded up to the pack size (and at least the minimum order quantity).</p>
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
+  <div v-if="rows.length" class="d-flex flex-wrap align-items-center gap-2 mb-2">
+    <button class="btn btn-primary" type="button" :disabled="!selected.length || busy" @click="createOrders">Create purchase order<span v-if="supplierCount > 1">s ([[ supplierCount ]] suppliers)</span></button>
+    <span class="small text-muted">Tick the ingredients to order. One draft order is created per supplier, using the suggested quantities. Ingredients without a supplier cannot be ordered here.</span>
+  </div>
+  <div v-if="message" class="alert alert-danger py-2" role="alert">[[ message ]]</div>
   <sr-loading v-if="loading"></sr-loading>
   <sr-empty v-else-if="!rows.length" message="Nothing needs reordering right now."></sr-empty>
   <div v-else class="table-responsive"><table class="table table-sm align-middle table-wrap-head">
-    <thead><tr><th>Ingredient</th><th>Supplier</th><th class="text-end">Lead time</th><th class="text-end">Need over lead time</th><th class="text-end">+ Safety stock</th><th class="text-end">- Usable stock</th><th class="text-end">- On order</th><th class="text-end">= Raw</th><th class="text-end">Pack</th><th class="text-end col-key">Suggested order</th></tr></thead>
-    <tbody><tr v-for="r in rows" :key="r.ingredient_id"><td>[[ r.name ]]</td><td class="text-nowrap">[[ r.supplier || 'not set' ]]</td><td class="text-end">[[ r.lead_time_days ]] d</td>
+    <thead><tr><th style="width: 2rem"><input type="checkbox" class="form-check-input" aria-label="Select all" :checked="allSelected" @change="toggleAll($event.target.checked)"></th><th>Ingredient</th><th>Supplier</th><th class="text-end">Lead time</th><th class="text-end">Need over lead time</th><th class="text-end">+ Safety stock</th><th class="text-end">- Usable stock</th><th class="text-end">- On order</th><th class="text-end">= Raw</th><th class="text-end">Pack</th><th class="text-end col-key">Suggested order</th></tr></thead>
+    <tbody><tr v-for="r in rows" :key="r.ingredient_id"><td><input type="checkbox" class="form-check-input" :aria-label="'Select ' + r.name" :disabled="!r.supplier_id" :value="r.ingredient_id" v-model="selected"></td><td>[[ r.name ]]</td><td class="text-nowrap">[[ r.supplier || 'not set' ]]</td><td class="text-end">[[ r.lead_time_days ]] d</td>
       <td class="text-end">[[ ui.num(r.need_over_lead_time, 2) ]]</td><td class="text-end">[[ ui.num(r.safety_stock, 2) ]]</td><td class="text-end">[[ ui.num(r.usable_stock, 2) ]]</td><td class="text-end">[[ ui.num(r.on_order, 2) ]]</td>
       <td class="text-end">[[ ui.num(r.raw_qty, 2) ]]</td><td class="text-end">[[ ui.num(r.pack_size, 2) ]]</td><td class="text-end col-key">[[ ui.qty(r.suggested_qty, r.unit) ]]</td></tr></tbody></table></div>
 </div>

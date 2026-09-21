@@ -2,6 +2,8 @@ const BLANK = { id: null, name: '', unit: 'kg', category: '', shelf_life_days: '
 SR.createApp({
   data() { return { rows: [], suppliers: [], filter: '', status: '', loading: true, error: null, form: null, errors: {}, saving: false, ui }; },
   computed: {
+    // inactive suppliers cannot be newly chosen, but the one already on the ingredient stays visible
+    supplierOptions() { return this.suppliers.filter(s => s.is_active || (this.form && s.id === this.form.default_supplier_id)); },
     shown() {
       const f = this.filter.toLowerCase();
       return this.rows.filter(r => (!f || r.name.toLowerCase().includes(f)) && (!this.status || r.status === this.status));
