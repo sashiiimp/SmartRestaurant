@@ -83,6 +83,39 @@ def forecast_cmd(as_of, from_, to_):
     click.echo(r)
 
 
+@group.command("demo-reset")
+@click.pass_context
+def demo_reset_cmd(ctx):
+    """Reset to the ready-to-demo state: seed, synthetic history, train+activate, backfill, forecast, alerts."""
+    from datetime import timedelta
+
+    from flask import current_app
+
+    from app.seed.generate import generate
+    from app.seed.seeder import seed_base
+    from app.services import forecasting_service as fs
+    from app.utils.dates import today
+
+    click.echo("seeding ...")
+    result = seed_base(reset=True)
+    click.echo("generating synthetic history ...")
+    click.echo(generate(1))
+    click.echo("training ...")
+    r = fs.train_model(1, current_app.config["MODEL_DIR"], activate=True)
+    click.echo(f"  {r['version_label']}: {r['algorithm']} (beats baseline: {r['beats_baseline']})")
+    click.echo("backfilling the last 56 days ...")
+    click.echo(fs.backfill(1, today() - timedelta(days=56), today() - timedelta(days=1)))
+    click.echo(fs.run_forecast(1, trigger="cli"))
+    try:
+        from app.services import alert_service
+
+        click.echo(alert_service.evaluate(1))
+    except ImportError:
+        pass
+    if result["passwords"]:
+        click.echo("users created (password = SEED_PASSWORD from .env, or the generated one printed by `seed`)")
+
+
 @group.command("create-user")
 @click.option("--username", prompt=True)
 @click.option("--full-name", prompt=True)

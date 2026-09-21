@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}End of day - SmartRestaurant{% endblock %}
+{% block content %}
+<div id="app" v-cloak>
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <h1 class="h4 m-0">Served and waste</h1>
+    <sr-date-nav v-model="date" @change="load"></sr-date-nav>
+  </div>
+  <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
+  <div v-if="loading" class="text-center py-5"><div class="spinner-border" role="status"><span class="visually-hidden">Loading</span></div></div>
+  <div v-else class="row g-4">
+    <div class="col-12 col-lg-7">
+      <div class="card"><div class="card-body">
+        <h2 class="h6">Portions served or sold</h2>
+        <p class="text-muted small">Enter the day's total per item. Leave blank to skip an item.</p>
+        <div class="row g-2 align-items-center mb-2 border-bottom pb-2 small text-muted d-none d-sm-flex">
+          <div class="col-5">Item</div><div class="col-2 text-end">Prepared</div><div class="col-2 text-end">Waste</div><div class="col-3">Served</div></div>
+        <div class="row g-2 align-items-center mb-2" v-for="i in items" :key="i.menu_item_id">
+          <div class="col-12 col-sm-5"><label :for="'s' + i.menu_item_id" class="form-label m-0">[[ i.name ]]</label>
+            <span v-if="i.flags.includes('served_exceeds_prepared')" class="badge text-bg-warning ms-1">served above prepared</span></div>
+          <div class="col-4 col-sm-2 text-sm-end small"><span class="d-sm-none text-muted">Prepared </span>[[ i.prepared ]]</div>
+          <div class="col-4 col-sm-2 text-sm-end small"><span class="d-sm-none text-muted">Waste </span>[[ i.wasted ]]</div>
+          <div class="col-4 col-sm-3"><input :id="'s' + i.menu_item_id" class="form-control" inputmode="numeric" v-model="served[i.menu_item_id]"></div>
+        </div>
+        <sr-field-error :errors="servedErrors" name="date"></sr-field-error>
+        <sr-field-error :errors="servedErrors" name="lines"></sr-field-error>
+        <div v-for="(w, n) in servedMessages" :key="n" class="alert alert-warning py-2 small mt-2" role="status">[[ w ]]</div>
+        <div v-if="conflicts" class="alert alert-warning mt-2" role="alert">
+          A different quantity is already saved for: [[ conflicts.map(c => c.item + ' (' + c.existing + ')').join(', ') ]].
+          <button class="btn btn-sm btn-warning ms-2" type="button" @click="saveServed(true)">Overwrite</button>
+        </div>
+        <button class="btn btn-primary btn-lg-touch mt-2" type="button" :disabled="savingServed" @click="saveServed(false)">Save served quantities</button>
+      </div></div>
+    </div>
+    <div class="col-12 col-lg-5">
+      <div class="card"><div class="card-body">
+        <h2 class="h6">Record waste</h2>
+        <div class="mb-2"><label class="form-label" for="w-item">Item</label>
+          <select id="w-item" class="form-select" v-model.number="waste.menu_item_id"><option v-for="i in items" :key="i.menu_item_id" :value="i.menu_item_id">[[ i.name ]]</option></select>
+          <sr-field-error :errors="wasteErrors" name="menu_item_id"></sr-field-error></div>
+        <div class="mb-2"><label class="form-label" for="w-qty">Quantity</label>
+          <input id="w-qty" class="form-control" inputmode="numeric" v-model="waste.quantity"><sr-field-error :errors="wasteErrors" name="quantity"></sr-field-error></div>
+        <div class="mb-2"><label class="form-label" for="w-reason">Reason</label>
+          <select id="w-reason" class="form-select" v-model="waste.reason"><option value="overproduction">Overproduction</option><option value="quality">Quality</option><option value="expired">Expired</option><option value="other">Other</option></select></div>
+        <div class="mb-2"><label class="form-label" for="w-note">Note (optional)</label><input id="w-note" class="form-control" maxlength="255" v-model="waste.note"></div>
+        <sr-field-error :errors="wasteErrors" name="date"></sr-field-error>
+        <button class="btn btn-outline-danger btn-lg-touch" type="button" :disabled="savingWaste" @click="saveWaste">Record waste</button>
+      </div></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/pages/kitchen_record.js') }}"></script>{% endblock %}

@@ -84,3 +84,44 @@ def register_error_handlers(app):
         if _is_api():
             return api_error("server_error", f"Something went wrong (request {getattr(g, 'request_id', '')}).", 500)
         return render_template("errors/500.html", request_id=getattr(g, "request_id", "")), 500
+
+
+def json_body() -> dict:
+    """The JSON request body as a dict ({} when missing); other types are a validation error."""
+    from flask import request as _r
+
+    data = _r.get_json(silent=True)
+    if data is None:
+        return {}
+    if not isinstance(data, dict):
+        raise ValidationError("The request body must be a JSON object.", code="bad_request")
+    return data
+
+
+def date_arg(name: str, default=None):
+    from datetime import date
+
+    v = request.args.get(name)
+    if not v:
+        return default
+    try:
+        return date.fromisoformat(v)
+    except ValueError:
+        raise ValidationError("Please fix the highlighted fields.", {name: "must be a date (YYYY-MM-DD)"})
+
+
+def int_arg(name: str, default=None):
+    v = request.args.get(name)
+    if v in (None, ""):
+        return default
+    try:
+        return int(v)
+    except ValueError:
+        raise ValidationError("Please fix the highlighted fields.", {name: "must be a whole number"})
+
+
+def bool_arg(name: str, default=False) -> bool:
+    v = request.args.get(name)
+    if v is None:
+        return default
+    return v.lower() in ("1", "true", "yes")

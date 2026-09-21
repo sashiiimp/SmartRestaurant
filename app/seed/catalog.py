@@ -28,12 +28,12 @@ SCHOOL_ITEMS = {"Chicken Burger", "Beef Burger", "Veggie Burger", "French Fries"
 # name, unit, category, shelf_life_days, supplier_index, min_stock, reorder_level, pack_size, min_order_qty,
 # opening stock, unit cost (LKR)
 INGREDIENTS = [
-    ("Chicken", "kg", "Meat", 3, 0, 40, 80, 10, 40, 45, 1350),
+    ("Chicken", "kg", "Meat", 4, 0, 20, 60, 10, 40, 30, 1350),
     ("Beef patty", "pcs", "Meat", 5, 0, 50, 100, 50, 100, 180, 190),
     ("Veg patty", "pcs", "Frozen", 30, 2, 28, 56, 28, 56, 90, 95),
-    ("Burger bun", "pcs", "Bakery", 3, 2, 170, 340, 50, 200, 500, 32),
+    ("Burger bun", "pcs", "Bakery", 4, 2, 170, 340, 50, 200, 500, 32),
     ("Wrap tortilla", "pcs", "Bakery", 7, 2, 45, 90, 25, 100, 150, 28),
-    ("Kottu roti", "pcs", "Bakery", 3, 2, 85, 170, 50, 100, 260, 24),
+    ("Kottu roti", "pcs", "Bakery", 4, 2, 85, 170, 50, 100, 260, 24),
     ("Potato", "kg", "Produce", 14, 1, 40, 80, 10, 50, 35, 220),
     ("Cooking oil", "L", "Dry goods", 180, 2, 14, 28, 5, 20, 60, 640),
     ("Lettuce", "kg", "Produce", 4, 1, 5, 9, 1, 5, 12, 480),
@@ -69,3 +69,8 @@ RECIPES = {
     "Iced Milo": [("Milo powder", "0.025"), ("Milk", "0.200"), ("Sugar", "0.015")],
     "Lime Juice": [("Lime", "0.080"), ("Sugar", "0.025")],
 }
+
+# Opening stock is about nine days of need for most items so the first demo is not a wall of alerts; chicken and
+# potato are deliberately short (chicken low, potato critical) so the shortage -> alert -> reorder flow is visible.
+_SPECIAL_OPENING = {"Chicken": 30, "Potato": 35}
+INGREDIENTS = [row[:9] + (_SPECIAL_OPENING.get(row[0], row[9] * 3),) + row[10:] for row in INGREDIENTS]

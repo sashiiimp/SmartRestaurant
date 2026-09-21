@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Preparation plan - SmartRestaurant{% endblock %}
+{% block content %}
+<div id="app" v-cloak>
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <h1 class="h4 m-0">What to prepare</h1>
+    <sr-date-nav v-model="date" @change="load"></sr-date-nav>
+  </div>
+  <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
+  <div v-if="plan" class="text-muted small mb-3">Safety buffer [[ plan.buffer_pct ]]%<span v-if="plan.model"> &middot; model [[ plan.model ]]</span></div>
+  <div v-if="loading" class="text-center py-5"><div class="spinner-border" role="status"><span class="visually-hidden">Loading</span></div></div>
+  <div v-else class="row g-3">
+    <div class="col-12 col-md-6 col-xl-4" v-for="it in items" :key="it.menu_item_id">
+      <div class="card card-item h-100" :class="it.status">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <h2 class="h6 mb-1">[[ it.name ]]</h2>
+            <sr-status-badge :status="it.status"></sr-status-badge>
+          </div>
+          <template v-if="it.status === 'no_forecast'">
+            <p class="text-muted mb-2">No forecast yet for this date.</p>
+          </template>
+          <template v-else>
+            <dl class="row mb-2 small">
+              <dt class="col-7 fw-normal text-muted">Forecast</dt><dd class="col-5 text-end mb-0">[[ ui.num(it.forecast_qty, 1) ]]</dd>
+              <dt class="col-7 fw-normal text-muted">Safety buffer</dt><dd class="col-5 text-end mb-0">+[[ it.buffer_pct ]]%</dd>
+              <dt class="col-7 fw-normal text-muted">Confirmed pre-orders</dt><dd class="col-5 text-end mb-0">[[ it.preorder_qty ]]</dd>
+              <dt class="col-7 fw-normal text-muted">Batch size</dt><dd class="col-5 text-end mb-0">[[ it.batch_size ]]</dd>
+            </dl>
+            <div class="d-flex justify-content-between align-items-baseline border-top pt-2">
+              <span>Recommended</span><span class="fs-4 fw-semibold">[[ it.recommended_qty ]]</span>
+            </div>
+            <div class="small text-muted mb-2">
+              <span v-if="it.weather_estimated">Weather estimated (seasonal average). </span>
+              <span v-if="it.forecast_method === 'baseline'">Simple estimate (same day last week).</span>
+            </div>
+            <div v-if="it.status !== 'suggested'" class="alert alert-light border py-2 small">
+              <strong>[[ it.status === 'accepted' ? 'Accepted' : 'Overridden' ]]: [[ it.final_qty ]]</strong>
+              <span v-if="it.status === 'accepted' && it.final_qty !== it.recommended_qty" class="text-warning"> (recommendation is now [[ it.recommended_qty ]])</span>
+              <div v-if="it.override_reason">Reason: [[ it.override_reason ]]</div>
+            </div>
+            <div v-if="!isPast" class="d-flex gap-2 mb-2">
+              <button class="btn btn-success btn-lg-touch flex-fill" type="button" :disabled="st(it.menu_item_id).busy" @click="decide(it, 'accept')">Accept [[ it.recommended_qty ]]</button>
+              <button class="btn btn-outline-secondary btn-lg-touch flex-fill" type="button" @click="st(it.menu_item_id).overriding = !st(it.menu_item_id).overriding">Override</button>
+            </div>
+            <div v-if="st(it.menu_item_id).overriding" class="border rounded p-2 mb-2">
+              <label class="form-label small mb-1" :for="'q' + it.menu_item_id">Quantity to prepare</label>
+              <input :id="'q' + it.menu_item_id" class="form-control mb-1" inputmode="numeric" v-model="st(it.menu_item_id).qty">
+              <sr-field-error :errors="st(it.menu_item_id).errors" name="final_qty"></sr-field-error>
+              <label class="form-label small mb-1 mt-2" :for="'r' + it.menu_item_id">Reason (required)</label>
+              <input :id="'r' + it.menu_item_id" class="form-control mb-1" v-model="st(it.menu_item_id).reason" maxlength="255">
+              <sr-field-error :errors="st(it.menu_item_id).errors" name="reason"></sr-field-error>
+              <button class="btn btn-warning btn-lg-touch w-100 mt-2" type="button" :disabled="st(it.menu_item_id).busy" @click="decide(it, 'override')">Save override</button>
+            </div>
+          </template>
+          <div class="border-top pt-2 mt-2">
+            <div class="d-flex justify-content-between small"><span>Prepared so far</span><strong>[[ it.prepared_so_far ]]</strong></div>
+            <div v-if="!isPast || true" class="input-group mt-1">
+              <input class="form-control" inputmode="numeric" placeholder="Quantity" :aria-label="'Add prepared quantity for ' + it.name" v-model="st(it.menu_item_id).add" @keyup.enter="addPrepared(it)">
+              <button class="btn btn-outline-primary btn-lg-touch" type="button" :disabled="st(it.menu_item_id).busy" @click="addPrepared(it)">+ Add</button>
+            </div>
+            <sr-field-error :errors="st(it.menu_item_id).errors" name="quantity"></sr-field-error>
+            <sr-field-error :errors="st(it.menu_item_id).errors" name="date"></sr-field-error>
+            <div v-if="st(it.menu_item_id).message && !Object.keys(st(it.menu_item_id).errors).length" class="text-danger small mt-1" role="alert">[[ st(it.menu_item_id).message ]]</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/pages/kitchen_prep.js') }}"></script>{% endblock %}

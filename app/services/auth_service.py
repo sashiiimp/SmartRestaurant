@@ -147,3 +147,8 @@ def reset_password(outlet_id: int, user_id: int, new_password: str, actor_id: in
     user.password_hash = hash_password(new_password)
     audit.record(outlet_id, actor_id, "user.password_reset", "user", user.id)
     db.session.commit()
+
+
+def user_dict(u: User) -> dict:
+    return {"id": u.id, "username": u.username, "full_name": u.full_name, "email": u.email, "role": u.role,
+            "is_active": u.is_active, "last_login_at": u.last_login_at.isoformat() + "Z" if u.last_login_at else None}

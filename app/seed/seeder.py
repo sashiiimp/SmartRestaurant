@@ -1,10 +1,12 @@
 """flask smartrest seed: outlet, users, settings, catalog. Goes through services (ARCH section 10)."""
 import os
 import secrets
+from datetime import timedelta
 
 from app.seed import catalog
 from app.services import auth_service, data_management_service as dm, inventory_service as inv
 from app.services import outlet_service, settings
+from app.utils.dates import today
 
 USERS = [("admin", "System Administrator", "admin"), ("kitchen1", "Kitchen Manager", "kitchen"),
          ("inventory1", "Inventory Manager", "inventory")]
@@ -49,4 +51,25 @@ def seed_base(reset: bool = False) -> dict:
         if not dm.get_recipe(outlet.id, item.id):
             dm.set_recipe(outlet.id, item.id, [
                 {"ingredient_id": ingredients[ing].id, "quantity_per_portion": q} for ing, q in lines])
+    if not inv.on_hand_map(outlet.id):
+        _opening_stock(outlet.id, ingredients)
     return {"passwords": created}
+
+
+def _opening_stock(outlet_id: int, ingredients: dict) -> None:
+    """Batches dated relative to today so the first demo already shows alerts (DATABASE.md section 5):
+    chicken low, potato critical, one bun batch expiring in 2 days, one expired chicken batch."""
+    day = today()
+    for (name, _u, _c, shelf, _s, _mn, _ro, _pk, _moq, opening, cost) in catalog.INGREDIENTS:
+        ing = ingredients[name]
+        expiry = (day + timedelta(days=shelf)).isoformat() if shelf else None
+        qty = opening
+        if name == "Burger bun":
+            qty = opening - 60
+            inv.record_stock_in(outlet_id, {"ingredient_id": ing.id, "quantity": 60, "received_date": (day - timedelta(days=2)).isoformat(),
+                                            "expiry_date": (day + timedelta(days=2)).isoformat(), "batch_no": "BUN-OLD", "unit_cost": cost})
+        if name == "Chicken":
+            inv.record_stock_in(outlet_id, {"ingredient_id": ing.id, "quantity": 5, "received_date": (day - timedelta(days=5)).isoformat(),
+                                            "expiry_date": (day - timedelta(days=1)).isoformat(), "batch_no": "CHK-EXPIRED", "unit_cost": cost})
+        inv.record_stock_in(outlet_id, {"ingredient_id": ing.id, "quantity": qty, "received_date": day.isoformat(),
+                                        "expiry_date": expiry, "batch_no": f"OPEN-{day:%Y%m%d}", "unit_cost": cost})

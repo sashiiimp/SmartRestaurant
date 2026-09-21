@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Demand forecast - SmartRestaurant{% endblock %}
+{% block content %}
+<div id="app" v-cloak>
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <h1 class="h4 m-0">7-day demand forecast</h1>
+    <sr-date-nav v-model="start" @change="load"></sr-date-nav>
+  </div>
+  <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
+  <div v-if="meta.active_model" class="text-muted small mb-2">
+    Model: [[ meta.active_model ]]
+    <span v-if="meta.last_run"> &middot; last run [[ ui.date(meta.last_run.as_of) ]] ([[ meta.last_run.status ]])</span>
+  </div>
+  <div v-else-if="!loading" class="alert alert-warning">No forecast yet. Ask the administrator to train a model and run a forecast.</div>
+  <div v-if="meta.missing_dates && meta.missing_dates.length && rows.length" class="alert alert-info py-2 small">
+    No forecast yet for: [[ meta.missing_dates.map(ui.date).join(', ') ]]<span v-if="meta.last_forecast_date"> (last available date: [[ ui.date(meta.last_forecast_date) ]])</span>.
+  </div>
+  <div v-if="loading" class="text-center py-5"><div class="spinner-border" role="status"><span class="visually-hidden">Loading</span></div></div>
+  <template v-else-if="rows.length">
+    <div class="table-responsive mb-4">
+      <table class="table table-sm align-middle">
+        <thead><tr><th>Item</th><th v-for="d in dates" :key="d" class="text-end">[[ ui.date(d) ]]</th></tr></thead>
+        <tbody>
+          <tr v-for="t in table" :key="t.id">
+            <td>[[ t.name ]]</td>
+            <td v-for="(c, i) in t.cells" :key="i" class="text-end">
+              <span v-if="c">[[ ui.num(c.predicted_qty, 0) ]]<span v-if="c.method === 'baseline'" title="Simple estimate (same day last week)"> *</span><span v-if="c.is_poya" class="badge text-bg-light ms-1" title="Poya day">P</span></span>
+              <span v-else class="text-muted">-</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="small text-muted">Portions per day. * simple estimate (same day last week). P = Poya day. Weather is estimated from the seasonal average unless the administrator entered it.</div>
+    </div>
+    <div class="row"><div class="col-12 col-lg-8">
+      <div class="d-flex align-items-center gap-2 mb-2"><label for="chart-item" class="form-label m-0">Chart item</label>
+        <select id="chart-item" class="form-select" style="max-width: 16rem" v-model.number="itemId">
+          <option v-for="it in items" :key="it.id" :value="it.id">[[ it.name ]]</option></select></div>
+      <sr-line-chart :labels="dates.map(ui.date)" :datasets="chartData" y-title="Portions per day" title="Forecast"></sr-line-chart>
+    </div></div>
+  </template>
+  <sr-empty v-else-if="!loading && meta.active_model" message="No forecast yet for this date range."></sr-empty>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/pages/kitchen_forecast.js') }}"></script>{% endblock %}

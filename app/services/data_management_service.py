@@ -425,3 +425,30 @@ def load_promotions_frame(outlet_id: int) -> pd.DataFrame:
     df = pd.DataFrame(rows, columns=["item_id", "date", "discount_pct"])
     df["date"] = pd.to_datetime(df["date"])
     return df
+
+
+# ---- serializers for the API layer -----------------------------------------------------------
+def menu_item_dict(m: MenuItem) -> dict:
+    return {"id": m.id, "name": m.name, "category": m.category, "price": float(m.price), "portion_unit": m.portion_unit,
+            "shelf_life_hours": m.shelf_life_hours, "batch_size": m.batch_size, "is_active": m.is_active,
+            "is_available": m.is_available, "has_recipe": bool(m.recipe_lines)}
+
+
+def recipe_dict(lines) -> list[dict]:
+    return [{"ingredient_id": r.ingredient_id, "ingredient": r.ingredient.name, "unit": r.ingredient.unit,
+             "quantity_per_portion": float(r.quantity_per_portion)} for r in lines]
+
+
+def promotion_dict(p: Promotion) -> dict:
+    return {"id": p.id, "name": p.name, "start_date": p.start_date.isoformat(), "end_date": p.end_date.isoformat(),
+            "discount_pct": float(p.discount_pct), "applies_to_all": p.applies_to_all, "promo_type": p.promo_type,
+            "is_active": p.is_active, "item_ids": [i.menu_item_id for i in p.items]}
+
+
+def holiday_dict(h: Holiday) -> dict:
+    return {"id": h.id, "date": h.holiday_date.isoformat(), "name": h.name, "type": h.holiday_type}
+
+
+def weather_dict(w: WeatherDaily) -> dict:
+    return {"date": w.weather_date.isoformat(), "rain_mm": float(w.rain_mm),
+            "temp_c": None if w.temp_c is None else float(w.temp_c), "source": w.source}
