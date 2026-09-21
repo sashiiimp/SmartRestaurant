@@ -28,6 +28,7 @@ SR.createApp({
       try {
         const { data, meta } = await api.get('/forecasts', { from: this.start, to: ui.addDays(this.start, 6) });
         this.rows = data; this.meta = meta;
+        if (!this.itemId && data.length) this.itemId = data[0].menu_item_id;  // show the first item in the chart selector
       } catch (e) { this.error = ui.errorText(e); } finally { this.loading = false; }
     },
   },

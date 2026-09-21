@@ -8,7 +8,7 @@
   </div>
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
   <div v-if="plan" class="text-muted small mb-3">Safety buffer [[ plan.buffer_pct ]]%<span v-if="plan.model"> &middot; model [[ plan.model ]]</span></div>
-  <div v-if="loading" class="text-center py-5"><div class="spinner-border" role="status"><span class="visually-hidden">Loading</span></div></div>
+  <sr-loading v-if="loading"></sr-loading>
   <div v-else class="row g-3">
     <div class="col-12 col-md-6 col-xl-4" v-for="it in items" :key="it.menu_item_id">
       <div class="card card-item h-100" :class="it.status">
@@ -24,7 +24,6 @@
             <dl class="row mb-2 small">
               <dt class="col-7 fw-normal text-muted">Forecast</dt><dd class="col-5 text-end mb-0">[[ ui.num(it.forecast_qty, 1) ]]</dd>
               <dt class="col-7 fw-normal text-muted">Safety buffer</dt><dd class="col-5 text-end mb-0">+[[ it.buffer_pct ]]%</dd>
-              <dt class="col-7 fw-normal text-muted">Confirmed pre-orders</dt><dd class="col-5 text-end mb-0">[[ it.preorder_qty ]]</dd>
               <dt class="col-7 fw-normal text-muted">Batch size</dt><dd class="col-5 text-end mb-0">[[ it.batch_size ]]</dd>
             </dl>
             <div class="d-flex justify-content-between align-items-baseline border-top pt-2">

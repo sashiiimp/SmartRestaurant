@@ -1,7 +1,7 @@
 SR.createApp({
   data() { return { d: null, loading: true, error: null, ui }; },
   async mounted() { await this.load(); },
-  computed: { maxNeed() { return this.d ? Math.max(1, ...this.d.need_vs_stock.map(r => Math.max(r.need, r.usable))) : 1; } },
+  computed: { stockTotal() { return this.d ? this.d.counts.ok + this.d.counts.low + this.d.counts.out : 0; }, maxNeed() { return this.d ? Math.max(1, ...this.d.need_vs_stock.map(r => Math.max(r.need, r.usable))) : 1; } },
   methods: {
     async load() {
       this.loading = true; this.error = null;

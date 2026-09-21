@@ -13,12 +13,12 @@
       <div class="col-6 col-md-2"><label class="form-label" for="u-pw">Initial password</label><input id="u-pw" type="password" class="form-control" v-model="form.password" autocomplete="new-password"><sr-field-error :errors="errors" name="password"></sr-field-error></div>
     </div>
     <div class="mt-3 d-flex gap-2"><button class="btn btn-primary" :disabled="saving" @click="create">Create</button><button class="btn btn-outline-secondary" @click="form = null">Cancel</button></div></div></div>
-  <div v-if="loading" class="text-center py-5"><div class="spinner-border" role="status"><span class="visually-hidden">Loading</span></div></div>
+  <sr-loading v-if="loading"></sr-loading>
   <div v-else class="table-responsive"><table class="table table-sm align-middle">
     <thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Status</th><th>Last login</th><th></th></tr></thead>
     <tbody><tr v-for="u in users" :key="u.id" :class="u.is_active ? '' : 'text-muted'"><td>[[ u.full_name ]]</td><td>[[ u.username ]]</td>
       <td><select class="form-select form-select-sm" style="max-width: 12rem" :aria-label="'Role for ' + u.username" :value="u.role" @change="change(u, { role: $event.target.value })"><option value="admin">Administrator</option><option value="kitchen">Food production</option><option value="inventory">Inventory and procurement</option></select></td>
-      <td>[[ u.is_active ? 'Active' : 'Deactivated' ]]</td><td>[[ ui.dateTime(u.last_login_at) ]]</td>
+      <td><span class="sr-badge" :class="u.is_active ? 'sr-badge-success' : ''">[[ u.is_active ? 'Active' : 'Deactivated' ]]</span></td><td>[[ ui.dateTime(u.last_login_at) ]]</td>
       <td><button class="btn btn-sm" :class="u.is_active ? 'btn-outline-danger' : 'btn-outline-success'" @click="toggle(u)">[[ u.is_active ? 'Deactivate' : 'Reactivate' ]]</button></td></tr></tbody></table></div>
 </div>
 {% endblock %}

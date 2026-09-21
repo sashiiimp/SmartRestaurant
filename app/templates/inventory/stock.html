@@ -27,7 +27,7 @@
     <div class="col-12 col-md-4"><input class="form-control" placeholder="Search ingredient" aria-label="Search ingredient" v-model="filter"></div>
     <div class="col-6 col-md-2"><select class="form-select" aria-label="Status filter" v-model="status"><option value="">All statuses</option><option value="ok">OK</option><option value="low">Low</option><option value="out">Out</option></select></div>
   </div>
-  <div v-if="loading" class="text-center py-5"><div class="spinner-border" role="status"><span class="visually-hidden">Loading</span></div></div>
+  <sr-loading v-if="loading"></sr-loading>
   <div v-else class="table-responsive"><table class="table table-sm align-middle">
     <thead><tr><th>Ingredient</th><th class="text-end">Usable</th><th class="text-end">On hand</th><th class="text-end">Min</th><th class="text-end">Reorder at</th><th>Status</th><th>Last movement</th><th></th></tr></thead>
     <tbody><tr v-for="r in shown" :key="r.id" :class="r.is_critical ? 'table-danger' : (r.status === 'low' ? 'table-warning' : '')">

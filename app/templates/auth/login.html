@@ -1,22 +1,55 @@
 {% extends "base.html" %}
 {% block title %}Log in - SmartRestaurant{% endblock %}
 {% block content %}
-<div class="row justify-content-center">
-  <div class="col-12 col-sm-8 col-md-5 col-lg-4">
-    <h1 class="h3 text-center mb-4 mt-4">SmartRestaurant</h1>
-    <div class="card shadow-sm"><div class="card-body">
-      <h2 class="h5 mb-3">Log in</h2>
+<div class="auth-shell">
+  <section class="auth-hero" aria-hidden="false">
+    <a class="brand" href="/"><span class="brand-mark"><i class="sr-i" data-icon="utensils" data-size="22"></i></span>
+      <span class="brand-text">SmartRestaurant<small>Forecasting &amp; inventory decision support</small></span></a>
+    <div>
+      <h2>Know what to prepare before the rush starts.</h2>
+      <p class="lead-text">Item-level demand forecasts turn into preparation plans, ingredient checks and reorder suggestions for fast-food kitchens.</p>
+    </div>
+    <ul class="feature-list">
+      <li><span class="f-icon"><i class="sr-i" data-icon="trending" data-size="20"></i></span><span><strong>7-day demand forecast</strong>Per menu item, with the safety buffer and batch size behind every number.</span></li>
+      <li><span class="f-icon"><i class="sr-i" data-icon="clipboard" data-size="20"></i></span><span><strong>Preparation plans</strong>Accept or override the recommendation and see ingredient shortages before they happen.</span></li>
+      <li><span class="f-icon"><i class="sr-i" data-icon="bell" data-size="20"></i></span><span><strong>Stock and waste alerts</strong>Projected stock-outs, expiring batches and reorder suggestions in one place.</span></li>
+    </ul>
+    <div class="auth-foot">CSE5015 project &middot; Team ForeSight &middot; demonstration system running on synthetic data</div>
+  </section>
+  <section class="auth-panel">
+    <div class="auth-card">
+      <div class="auth-mobile-brand"><span class="brand-mark"><i class="sr-i" data-icon="utensils" data-size="20"></i></span>SmartRestaurant</div>
+      <h1>Welcome back</h1>
+      <p class="sub">Log in to your role dashboard.</p>
       {% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
-      <form method="post" novalidate>
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <div class="mb-3"><label class="form-label" for="username">Username</label>
-          <input class="form-control" id="username" name="username" value="{{ username }}" autocomplete="username" required autofocus></div>
-        <div class="mb-3"><label class="form-label" for="password">Password</label>
-          <input class="form-control" id="password" name="password" type="password" autocomplete="current-password" required></div>
-        <button class="btn btn-primary w-100" type="submit">Log in</button>
-      </form>
-    </div></div>
-    <p class="text-center text-muted small mt-3">Demand forecasting and inventory decision support</p>
-  </div>
+      <div class="card"><div class="card-body">
+        <form method="post" novalidate>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="mb-3"><label class="form-label" for="username">Username</label>
+            <input class="form-control" id="username" name="username" value="{{ username }}" autocomplete="username" autocapitalize="none" spellcheck="false" required autofocus></div>
+          <div class="mb-4"><label class="form-label" for="password">Password</label>
+            <div class="pw-wrap">
+              <input class="form-control" id="password" name="password" type="password" autocomplete="current-password" required>
+              <button class="pw-toggle" id="pw-toggle" type="button" aria-label="Show password" aria-pressed="false"><i class="sr-i" data-icon="eye" data-size="18"></i></button>
+            </div></div>
+          <button class="btn btn-primary w-100" type="submit">Log in</button>
+        </form>
+      </div></div>
+      <p class="auth-note">Demand forecasting and inventory decision support</p>
+    </div>
+  </section>
 </div>
 {% endblock %}
+{% block scripts %}<script>
+  (function () {
+    var btn = document.getElementById('pw-toggle'), input = document.getElementById('password');
+    if (!btn || !input || !window.SRIcons) return;
+    btn.addEventListener('click', function () {
+      var show = input.type === 'password';
+      input.type = show ? 'text' : 'password';
+      btn.setAttribute('aria-pressed', show ? 'true' : 'false');
+      btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+      btn.replaceChildren(window.SRIcons.svg(show ? 'eyeoff' : 'eye', 18));
+    });
+  })();
+</script>{% endblock %}

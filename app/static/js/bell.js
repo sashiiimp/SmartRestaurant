@@ -6,6 +6,6 @@
     const c = (meta && meta.counts) || {};
     const n = (c.critical || 0) + (c.warning || 0) + (c.info || 0);
     badge.textContent = n;
-    badge.className = 'badge ' + (c.critical ? 'bg-danger' : n ? 'bg-warning text-dark' : 'bg-secondary');
+    badge.className = 'count-badge' + (c.critical ? ' is-critical' : n ? ' is-warning' : '');
   }).catch(() => {});
 })();

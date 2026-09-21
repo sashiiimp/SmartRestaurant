@@ -6,10 +6,10 @@
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
   <ul class="nav nav-tabs mb-3"><li class="nav-item" v-for="t in [['sales','Sales import'],['promos','Promotions'],['holidays','Holidays'],['weather','Weather']]" :key="t[0]">
     <button class="nav-link" :class="{ active: tab === t[0] }" @click="tab = t[0]">[[ t[1] ]]</button></li></ul>
-  <div v-if="tab === 'sales'"><p class="text-muted">CSV with columns <code>date, item, quantity</code> and optionally <code>unit_price</code>. Rows are checked first; nothing is saved until you confirm. Unknown item names are reported, never created.</p>
-    <sr-csv-import endpoint="/sales/import" label="Sales CSV"></sr-csv-import></div>
-  <div v-if="tab === 'holidays'"><p class="text-muted">CSV with columns <code>date, name, type</code> (type: public, poya, school, other).</p><sr-csv-import endpoint="/holidays/import" label="Holidays CSV"></sr-csv-import></div>
-  <div v-if="tab === 'weather'"><p class="text-muted">CSV with columns <code>date, rain_mm</code> and optionally <code>temp_c</code>. Weather entered for a future date is used by the forecast instead of the seasonal average.</p><sr-csv-import endpoint="/weather/import" label="Weather CSV"></sr-csv-import></div>
+  <div v-if="tab === 'sales'" class="card"><div class="card-body"><p class="text-muted">CSV with columns <code>date, item, quantity</code> and optionally <code>unit_price</code>. Rows are checked first; nothing is saved until you confirm. Unknown item names are reported, never created.</p>
+    <sr-csv-import endpoint="/sales/import" label="Sales CSV"></sr-csv-import></div></div>
+  <div v-if="tab === 'holidays'" class="card"><div class="card-body"><p class="text-muted">CSV with columns <code>date, name, type</code> (type: public, poya, school, other).</p><sr-csv-import endpoint="/holidays/import" label="Holidays CSV"></sr-csv-import></div></div>
+  <div v-if="tab === 'weather'" class="card"><div class="card-body"><p class="text-muted">CSV with columns <code>date, rain_mm</code> and optionally <code>temp_c</code>. Weather entered for a future date is used by the forecast instead of the seasonal average.</p><sr-csv-import endpoint="/weather/import" label="Weather CSV"></sr-csv-import></div></div>
   <div v-if="tab === 'promos'">
     <div class="d-flex justify-content-between mb-2"><p class="text-muted m-0">Promotions raise the forecast for the items they cover. Enter them before running the forecast.</p><button class="btn btn-primary" @click="add">Add promotion</button></div>
     <div v-if="form" class="card mb-3"><div class="card-body"><div class="row g-2">

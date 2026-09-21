@@ -32,7 +32,6 @@ SR.createApp({
         s.overriding = false;
         await this.refresh();
         ui.toast(action === 'accept' ? item.name + ': accepted ' + data.final_qty : item.name + ': overridden to ' + data.final_qty);
-        if (data.warnings && data.warnings.length) ui.toast(data.warnings[0], 'warning');
       } catch (e) { s.errors = e.fields || {}; s.message = ui.errorText(e); } finally { s.busy = false; }
     },
     async addPrepared(item) {

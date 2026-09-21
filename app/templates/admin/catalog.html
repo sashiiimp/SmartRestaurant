@@ -21,11 +21,11 @@
       <div class="col-12 col-md-2"><button class="btn btn-sm btn-outline-danger" @click="recipe.lines.splice(n, 1)">Remove</button></div></div>
     <div v-if="recipe.error" class="alert alert-danger py-2" role="alert">[[ recipe.error ]]</div>
     <div class="d-flex gap-2"><button class="btn btn-outline-primary" @click="addLine">Add ingredient</button><button class="btn btn-primary" @click="saveRecipe">Save recipe</button><button class="btn btn-outline-secondary" @click="recipe = null">Cancel</button></div></div></div>
-  <div v-if="loading" class="text-center py-5"><div class="spinner-border" role="status"><span class="visually-hidden">Loading</span></div></div>
+  <sr-loading v-if="loading"></sr-loading>
   <div v-else class="table-responsive"><table class="table table-sm align-middle">
     <thead><tr><th>Item</th><th>Category</th><th class="text-end">Price</th><th class="text-end">Batch</th><th>Recipe</th><th>Status</th><th></th></tr></thead>
     <tbody><tr v-for="i in items" :key="i.id" :class="i.is_active ? '' : 'text-muted'"><td>[[ i.name ]]</td><td>[[ i.category ]]</td><td class="text-end">[[ ui.money(i.price) ]]</td><td class="text-end">[[ i.batch_size ]]</td>
-      <td><span v-if="i.has_recipe" class="text-success">defined</span><span v-else class="badge text-bg-warning">missing</span></td><td>[[ i.is_active ? 'Active' : 'Inactive' ]]</td>
+      <td><span v-if="i.has_recipe" class="sr-badge sr-badge-success">defined</span><span v-else class="badge text-bg-warning">missing</span></td><td><span class="sr-badge" :class="i.is_active ? 'sr-badge-success' : ''">[[ i.is_active ? 'Active' : 'Inactive' ]]</span></td>
       <td class="text-nowrap"><button class="btn btn-sm btn-outline-secondary me-1" @click="edit(i)">Edit</button><button class="btn btn-sm btn-outline-primary me-1" @click="openRecipe(i)">Recipe</button>
         <button class="btn btn-sm" :class="i.is_active ? 'btn-outline-danger' : 'btn-outline-success'" @click="setActive(i, !i.is_active)">[[ i.is_active ? 'Deactivate' : 'Activate' ]]</button></td></tr></tbody></table></div>
 </div>

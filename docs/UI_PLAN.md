@@ -178,3 +178,14 @@ After Accept the card shows "Accepted 54" with a grey Undo-by-override link. Ove
 ## 8. What is deliberately not built
 
 Login-less kiosk mode, dark theme, i18n (English only, A11), print stylesheets, drag-and-drop, real-time push, offline mode, a PWA shell, a bespoke design system.
+
+## 9. Visual design system (as built, 21 Sep 2026)
+
+Display-only layer on top of the vendored Bootstrap; no data, API, route or business-logic change.
+
+- **Shell:** dark left sidebar (off-canvas menu below 992 px) with brand, role chip, icon navigation and user/log-out block; sticky top bar with breadcrumb, the "Synthetic demo data" pill (text still comes from the `data_source_label` setting) and the alert bell.
+- **Role accents** (one design system, colour set by `body[data-role]`): Administrator indigo, Food Production burnt orange, Inventory teal. Sidebar tint follows the role.
+- **Tokens and components** are in `static/css/app.css` (CSS variables for colour, radius, shadow; semantic success/warning/danger/info colours are the same in every role). Shared Vue components in `components.js`: `sr-stat-tile` (icon, tone), `sr-status-badge`, `sr-alert-list` (severity icon and tag), `sr-empty` (icon), `sr-loading` (skeleton), `sr-icon`, and the Chart.js wrappers `sr-line-chart`, `sr-bar-chart`, `sr-doughnut-chart`.
+- **Icons** are inline SVG from `static/js/icons.js`; no icon font, web font or CDN.
+- **Charts added from existing endpoints only:** Admin dashboard (sales and waste trend from `/reports/sales` and `/reports/waste`; alerts by severity), Kitchen dashboard (forecast, recommended and prepared by item), Inventory dashboard (stock status). The Monitoring, forecast and need-versus-stock views keep their charts.
+- **Login** is a split layout (product panel and form) that collapses to the form on tablets and phones; error pages share the same look.

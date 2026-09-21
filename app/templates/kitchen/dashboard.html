@@ -7,18 +7,22 @@
     <sr-date-nav v-model="date" @change="load"></sr-date-nav>
   </div>
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
-  <div v-if="loading" class="text-center py-5"><div class="spinner-border" role="status"><span class="visually-hidden">Loading</span></div></div>
+  <sr-loading v-if="loading" :tiles="4" :cards="2"></sr-loading>
   <template v-else-if="d">
     <div class="row g-3 mb-3">
-      <div class="col-6 col-lg-3"><sr-stat-tile label="Items to prepare" :value="d.tiles.items_to_prepare" href="/kitchen/prep"></sr-stat-tile></div>
-      <div class="col-6 col-lg-3"><sr-stat-tile label="Prepared / planned" :value="d.tiles.prepared_total + ' / ' + d.tiles.planned_total"></sr-stat-tile></div>
-      <div class="col-6 col-lg-3"><sr-stat-tile label="Ingredient shortages" :value="d.tiles.shortage_count" :tone="d.tiles.shortage_count ? 'danger' : ''" href="/kitchen/requirements"></sr-stat-tile></div>
-      <div class="col-6 col-lg-3"><sr-stat-tile label="Open alerts" :value="d.tiles.open_alerts" :tone="d.tiles.open_alerts ? 'warning' : ''"></sr-stat-tile></div>
+      <div class="col-6 col-lg-3"><sr-stat-tile label="Items to prepare" icon="clipboard" :value="d.tiles.items_to_prepare" href="/kitchen/prep"></sr-stat-tile></div>
+      <div class="col-6 col-lg-3"><sr-stat-tile label="Prepared / planned" icon="check" tone="success" :value="d.tiles.prepared_total + ' / ' + d.tiles.planned_total" :hint="preparedPct + '% of the plan prepared'"></sr-stat-tile></div>
+      <div class="col-6 col-lg-3"><sr-stat-tile label="Ingredient shortages" icon="warning" :value="d.tiles.shortage_count" :tone="d.tiles.shortage_count ? 'danger' : ''" href="/kitchen/requirements"></sr-stat-tile></div>
+      <div class="col-6 col-lg-3"><sr-stat-tile label="Open alerts" icon="bell" :value="d.tiles.open_alerts" :tone="d.tiles.open_alerts ? 'warning' : ''"></sr-stat-tile></div>
     </div>
     <div class="row g-3">
       <div class="col-12 col-xl-8">
+        <div class="card mb-3"><div class="card-body">
+          <div class="card-head"><h2 class="h6">Forecast, recommendation and prepared quantity by item</h2></div>
+          <sr-bar-chart all-labels :labels="planLabels" :datasets="planChart" y-title="Portions" :height="250"></sr-bar-chart>
+        </div></div>
         <div class="card"><div class="card-body">
-          <div class="d-flex justify-content-between"><h2 class="h6">Today's plan</h2><a href="/kitchen/prep" class="small">Open prep plan</a></div>
+          <div class="card-head"><h2 class="h6">Today's plan</h2><a href="/kitchen/prep">Open prep plan</a></div>
           <div class="table-responsive"><table class="table table-sm align-middle mb-0">
             <thead><tr><th>Item</th><th class="text-end">Forecast</th><th class="text-end">Recommended</th><th class="text-end">Final</th><th class="text-end">Prepared</th><th>Status</th></tr></thead>
             <tbody><tr v-for="r in d.plan" :key="r.menu_item_id">

@@ -5,7 +5,7 @@
   <h1 class="h4 mb-1">Ingredient demand, next 7 days</h1>
   <p class="text-muted small">Forecast portions x recipes, using the recommended (or accepted) preparation quantities.</p>
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
-  <div v-if="loading" class="text-center py-5"><div class="spinner-border" role="status"><span class="visually-hidden">Loading</span></div></div>
+  <sr-loading v-if="loading"></sr-loading>
   <template v-else-if="f">
     <sr-empty v-if="!rows.length" message="No ingredient forecast yet. The forecast may not have been run."></sr-empty>
     <div v-else class="table-responsive"><table class="table table-sm align-middle">

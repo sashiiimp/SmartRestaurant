@@ -4,30 +4,32 @@
 <div id="app" v-cloak>
   <h1 class="h4 mb-3">Sales, forecast accuracy and waste</h1>
   <ul class="nav nav-tabs mb-3"><li class="nav-item" v-for="t in [['sales','Sales and revenue'],['forecast','Forecast accuracy'],['waste','Waste']]" :key="t[0]"><button class="nav-link" :class="{ active: tab === t[0] }" @click="setTab(t[0])">[[ t[1] ]]</button></li></ul>
-  <div class="row g-2 align-items-end mb-3">
-    <div class="col-6 col-md-2"><label class="form-label" for="m-from">From</label><input id="m-from" type="date" class="form-control" v-model="from" @change="load"></div>
-    <div class="col-6 col-md-2"><label class="form-label" for="m-to">To</label><input id="m-to" type="date" class="form-control" v-model="to" @change="load"></div>
-    <div class="col-12 col-md-3 ms-md-auto text-md-end"><a class="btn btn-outline-secondary" :href="csvUrl">Download CSV</a></div>
-    <div class="col-6 col-md-2" v-if="tab !== 'forecast'"><label class="form-label" for="m-group">Group by</label><select id="m-group" class="form-select" v-model="groupBy" @change="load"><option value="day">Day</option><option value="week">Week</option><option value="month">Month</option></select></div>
-  </div>
+  <div class="card mb-3"><div class="card-body py-3">
+  <div class="row g-2 align-items-end">
+      <div class="col-6 col-md-2"><label class="form-label" for="m-from">From</label><input id="m-from" type="date" class="form-control" v-model="from" @change="load"></div>
+      <div class="col-6 col-md-2"><label class="form-label" for="m-to">To</label><input id="m-to" type="date" class="form-control" v-model="to" @change="load"></div>
+      <div class="col-12 col-md-3 ms-md-auto text-md-end"><a class="btn btn-outline-secondary" :href="csvUrl">Download CSV</a></div>
+      <div class="col-6 col-md-2" v-if="tab !== 'forecast'"><label class="form-label" for="m-group">Group by</label><select id="m-group" class="form-select" v-model="groupBy" @change="load"><option value="day">Day</option><option value="week">Week</option><option value="month">Month</option></select></div>
+    </div>
+  </div></div>
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
-  <div v-if="loading" class="text-center py-4"><div class="spinner-border" role="status"><span class="visually-hidden">Loading</span></div></div>
+  <sr-loading v-if="loading"></sr-loading>
   <template v-else>
     <div v-if="tab === 'sales' && sales">
-      <div class="row g-3 mb-3"><div class="col-6 col-md-3"><sr-stat-tile label="Portions sold" :value="ui.num(sales.totals.quantity, 0)"></sr-stat-tile></div><div class="col-6 col-md-3"><sr-stat-tile label="Revenue" :value="ui.money(sales.totals.revenue)"></sr-stat-tile></div></div>
-      <sr-bar-chart :labels="salesLabels" :datasets="salesData" y-title="Portions" title="Portions sold"></sr-bar-chart>
+      <div class="row g-3 mb-3"><div class="col-6 col-md-3"><sr-stat-tile label="Portions sold" icon="bag" :value="ui.num(sales.totals.quantity, 0)"></sr-stat-tile></div><div class="col-6 col-md-3"><sr-stat-tile label="Revenue" icon="dollar" :value="ui.money(sales.totals.revenue)"></sr-stat-tile></div></div>
+      <div class="card mb-3"><div class="card-body"><sr-bar-chart :labels="salesLabels" :datasets="salesData" y-title="Portions" title="Portions sold"></sr-bar-chart></div></div>
       <div class="row g-3 mt-1"><div class="col-12 col-lg-7"><div class="table-responsive" style="max-height: 22rem; overflow: auto"><table class="table table-sm"><thead><tr><th>Period</th><th class="text-end">Portions</th><th class="text-end">Revenue</th></tr></thead>
         <tbody><tr v-for="r in sales.rows" :key="r.period"><td>[[ r.period ]]</td><td class="text-end">[[ ui.num(r.quantity, 0) ]]</td><td class="text-end">[[ ui.money(r.revenue) ]]</td></tr></tbody>
         <tfoot><tr class="fw-semibold"><td>Total</td><td class="text-end">[[ ui.num(sales.totals.quantity, 0) ]]</td><td class="text-end">[[ ui.money(sales.totals.revenue) ]]</td></tr></tfoot></table></div></div>
-        <div class="col-12 col-lg-5"><h2 class="h6">Top items</h2><ol><li v-for="i in sales.top_items" :key="i.item">[[ i.item ]]: [[ ui.num(i.quantity, 0) ]] ([[ ui.money(i.revenue) ]])</li></ol>
-          <h2 class="h6" v-if="sales.bottom_items.length">Lowest items</h2><ol v-if="sales.bottom_items.length"><li v-for="i in sales.bottom_items" :key="i.item">[[ i.item ]]: [[ ui.num(i.quantity, 0) ]]</li></ol></div></div>
+        <div class="col-12 col-lg-5"><div class="card"><div class="card-body"><h2 class="h6">Top items</h2><ol><li v-for="i in sales.top_items" :key="i.item">[[ i.item ]]: [[ ui.num(i.quantity, 0) ]] ([[ ui.money(i.revenue) ]])</li></ol>
+          <h2 class="h6" v-if="sales.bottom_items.length">Lowest items</h2><ol v-if="sales.bottom_items.length"><li v-for="i in sales.bottom_items" :key="i.item">[[ i.item ]]: [[ ui.num(i.quantity, 0) ]]</li></ol></div></div></div></div>
       <div class="small text-muted mt-2">Revenue uses the price stored on each sales record. Data source: [[ sales.data_source ]].</div>
     </div>
     <div v-if="tab === 'forecast' && acc">
       <sr-empty v-if="!acc.overall" :message="acc.note"></sr-empty>
       <template v-else>
-        <div class="row g-3 mb-3"><div class="col-6 col-md-2"><sr-stat-tile label="MAE" :value="ui.num(acc.overall.mae, 2)" hint="portions per item-day"></sr-stat-tile></div><div class="col-6 col-md-2"><sr-stat-tile label="WAPE" :value="ui.num(acc.overall.wape, 1) + '%'"></sr-stat-tile></div><div class="col-6 col-md-2"><sr-stat-tile label="MAPE" :value="ui.num(acc.overall.mape, 1) + '%'"></sr-stat-tile></div><div class="col-6 col-md-2"><sr-stat-tile label="Bias" :value="ui.num(acc.overall.bias, 2)" hint="+ = over-forecast"></sr-stat-tile></div><div class="col-6 col-md-2"><sr-stat-tile label="Forecasts compared" :value="acc.pairs"></sr-stat-tile></div></div>
-        <sr-line-chart :labels="accLabels" :datasets="accData" y-title="Portions per day" title="Forecast vs actual"></sr-line-chart>
+        <div class="row g-3 mb-3"><div class="col-6 col-md-2"><sr-stat-tile label="MAE" icon="target" :value="ui.num(acc.overall.mae, 2)" hint="portions per item-day"></sr-stat-tile></div><div class="col-6 col-md-2"><sr-stat-tile label="WAPE" icon="target" :value="ui.num(acc.overall.wape, 1) + '%'"></sr-stat-tile></div><div class="col-6 col-md-2"><sr-stat-tile label="MAPE" icon="target" :value="ui.num(acc.overall.mape, 1) + '%'"></sr-stat-tile></div><div class="col-6 col-md-2"><sr-stat-tile label="Bias" icon="activity" :value="ui.num(acc.overall.bias, 2)" hint="+ = over-forecast"></sr-stat-tile></div><div class="col-6 col-md-2"><sr-stat-tile label="Forecasts compared" icon="layers" :value="acc.pairs"></sr-stat-tile></div></div>
+        <div class="card mb-3"><div class="card-body"><sr-line-chart :labels="accLabels" :datasets="accData" y-title="Portions per day" title="Forecast vs actual"></sr-line-chart></div></div>
         <div class="table-responsive mt-3"><table class="table table-sm"><thead><tr><th>Item</th><th class="text-end">MAE</th><th class="text-end">RMSE</th><th class="text-end">MAPE %</th><th class="text-end">WAPE %</th><th class="text-end">Bias</th></tr></thead>
           <tbody><tr v-for="r in acc.per_item" :key="r.menu_item_id"><td>[[ r.item ]]</td><td class="text-end">[[ ui.num(r.mae, 2) ]]</td><td class="text-end">[[ ui.num(r.rmse, 2) ]]</td><td class="text-end">[[ ui.num(r.mape, 1) ]]</td><td class="text-end">[[ ui.num(r.wape, 1) ]]</td><td class="text-end">[[ ui.num(r.bias, 2) ]]</td></tr></tbody></table></div>
         <div class="small text-muted">Only forecasts made on or before the day count. Backfilled forecasts ([[ (acc.run_types || []).join(', ') ]]) use the copy of the model fitted before the 56-day hold-out and estimated weather, so they are out-of-sample for the hold-out days; days before that were part of training. Synthetic data.</div>
@@ -35,8 +37,8 @@
     </div>
     <div v-if="tab === 'waste' && waste">
       <h2 class="h6">Prepared-food waste</h2>
-      <div class="row g-3 mb-2"><div class="col-6 col-md-3"><sr-stat-tile label="Portions wasted" :value="ui.num(waste.food.totals.quantity, 0)"></sr-stat-tile></div><div class="col-6 col-md-3"><sr-stat-tile label="Value at selling price" :value="ui.money(waste.food.totals.value)"></sr-stat-tile></div></div>
-      <sr-bar-chart :labels="wasteLabels" :datasets="wasteData" y-title="LKR" title="Food waste value"></sr-bar-chart>
+      <div class="row g-3 mb-2"><div class="col-6 col-md-3"><sr-stat-tile label="Portions wasted" icon="trash" :value="ui.num(waste.food.totals.quantity, 0)"></sr-stat-tile></div><div class="col-6 col-md-3"><sr-stat-tile label="Value at selling price" icon="dollar" :value="ui.money(waste.food.totals.value)"></sr-stat-tile></div></div>
+      <div class="card mb-3"><div class="card-body"><sr-bar-chart :labels="wasteLabels" :datasets="wasteData" y-title="LKR" title="Food waste value"></sr-bar-chart></div></div>
       <div class="row g-3 mt-1"><div class="col-12 col-md-6"><h3 class="h6">Top 5 wasted items</h3><table class="table table-sm"><thead><tr><th>Item</th><th class="text-end">Portions</th><th class="text-end">Value</th></tr></thead><tbody><tr v-for="i in waste.food.top_items" :key="i.item"><td>[[ i.item ]]</td><td class="text-end">[[ i.quantity ]]</td><td class="text-end">[[ ui.money(i.value) ]]</td></tr></tbody></table></div>
         <div class="col-12 col-md-6"><h3 class="h6">By reason</h3><table class="table table-sm"><tbody><tr v-for="r in waste.food.by_reason" :key="r.reason"><td>[[ r.reason ]]</td><td class="text-end">[[ r.quantity ]]</td></tr></tbody></table></div></div>
       <h2 class="h6 mt-3">Ingredient wastage (stock)</h2>
