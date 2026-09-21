@@ -13,6 +13,13 @@ from app.models import ForecastRun, ModelVersion
 pytestmark = pytest.mark.perf
 
 
+@pytest.fixture(autouse=True)
+def real_today(fixed_today, monkeypatch):
+    # These tests write to the real dev database, so they must use the real date, not the fixed test date;
+    # otherwise every run leaves a forecast run dated 25 Sep in the demo data.
+    monkeypatch.delenv("SMARTREST_TODAY", raising=False)
+
+
 @pytest.fixture(scope="module")
 def live():
     application = create_app("dev")

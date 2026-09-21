@@ -131,6 +131,8 @@ def run_forecast(outlet_id: int, as_of: date | None = None, horizon: int | None 
     """Forecast every active item for as_of .. as_of+horizon-1 with the active model. Never trains."""
     started = time.perf_counter()
     as_of = as_of or today()
+    if as_of > today():
+        raise ValidationError("A forecast run cannot start in the future.", {"as_of": "must not be after today"})
     horizon = horizon or settings.get_int(outlet_id, "forecast_horizon_days")
     run = ForecastRun(outlet_id=outlet_id, as_of_date=as_of, horizon_days=horizon, trigger_type=trigger,
                       status="running", created_by=actor_id)
@@ -253,8 +255,10 @@ def backfill(outlet_id: int, start: date, end: date, actor_id: int | None = None
 
 # ---- reading forecasts (K2, S1) --------------------------------------------------------------
 def get_forecasts(outlet_id: int, start: date, end: date, item_id: int | None = None) -> dict:
+    # Forecasts from a run dated after today (e.g. left over from a demo clock override) are never shown.
     q = (db.session.query(Forecast, MenuItem.name).join(MenuItem, MenuItem.id == Forecast.menu_item_id)
-         .filter(Forecast.outlet_id == outlet_id, Forecast.is_latest.is_(True),
+         .join(ForecastRun, ForecastRun.id == Forecast.run_id)
+         .filter(Forecast.outlet_id == outlet_id, Forecast.is_latest.is_(True), ForecastRun.as_of_date <= today(),
                  Forecast.target_date >= start, Forecast.target_date <= end))
     if item_id:
         q = q.filter(Forecast.menu_item_id == item_id)
@@ -272,9 +276,13 @@ def get_forecasts(outlet_id: int, start: date, end: date, item_id: int | None = 
     all_days = [start + timedelta(days=i) for i in range((end - start).days + 1)]
     missing = [d.isoformat() for d in all_days if d not in have_dates]
     active = get_active_model(outlet_id)
-    last = ForecastRun.query.filter_by(outlet_id=outlet_id).order_by(ForecastRun.id.desc()).first()
-    latest_date = db.session.query(db.func.max(Forecast.target_date)).filter(
-        Forecast.outlet_id == outlet_id, Forecast.is_latest.is_(True)).scalar()
+    # A run can never be "later" than the date being viewed or than today, whichever is earlier.
+    cap = min(start, today())
+    last = (ForecastRun.query.filter(ForecastRun.outlet_id == outlet_id, ForecastRun.as_of_date <= cap)
+            .order_by(ForecastRun.as_of_date.desc(), ForecastRun.id.desc()).first())
+    latest_date = (db.session.query(db.func.max(Forecast.target_date)).join(ForecastRun, ForecastRun.id == Forecast.run_id)
+                   .filter(Forecast.outlet_id == outlet_id, Forecast.is_latest.is_(True),
+                           ForecastRun.as_of_date <= today()).scalar())
     meta = {"active_model": (f"{active.version_label} ({active.algorithm})" if active else None),
             "last_run": None if not last else {"status": last.status, "reason": last.reason,
                                                "as_of": last.as_of_date.isoformat()},
@@ -293,7 +301,9 @@ def forecast_map(outlet_id: int, start: date, end: date) -> dict:
 
 
 def list_runs(outlet_id: int, limit: int = 30) -> list[dict]:
-    rows = ForecastRun.query.filter_by(outlet_id=outlet_id).order_by(ForecastRun.id.desc()).limit(limit).all()
+    # Same rule as get_forecasts: a run dated after today (leftover from a demo clock override) is never listed.
+    rows = (ForecastRun.query.filter(ForecastRun.outlet_id == outlet_id, ForecastRun.as_of_date <= today())
+            .order_by(ForecastRun.id.desc()).limit(limit).all())
     return [{"id": r.id, "as_of": r.as_of_date.isoformat(), "horizon_days": r.horizon_days, "trigger": r.trigger_type,
              "status": r.status, "reason": r.reason, "items_forecast": r.items_forecast,
              "model": r.model_version.version_label if r.model_version else None,

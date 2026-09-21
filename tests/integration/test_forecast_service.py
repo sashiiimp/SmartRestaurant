@@ -113,6 +113,67 @@ def test_get_forecasts_reports_missing_dates_and_active_model(world):
     assert out["meta"]["active_model"].startswith("v20260925-")
 
 
+def test_future_run_is_rejected(world):
+    train(world)
+    from app.services.errors import ValidationError
+    with pytest.raises(ValidationError):
+        fs.run_forecast(1, as_of=TODAY + timedelta(days=4))
+
+
+def test_last_run_shown_is_never_later_than_today_or_the_selected_date(world):
+    from app.extensions import db
+    train(world)
+    fs.run_forecast(1)
+    # a stray run dated in the future (e.g. inserted by an old CLI call) must not be reported as the last run
+    db.session.add(ForecastRun(outlet_id=1, as_of_date=TODAY + timedelta(days=4), horizon_days=7,
+                               trigger_type="cli", status="ok"))
+    db.session.commit()
+    assert fs.get_forecasts(1, TODAY, TODAY + timedelta(days=6))["meta"]["last_run"]["as_of"] == TODAY.isoformat()
+    assert fs.get_forecasts(1, TODAY + timedelta(days=7), TODAY + timedelta(days=13))["meta"]["last_run"]["as_of"] == TODAY.isoformat()
+    # viewing an earlier week caps the run at that date
+    assert fs.get_forecasts(1, TODAY - timedelta(days=3), TODAY + timedelta(days=3))["meta"]["last_run"] is None
+
+
+def test_forecasts_from_a_future_dated_run_are_not_shown(world):
+    from app.extensions import db
+    train(world)
+    fs.run_forecast(1)
+    future = ForecastRun(outlet_id=1, as_of_date=TODAY + timedelta(days=4), horizon_days=7, trigger_type="cli", status="ok")
+    db.session.add(future)
+    db.session.flush()
+    src = Forecast.query.filter_by(is_latest=True).first()
+    db.session.add(Forecast(outlet_id=1, run_id=future.id, model_version_id=src.model_version_id, menu_item_id=src.menu_item_id,
+                            target_date=TODAY + timedelta(days=10), predicted_qty=1, method="baseline", is_latest=True))
+    db.session.commit()
+    meta = fs.get_forecasts(1, TODAY, TODAY + timedelta(days=13))["meta"]
+    assert meta["last_forecast_date"] == (TODAY + timedelta(days=6)).isoformat()
+
+
+def test_run_history_never_lists_a_future_dated_run(world):
+    from app.extensions import db
+    train(world)
+    fs.run_forecast(1)
+    db.session.add(ForecastRun(outlet_id=1, as_of_date=TODAY + timedelta(days=4), horizon_days=7,
+                               trigger_type="cli", status="ok", reason="Simple estimate (same day last week) used for some or all items."))
+    db.session.commit()
+    runs = fs.list_runs(1)
+    assert runs and all(r["as_of"] <= TODAY.isoformat() for r in runs)
+
+
+def test_simple_estimate_only_when_no_model_forecast_is_possible(world):
+    """A '*' (method=baseline) row exists only if the active model is itself a baseline, or the item is not in the
+    model / has too little history. With enough history for every item and an ML model active, none appear."""
+    res = train(world)
+    mv = fs.get_active_model(1)
+    fs.run_forecast(1)
+    methods = {f.method for f in Forecast.query.filter_by(is_latest=True)}
+    if mv.algorithm in ("naive_lag7", "seasonal_mean4"):
+        assert methods == {"baseline"}
+    else:
+        assert methods == {"model"}
+        assert ForecastRun.query.one().reason is None
+
+
 def test_backfill_uses_the_train_only_model(world):
     """The shipped model is refit on all history; backfill must use the copy that never saw the hold-out days."""
     train(world)
