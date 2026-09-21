@@ -161,3 +161,18 @@ page overflowed a 360 px screen by 5 px because of a hidden helper span (removed
 were wrong (the code was right).
 
 Not done: perf tests (they write to the live database); live deployment.
+
+## 10. Deployment of the proposal-completion work to the demo database (21 Sep 2026)
+
+| Step | Result |
+|---|---|
+| Backup before the change (`backups/smartrest_live_before_deploy_*.sql`, git-ignored) | taken |
+| `flask db upgrade` on the demo database | `2f76e5862108` to `165b04a3da7c`; four new tables (`stock_requests`, `stock_request_lines`, `orders`, `ingredient_usage`); existing rows unchanged (3 users, 7,500 sales records) |
+| Server reload (gunicorn HUP, port 39500) | new workers booted; every new page redirects to login and every new API answers 401 (not 404) |
+| Forecast for the current business date (22 Sep in Asia/Colombo) | run 71, status ok, 10 of 10 items |
+| Alert evaluation | 13 open (admin 4 critical and 9 warning; kitchen 2 and 2; inventory 4 and 7) |
+| `flask smartrest check-stock` | consistent; one expired batch listed |
+| Read-only smoke check, all parameter-free GET routes as each role (injected sessions, no logins) | 62 routes: anonymous refused everywhere; admin 47 allowed and 15 forbidden; kitchen 21 and 41; inventory 24 and 38; no foreign navigation links; slowest request 227 ms |
+
+The perf tests were not run: they write to the demo database and log in with a password that no longer matches the demo users.
+The working copy `smartrest_work` (a clone taken before the changes) is kept for further testing and can be dropped.

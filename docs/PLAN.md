@@ -6,7 +6,7 @@ Read after `REQUIREMENTS.md`, `ARCHITECTURE.md`, `DATABASE.md`, `API.md`, `ML_PL
 
 **M1 and M2 are complete and tested** (144 automated tests, 91% service/ML coverage, browser tests of all three roles, all 17 pages checked at 360/768/1280 px; see `TEST_LOG.md`). Stretch items built: CSV download of reports (A13) and the settings and alert configuration page (A6, A7). Not built: pre-orders, availability toggle, expiry page, adjustments, manual shortage report, suppliers/purchase orders, admin inventory overview, server deployment, feature ablation. Actual ML results are in `ML_EVALUATION.md`.
 
-**All 15 functions of section 3A are built and tested on the work copy (21 Sep 2026); deployment to the live demo database is the remaining step.** **Scope change approved 21 Sep 2026:** every function in the approved proposal is now in scope, including all former S and X items that the proposal lists. Section 3A is the plan for the remaining work; section 4 is superseded for those items. The work is done in tiers 1 to 3 and each group is tested on a copy of the database (`smartrest_work`) before the live demo database is upgraded.
+**All 15 functions of section 3A are built, tested and deployed to the live demo database (21 Sep 2026, migrations `b8b8048fad45` and `165b04a3da7c`).** **Scope change approved 21 Sep 2026:** every function in the approved proposal is now in scope, including all former S and X items that the proposal lists. Section 3A is the plan for the remaining work; section 4 is superseded for those items. The work is done in tiers 1 to 3 and each group is tested on a copy of the database (`smartrest_work`) before the live demo database is upgraded.
 
 ## 1. Situation
 
@@ -66,21 +66,21 @@ Basis: audit of the implementation against `docs/proposal.pdf` and the role func
 
 | # | Function | Role | Tier | h | Status |
 |---|---|---|---|---|---|
-| 1 | Manage Suppliers | Inventory | 1 | 2.0 | done 21 Sep (tested on the work copy) |
-| 2 | Stock Adjustment | Inventory | 1 | 2.5 | done 21 Sep (tested on the work copy) |
-| 3 | Manage Purchase Orders | Inventory | 1 | 7.0 | done 21 Sep (tested on the work copy) |
-| 4 | Manage Food Availability (toggle on the prep page) | Kitchen | 1 | 1.5 | done 21 Sep (tested on the work copy) |
-| 5 | Manage Pre-Order | Kitchen | 1 | 4.0 | done 21 Sep (tested on the work copy) |
-| 6 | Inventory Monitoring and Inventory Demand Forecast Monitoring (admin page) | Admin | 1 | 2.0 | done 21 Sep (tested on the work copy) |
-| 7 | Request Kitchen Stock and Manage Kitchen Stock Requests | Kitchen, Inventory | 2 | 8.0 | done 21 Sep (tested on the work copy) |
-| 8 | Validate Inventory Data (consistency check) | Inventory | 2 | 1.5 | done 21 Sep (tested on the work copy) |
-| 9 | Food Demand Forecast Monitoring (admin forecast tab) | Admin | 2 | 2.0 | done 21 Sep (tested on the work copy) |
-| 10 | System Reports: inventory and movements, CSV | Admin | 2 | 2.5 | done 21 Sep (tested on the work copy) |
-| 14 | Shortage Reporting (manual report creating a `manual_shortage` alert) | Kitchen | 2 | 2.0 | done 21 Sep (tested on the work copy) |
-| 15 | Restaurant Information Management (name, address, contact, opening days and hours) | Admin | 2 | 1.5 | done 21 Sep (tested on the work copy) |
-| 11 | Manage Daily Order | Kitchen | 3 | 3.5 | done 21 Sep (tested on the work copy) |
-| 12 | Record Ingredient Usage | Kitchen | 3 | 3.5 | done 21 Sep (tested on the work copy) |
-| 13 | System Analytics | Admin | 3 | 4.0 | done 21 Sep (tested on the work copy) |
+| 1 | Manage Suppliers | Inventory | 1 | 2.0 | done and deployed 21 Sep |
+| 2 | Stock Adjustment | Inventory | 1 | 2.5 | done and deployed 21 Sep |
+| 3 | Manage Purchase Orders | Inventory | 1 | 7.0 | done and deployed 21 Sep |
+| 4 | Manage Food Availability (toggle on the prep page) | Kitchen | 1 | 1.5 | done and deployed 21 Sep |
+| 5 | Manage Pre-Order | Kitchen | 1 | 4.0 | done and deployed 21 Sep |
+| 6 | Inventory Monitoring and Inventory Demand Forecast Monitoring (admin page) | Admin | 1 | 2.0 | done and deployed 21 Sep |
+| 7 | Request Kitchen Stock and Manage Kitchen Stock Requests | Kitchen, Inventory | 2 | 8.0 | done and deployed 21 Sep |
+| 8 | Validate Inventory Data (consistency check) | Inventory | 2 | 1.5 | done and deployed 21 Sep |
+| 9 | Food Demand Forecast Monitoring (admin forecast tab) | Admin | 2 | 2.0 | done and deployed 21 Sep |
+| 10 | System Reports: inventory and movements, CSV | Admin | 2 | 2.5 | done and deployed 21 Sep |
+| 14 | Shortage Reporting (manual report creating a `manual_shortage` alert) | Kitchen | 2 | 2.0 | done and deployed 21 Sep |
+| 15 | Restaurant Information Management (name, address, contact, opening days and hours) | Admin | 2 | 1.5 | done and deployed 21 Sep |
+| 11 | Manage Daily Order | Kitchen | 3 | 3.5 | done and deployed 21 Sep |
+| 12 | Record Ingredient Usage | Kitchen | 3 | 3.5 | done and deployed 21 Sep |
+| 13 | System Analytics | Admin | 3 | 4.0 | done and deployed 21 Sep |
 
 Functions 14 and 15 were found in a second check of the proposal tables after the first audit. Food Preparation Management is treated as covered by the prep plan decisions plus prepared recording; no separate status workflow is added.
 
