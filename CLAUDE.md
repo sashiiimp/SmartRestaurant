@@ -75,4 +75,3 @@ Service tested, API matches `API.md`, page matches `UI_PLAN.md`, RBAC and archit
 - The project runs on **Python 3.14** (pinned wheels for pandas, scikit-learn, xgboost-cpu install fine; `requirements.txt` has the tested versions).
 - The database is a **private MariaDB 11.8 instance** on port 3307 (`scripts/db.sh start`); the machine also runs an unrelated MariaDB/aaPanel server that this project must not touch. Use portable SQLAlchemy types only. Unit tests use SQLite; concurrency and constraint tests use MariaDB.
 - `pkill -f` patterns can kill the shell that issues them; use `scripts/devserver.sh start|stop` for the dev server.
-- A stray copy of `proposal.pdf` exists at the repo root; `docs/proposal.pdf` is the one referenced.
