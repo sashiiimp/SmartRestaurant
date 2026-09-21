@@ -92,7 +92,7 @@ Abbreviations: **A** admin, **K** kitchen, **I** inventory. **(R)** means read-o
 | `GET /holidays`, `POST /holidays/import` | A | M2 | A15 | CSV, same dry-run contract as sales import |
 | `GET /weather?from=&to=`, `POST /weather/import` | A | M2 | A15 | CSV, same dry-run contract |
 | `GET /forecasts?from=&to=&item_id=` | A K I | M1 | K2, S1 | latest version per item and date. `meta` has `active_model`, `last_run`, and `missing_dates` when a date has no forecast. |
-| `GET /forecasts/accuracy?from=&to=&item_id=` | A | M2 | A9 | per item and overall MAE, WAPE, MAPE, bias, plus a daily forecast-vs-actual series (rule in DATABASE 2.6) |
+| `GET /forecasts/accuracy?from=&to=&item_id=&format=csv` | A | M2 | A9 | per item and overall MAE, WAPE, MAPE, bias, plus a daily forecast-vs-actual series (rule in DATABASE 2.6) |
 | `GET /forecast-runs?limit=` | A | M1 | A9, S1 | includes failed/skipped with `reason` |
 | `POST /forecast-runs` | A | M1 | S1 | `{as_of?, horizon_days?}` (defaults: today, 7). Synchronous, target under 5 s. |
 | `GET /model-versions` | A | M1 | A16 | with metrics summary and active flag |
@@ -126,7 +126,9 @@ Abbreviations: **A** admin, **K** kitchen, **I** inventory. **(R)** means read-o
 | `GET /dashboards/inventory` | I, A(R) | M1 | I1 | |
 | `GET /reports/sales?from=&to=&group_by=day\|week\|month&item_id=` | A | M2 | A8 | rows plus totals plus top/bottom items |
 | `GET /reports/waste?from=&to=&group_by=` | A | M2 | A11 | `food` and `ingredient` returned as two separate sections (assumption A6 in REQUIREMENTS) |
-| `GET /reports/stock-movements?...&format=csv` | A | S | A13 | `format=csv` on any report returns the same rows as a download |
+| `GET /reports/sales` and `/reports/waste` with `format=csv` | A | S (built) | A13 | the CSV is built from the same service rows as the JSON |
+| `GET /settings`, `PUT /settings` | A | S (built) | A6, A7 | thresholds, data-source banner, alert type switches |
+| `GET /reports/stock-movements` | A | S (not built) | A13 | use `GET /stock/movements` |
 
 Reports and pages call the same service method, so a chart, its table and its CSV always agree (A8, A13).
 

@@ -2,6 +2,10 @@
 
 Read after `REQUIREMENTS.md`, `ARCHITECTURE.md`, `DATABASE.md`, `API.md`, `ML_PLAN.md`, `UI_PLAN.md`. Testing is in `TESTING.md`. **No code is written until this plan is approved.**
 
+## 0. Status (21 Sep 2026)
+
+**M1 and M2 are complete and tested** (144 automated tests, 91% service/ML coverage, browser tests of all three roles, all 17 pages checked at 360/768/1280 px; see `TEST_LOG.md`). Stretch items built: CSV download of reports (A13) and the settings and alert configuration page (A6, A7). Not built: pre-orders, availability toggle, expiry page, adjustments, manual shortage report, suppliers/purchase orders, admin inventory overview, server deployment, feature ablation. Actual ML results are in `ML_EVALUATION.md`.
+
 ## 1. Situation
 
 | Item | Value |

@@ -14,7 +14,7 @@ If asked to build something outside M1/M2 of `PLAN.md`, say so and ask before do
 
 ## Status
 
-Planning is complete; **no code exists until the user approves `docs/PLAN.md`.** After approval, work follows the day-by-day slices in `PLAN.md` section 5, and this section is updated with the current day and gate.
+**M1 and M2 of `docs/PLAN.md` are implemented and tested (21 Sep 2026)**; see `docs/PLAN.md` section 0 and `docs/TEST_LOG.md`. Remaining work is only stretch items (PLAN section 3) and report/demo preparation. Keep the fast tests green (`pytest -q -m "not mysql"`) and re-run `python tests/ui/smoke.py all` after UI changes.
 
 ## Commands (available once the slices are built)
 
@@ -27,7 +27,7 @@ flask smartrest generate-data        # synthetic history, loaded through the imp
 flask smartrest train --activate     # trains baselines, RF, XGBoost; prints the comparison
 flask smartrest forecast [--as-of D] [--from D --to D]   # --from/--to = backfill
 flask smartrest alerts
-flask smartrest create-user | set-setting <key> <value>
+flask smartrest create-user | set-setting <key> <value> | demo-reset
 flask run                            # dev server
 pytest -q -m "not mysql"             # fast tests
 pytest -q                            # all tests (needs the smartrest_test database)
@@ -72,6 +72,7 @@ Service tested, API matches `API.md`, page matches `UI_PLAN.md`, RBAC and archit
 
 ## Known environment facts
 
-- The machine has **Python 3.14**; check that scikit-learn, XGBoost and pandas install as binary wheels on day 0, otherwise use Python 3.12.
-- The database server is **MariaDB 11.8** (aaPanel). Use portable SQLAlchemy types only. Unit tests use SQLite; concurrency and constraint tests use MariaDB.
+- The project runs on **Python 3.14** (pinned wheels for pandas, scikit-learn, xgboost-cpu install fine; `requirements.txt` has the tested versions).
+- The database is a **private MariaDB 11.8 instance** on port 3307 (`scripts/db.sh start`); the machine also runs an unrelated MariaDB/aaPanel server that this project must not touch. Use portable SQLAlchemy types only. Unit tests use SQLite; concurrency and constraint tests use MariaDB.
+- `pkill -f` patterns can kill the shell that issues them; use `scripts/devserver.sh start|stop` for the dev server.
 - A stray copy of `proposal.pdf` exists at the repo root; `docs/proposal.pdf` is the one referenced.

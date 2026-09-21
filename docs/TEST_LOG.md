@@ -1,6 +1,6 @@
 # SmartRestaurant: test log
 
-Results of running the plan in `TESTING.md` on 21 Sep 2026 (Python 3.14.4, MariaDB 11.8.6, Chromium 147 via Playwright).
+Results of running the plan in `TESTING.md` on 21 Sep 2026 (Python 3.14.4, MariaDB 11.8.6, Chromium 153 via Playwright).
 Everything below was actually run; nothing is estimated.
 
 ## 1. Automated tests

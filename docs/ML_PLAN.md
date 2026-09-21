@@ -128,7 +128,7 @@ Postponed: hyperparameter search, feature ablation, prediction intervals, per-it
  "per_item": {"1": {"naive_lag7": {}, "<winner>": {}}},
  "holdout_rows": 560,
  "oracle_mae": 0,
- "feature_importance": [{"feature": "lag_7", "importance": 0.0}]}
+ "feature_importance": [{"feature": "lag_7", "importance": 0.0}]}   // one-hot item columns are summed into "menu_item (which item)"
 ```
 
 **Acceptance criteria**
@@ -152,7 +152,7 @@ Live monitoring (A9) recomputes MAE, WAPE, MAPE and bias from stored forecasts a
 4. In one transaction: insert `forecasts` (with `input_snapshot`), flip `is_latest` on the previous rows for those (item, date), set the run's status, reason and counts.
 5. Return the run summary. The CLI then calls alert evaluation (ARCH section 6).
 
-**Backfill** (`flask smartrest forecast --from D1 --to D2`): one single-day run per date with `as_of = that date`, `trigger = backfill`, `use_estimated_weather = true`. This fills the past 4 to 8 weeks with out-of-sample forecasts so the A9 forecast-vs-actual chart is populated on demo day. Run it after `train --activate`.
+**Backfill** (`flask smartrest forecast --from D1 --to D2`): one single-day run per date with `as_of = that date`, `trigger = backfill`, `use_estimated_weather = true`. This fills the past 56 days so the A9 forecast-vs-actual chart is populated on demo day. **Backfill uses `eval_model`, the copy fitted on the training period only** (the shipped model is refit on all history and has seen those days), so forecasts for the hold-out days are genuinely out-of-sample. Run it after `train --activate`.
 
 Retraining is manual (`flask smartrest train`, or the admin button), recommended weekly once real data flows. Rollback = activate the previous version. There is no scheduler (ARCH D6).
 

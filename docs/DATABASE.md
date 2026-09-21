@@ -6,7 +6,7 @@ Read `REQUIREMENTS.md` (story IDs) and `ARCHITECTURE.md` first. Tier labels (M1,
 
 | # | Decision |
 |---|---|
-| DB1 | **DBMS.** The proposal says MySQL. The server on this machine is **MariaDB 11.8** (aaPanel), which is MySQL-compatible for everything used here (InnoDB, DECIMAL, CHECK, JSON as text). Models use only portable SQLAlchemy types so the same code runs on SQLite (unit tests) and MySQL/MariaDB (integration tests, demo). |
+| DB1 | **DBMS.** The proposal says MySQL. The server used is **MariaDB 11.8**, run as a private instance for this project on port 3307 (`scripts/db.sh`, data under `.mariadb/`, so it never touches the other databases on the machine); it is MySQL-compatible for everything used here (InnoDB, DECIMAL, CHECK, JSON as text). MariaDB reports CHECK failures as OperationalError 4025 and, with snapshot isolation, can fail a locking read with 1020 (services retry). Models use only portable SQLAlchemy types so the same code runs on SQLite (unit tests) and MySQL/MariaDB (integration tests, demo). |
 | DB2 | Charset `utf8mb4`, engine InnoDB. Timestamps are UTC `DATETIME`; business dates are `DATE` in Asia/Colombo (ARCH D7). |
 | DB3 | Primary keys are integer auto-increment (`BIGINT` on high-volume tables: sales, movements, forecasts, prep, waste). Enumerations are `VARCHAR` plus a `CHECK` constraint (portable; no native ENUM). |
 | DB4 | **Money** `DECIMAL(12,2)` (LKR). **Ingredient quantities** `DECIMAL(12,3)`. **Recipe quantities** `DECIMAL(12,4)`. **Portions** (sold, prepared, wasted) are `INT`. **Forecast quantity** is `DECIMAL(10,2)`. No floats for stock or money. |
