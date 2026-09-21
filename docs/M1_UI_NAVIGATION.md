@@ -1,5 +1,9 @@
-<!-- Capture note (delete before submission): every file currently in docs/screenshots/ was taken BEFORE the UI redesign
-     (top navigation bar). Figures 1-10 below must be re-captured from the current sidebar layout at 1280 px width. -->
+<!-- Notes for the team (delete before submission):
+     1. Every file currently in docs/screenshots/ was taken BEFORE the UI redesign (top navigation bar) and none exists for the
+        pages added on 21 Sep 2026. All figures in section 5 must be captured again, at 1280 px width, from the live demo.
+     2. Sections 2 to 4 (page tables and navigation flows) still describe the interface as it was before 21 Sep and do not yet list
+        the new pages (Administrator: Inventory; Food Production: Orders, Stock requests; Inventory & Procurement: Purchase orders,
+        Kitchen requests, Suppliers). Update them before submission. -->
 
 # Milestone 1: User Interfaces and Navigation
 
@@ -92,19 +96,32 @@ Login → Dashboard → Stock → Ingredient demand → Reorder → Record stock
 
 ## 5. Screenshots for the Milestone 1 report
 
-Ten screenshots are recommended, three to four per role, taken at 1280 px width from the current interface, using the seeded synthetic data. The file names are those used by `tests/ui/smoke.py`. Figure 1 has no existing file name.
+Nineteen figures are recommended, grouped by role in the order a reader meets the system. Sixteen are core; the three marked *optional* can be dropped if space is short (renumber the rest). Take them at 1280 px width from the running demo with a full-page capture, and keep the "Synthetic demo data" label in view. Old files in `docs/screenshots/` must not be used: they show the previous layout, and there are none for the new pages.
 
-| Figure | Screenshot (file) | Caption |
-|---|---|---|
-| 1 | Login page (`login.png`, new) | **Figure 1:** Login page. All roles sign in here and are redirected to their own dashboard. |
-| 2 | `a_dashboard.png` | **Figure 2:** Administrator dashboard (System overview) with summary tiles, sales and waste trend, alerts by severity, open alerts and model status. |
-| 3 | `a_models.png` | **Figure 3:** Administrator Models page showing the active model, the model comparison table, versions and forecast runs. |
-| 4 | `k_dashboard.png` | **Figure 4:** Food Production dashboard showing the daily plan, ingredient shortages and alerts. |
-| 5 | `k_forecast.png` | **Figure 5:** Food Production 7-day demand forecast by menu item, with the forecast chart. |
-| 6 | `k_prep.png` | **Figure 6:** Preparation plan with the recommended quantity per item and the Accept and Override actions. |
-| 7 | `k_requirements.png` | **Figure 7:** Ingredient requirements against usable stock, with shortages highlighted. |
-| 8 | `i_dashboard.png` | **Figure 8:** Inventory & Procurement dashboard showing stock status, reorder suggestions, expiring batches and alerts. |
-| 9 | `i_movements.png` | **Figure 9:** Record stock page for stock in, stock out and wastage, with movement history and batches. |
-| 10 | `i_reorder.png` | **Figure 10:** Reorder suggestions with the calculation shown for each ingredient. |
+**Capture them during one run of the demo script** (`DEMO_NEW_FEATURES.md`): the states below occur naturally in that order, and no extra data has to be invented. The "Demo step" column says when to press the key.
 
-Other screenshots are available if space allows: `a_monitor_sales.png` and `a_monitor_forecast.png` (Monitoring), `a_data.png`, `a_catalog.png`, `a_users.png`, `i_stock.png`, `i_forecast.png`, `k_record.png` and `k_prep_after.png` (a plan after an item is accepted).
+| Fig | Role and page | Must be visible (set the screen up like this) | Demo step | Caption | |
+|---|---|---|---|---|---|
+| 1 | Logged out, `/login` | The whole split layout with the "Welcome back" form. | none | **Figure 1:** Login page. Every role signs in here and is sent to its own dashboard. | core |
+| 2 | Administrator, `/admin` | Sidebar with all eight links, the four tiles, sales and waste trend, alerts chart, alert list, model card. | after 3.1 | **Figure 2:** Administrator dashboard (System overview). | core |
+| 3 | Administrator, `/admin/models` | Active model card with the comparison table, Train and Run buttons (not pressed), versions and forecast runs. | any | **Figure 3:** Forecast models page: the active model, the comparison against the baselines, versions and forecast runs. | core |
+| 4 | Administrator, `/admin/inventory` | *Stock levels* tab: the four status tiles, the table and the *Download stock levels (CSV)* button. | 3.2 | **Figure 4:** Read-only inventory overview for the Administrator (stock levels, ingredient demand, batches, movements). | core |
+| 5 | Administrator, `/admin/monitor`, **Analytics** tab | Both bar charts and both line charts, the period and data-source line, and the "does not prove" note. | 3.5 | **Figure 5:** Analytics: demand by weekday, holiday and promotion days against ordinary days, forecast error and waste rate over time. | core |
+| 6 | Administrator, `/admin/settings` | The **Restaurant information** card filled in, and the restaurant name showing in the sidebar. | 3.8 | **Figure 6:** Restaurant information and settings. | optional |
+| 7 | Food Production, `/kitchen` | Sidebar with seven links, four tiles, the chart, today's plan table, shortages and alerts. | before 1.1 | **Figure 7:** Food Production dashboard: the day's plan, ingredient shortages and alerts. | core |
+| 8 | Food Production, `/kitchen/forecast` | Model and last-run line, the item-by-day table with the `*` and `P` legend, the chart with the item selector. | any | **Figure 8:** Seven-day demand forecast by menu item. | core |
+| 9 | Food Production, `/kitchen/prep` | Item cards with *Confirmed pre-orders*, recommended quantity, Accept and Override, and one card showing the red *Unavailable* badge with its *Mark available* button. | 1.1 | **Figure 9:** Preparation plan with the recommendation, pre-orders and the availability control. | core |
+| 10 | Food Production, `/kitchen/orders` | *Pre-orders* tab with two rows: the pending one and the confirmed one (Chicken Burger, 120). | 1.4 | **Figure 10:** Orders: pre-orders (confirmed ones raise the preparation quantity) and, on the second tab, daily orders. | core |
+| 11 | Food Production, `/kitchen/requirements` | The Chicken row in red (short by 9.28 kg) with *Request stock* and *Report shortage*, other rows sufficient. | 1.7 | **Figure 11:** Ingredient requirements against usable stock, with shortages highlighted and the request and report actions. | core |
+| 12 | Food Production, `/kitchen/stock-requests` | Two request cards: one *Pending* and one *Rejected* showing the reason. Capture after Scene 2 step 2. | after 2.2 | **Figure 12:** Kitchen stock requests with their status and the inventory manager's reject reason. | core |
+| 13 | Food Production, `/kitchen/record` | The **Ingredient usage** card with one row saved (expected, actual, +0.22 difference, note). | 1.6 | **Figure 13:** Ingredient usage: expected use (prepared x recipe) against the amount actually used. | optional |
+| 14 | Inventory & Procurement, `/inventory` | Sidebar with eight links, the four tiles, the **Kitchen requests** card showing a count, reorder table, alerts including the Potato shortage report. | 2.1 | **Figure 14:** Inventory & Procurement dashboard with stock status, reorder suggestions, kitchen requests and alerts. | core |
+| 15 | Inventory & Procurement, `/inventory/movements`, **Adjustment** tab | The tab open with the ingredient chosen, *System on hand* and the live *difference*, and the movement history beside it. | 2.8 | **Figure 15:** Record stock, with the Adjustment tab (counted quantity against the system quantity, reason required). | core |
+| 16 | Inventory & Procurement, `/inventory/reorder` | Both rows ticked and the *Create purchase orders (2 suppliers)* button. Take it before pressing the button. | 2.4 | **Figure 16:** Reorder suggestions with the calculation shown, and purchase orders created per supplier. | core |
+| 17 | Inventory & Procurement, `/inventory/purchase-orders` | The Chicken order open, status *Partially received*, lines ordered, received and outstanding, plus the order list beneath. | 2.5 | **Figure 17:** Purchase orders: status, received and outstanding quantities, and stock receipt. | core |
+| 18 | Inventory & Procurement, `/inventory/requests` | A request open in the detail card with the *Issue stock* form (per-line quantity, usable stock), and the request list beneath. | 2.3, before pressing Issue | **Figure 18:** Kitchen requests handled by the inventory manager: approve, reject with a reason, or issue stock. | core |
+| 19 | Inventory & Procurement, `/inventory/suppliers` | Supplier table with one *Inactive* supplier. | 2.10 | **Figure 19:** Supplier management. | optional |
+
+File names: `fig01_login.png` to `fig19_suppliers.png` (for example `fig10_kitchen_orders.png`), so they line up with the captions.
+
+**Also available if there is room:** the Stock page with the **Data check** panel showing "No problems found" (2.9); Monitoring *Inventory* (closing stock trend) and *Stock movements* tabs with the linked `purchase_order #` and `stock_request #` references (3.6, 3.7); the Monitoring *Demand forecast* tab (3.3).
