@@ -1,6 +1,46 @@
 {% extends "base.html" %}
 {% block title %}Inventory - SmartRestaurant{% endblock %}
 {% block content %}
-<h1 class="h4">Inventory dashboard</h1>
-<p class="text-muted">Placeholder: this page is built in a later slice.</p>
+<div id="app" v-cloak>
+  <h1 class="h4 mb-3">Inventory and purchasing</h1>
+  <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
+  <div v-if="loading" class="text-center py-5"><div class="spinner-border" role="status"><span class="visually-hidden">Loading</span></div></div>
+  <template v-else-if="d">
+    <div class="row g-3 mb-3">
+      <div class="col-6 col-lg-3"><sr-stat-tile label="Stock OK" :value="d.counts.ok" tone="success" href="/inventory/stock"></sr-stat-tile></div>
+      <div class="col-6 col-lg-3"><sr-stat-tile label="Low" :value="d.counts.low" :tone="d.counts.low ? 'warning' : ''" href="/inventory/stock"></sr-stat-tile></div>
+      <div class="col-6 col-lg-3"><sr-stat-tile label="Out of stock" :value="d.counts.out" :tone="d.counts.out ? 'danger' : ''" href="/inventory/stock"></sr-stat-tile></div>
+      <div class="col-6 col-lg-3"><sr-stat-tile label="Open alerts" :value="d.alert_counts.critical + d.alert_counts.warning" :hint="d.alert_counts.critical + ' critical'"></sr-stat-tile></div>
+    </div>
+    <div class="row g-3">
+      <div class="col-12 col-xl-7">
+        <div class="card mb-3"><div class="card-body">
+          <div class="d-flex justify-content-between"><h2 class="h6">Reorder now (top 5)</h2><a href="/inventory/reorder" class="small">All suggestions</a></div>
+          <sr-empty v-if="!d.reorder.length" message="Nothing to reorder."></sr-empty>
+          <div v-else class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Ingredient</th><th class="text-end">Suggested</th><th>Supplier</th></tr></thead>
+            <tbody><tr v-for="r in d.reorder" :key="r.ingredient_id"><td>[[ r.name ]]</td><td class="text-end">[[ ui.qty(r.suggested_qty, r.unit) ]]</td><td>[[ r.supplier ]] <span class="text-muted small">([[ r.lead_time_days ]] d)</span></td></tr></tbody></table></div>
+        </div></div>
+        <div class="card mb-3"><div class="card-body">
+          <h2 class="h6">Next 7 days: need vs usable stock</h2>
+          <div v-for="r in d.need_vs_stock" :key="r.name" class="mb-2">
+            <div class="d-flex justify-content-between small"><span>[[ r.name ]]</span><span>need [[ ui.qty(r.need, r.unit) ]] &middot; have [[ ui.qty(r.usable, r.unit) ]]</span></div>
+            <div class="progress" style="height: 10px" role="img" :aria-label="r.name + ' need versus stock'">
+              <div class="progress-bar bg-secondary" :style="{ width: (r.usable / maxNeed * 100) + '%' }"></div></div>
+            <div class="progress mt-1" style="height: 10px"><div class="progress-bar" :class="r.need > r.usable ? 'bg-danger' : 'bg-success'" :style="{ width: (r.need / maxNeed * 100) + '%' }"></div></div>
+          </div>
+          <div class="small text-muted">Grey = usable stock, coloured = 7-day need (red when stock will not cover it).</div>
+        </div></div>
+        <div class="card"><div class="card-body">
+          <h2 class="h6">Expiring soon</h2>
+          <sr-empty v-if="!d.expiring.length" message="No batches expiring in the next 3 days."></sr-empty>
+          <div v-else class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Ingredient</th><th>Batch</th><th class="text-end">Qty</th><th>Expiry</th></tr></thead>
+            <tbody><tr v-for="b in d.expiring" :key="b.id" :class="b.expired ? 'table-danger' : ''"><td>[[ b.ingredient ]]</td><td>[[ b.batch_no ]]</td><td class="text-end">[[ ui.qty(b.qty_remaining, b.unit) ]]</td>
+              <td>[[ ui.date(b.expiry_date) ]] <span v-if="b.expired" class="badge text-bg-danger">expired</span></td></tr></tbody></table></div>
+        </div></div>
+      </div>
+      <div class="col-12 col-xl-5"><div class="card"><div class="card-body"><h2 class="h6">Alerts</h2><sr-alert-list :alerts="d.alerts" @acknowledge="ack"></sr-alert-list></div></div></div>
+    </div>
+  </template>
+</div>
 {% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/pages/inventory_dashboard.js') }}"></script>{% endblock %}

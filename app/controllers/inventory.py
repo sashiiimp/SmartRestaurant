@@ -10,3 +10,23 @@ bp.before_request(role_guard("inventory"))
 @bp.route("")
 def dashboard():
     return render_template("inventory/dashboard.html")
+
+
+@bp.route("/stock")
+def stock():
+    return render_template("inventory/stock.html")
+
+
+@bp.route("/movements")
+def movements():
+    return render_template("inventory/movements.html")
+
+
+@bp.route("/forecast")
+def forecast():
+    return render_template("inventory/forecast.html")
+
+
+@bp.route("/reorder")
+def reorder():
+    return render_template("inventory/reorder.html")

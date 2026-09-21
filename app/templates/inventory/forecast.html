@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Ingredient demand - SmartRestaurant{% endblock %}
+{% block content %}
+<div id="app" v-cloak>
+  <h1 class="h4 mb-1">Ingredient demand, next 7 days</h1>
+  <p class="text-muted small">Forecast portions x recipes, using the recommended (or accepted) preparation quantities.</p>
+  <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
+  <div v-if="loading" class="text-center py-5"><div class="spinner-border" role="status"><span class="visually-hidden">Loading</span></div></div>
+  <template v-else-if="f">
+    <sr-empty v-if="!rows.length" message="No ingredient forecast yet. The forecast may not have been run."></sr-empty>
+    <div v-else class="table-responsive"><table class="table table-sm align-middle">
+      <thead><tr><th>Ingredient</th><th class="text-end">Usable now</th><th v-for="d in days" :key="d" class="text-end">[[ ui.date(d) ]]</th><th class="text-end">7-day need</th><th class="text-end">Days of cover</th><th>Runs short</th></tr></thead>
+      <tbody><tr v-for="r in rows" :key="r.ingredient_id" :class="r.first_shortfall_date ? 'table-warning' : ''">
+        <td>[[ r.name ]]</td><td class="text-end">[[ ui.qty(r.usable_stock, r.unit) ]]</td>
+        <td v-for="(n, i) in r.daily" :key="i" class="text-end">[[ ui.num(n, 1) ]]</td>
+        <td class="text-end">[[ ui.qty(r.total_need, r.unit) ]]</td><td class="text-end">[[ r.days_of_cover === null ? '-' : (r.days_of_cover > 99 ? '>99' : r.days_of_cover) ]]</td>
+        <td>[[ r.first_shortfall_date ? ui.date(r.first_shortfall_date) : '' ]]</td></tr></tbody></table></div>
+    <div v-if="f.unknown_items.length" class="alert alert-warning">Unknown demand (no recipe): [[ f.unknown_items.map(i => i.name).join(', ') ]]</div>
+  </template>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/pages/inventory_forecast.js') }}"></script>{% endblock %}

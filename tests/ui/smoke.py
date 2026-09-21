@@ -69,7 +69,7 @@ def kitchen(browser):
     visit(page, "/kitchen/prep", "k_prep_after", wait=".card-item")
     assert page.locator(".card-item.accepted").count() == 1 and page.locator(".card-item.overridden").count() == 1
     visit(page, "/kitchen/record", "k_record", wait="#w-item")
-    page.locator("input[id^=s]").first.fill("30")
+    page.locator("input[id^=s]").first.fill("999")
     page.get_by_role("button", name="Save served quantities").click()
     page.wait_for_selector("text=served above prepared", timeout=5000)
     page.fill("#w-qty", "-4")
@@ -79,7 +79,46 @@ def kitchen(browser):
     page.get_by_role("button", name="Record waste").click()
     page.wait_for_selector("text=Waste recorded", timeout=5000)
     assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth + 1"), "horizontal scroll at 390px"
+    visit(page, "/kitchen", "k_dashboard", wait=".stat-tile")
+    assert page.locator(".stat-tile").count() == 4
+    visit(page, "/kitchen/requirements", "k_requirements", wait="table")
+    assert "Chicken" in page.locator("tr.table-danger").first.inner_text(), "chicken should be short today"
     r = page.goto(BASE + "/admin")
+    assert r.status == 403, r.status
+    ctx.close()
+
+
+def inventory(browser):
+    ctx = browser.new_context(viewport={"width": 1280, "height": 900})
+    page = ctx.new_page()
+    login(page, "inventory1")
+    assert page.url.endswith("/inventory"), page.url
+    visit(page, "/inventory", "i_dashboard", wait=".stat-tile")
+    assert "Chicken" in page.inner_text("main"), "chicken alert/reorder expected on the dashboard"
+    visit(page, "/inventory/stock", "i_stock", wait="table tbody tr")
+    assert page.locator("table tbody tr").count() >= 20
+    page.get_by_role("button", name="Add ingredient").click()
+    page.get_by_role("button", name="Save", exact=True).click()
+    page.wait_for_selector("text=is required", timeout=4000)
+    page.get_by_role("button", name="Cancel").click()
+    visit(page, "/inventory/movements", "i_movements", wait="#m-ing")
+    page.select_option("#m-ing", label="Chicken (kg)")
+    page.fill("#m-qty", "100")
+    page.get_by_role("button", name="Save", exact=True).click()
+    page.wait_for_selector("text=Usable stock is now", timeout=5000)
+    page.get_by_role("button", name="Stock out").click()
+    page.select_option("#m-ing", label="Potato (kg)")
+    page.fill("#m-qty", "9999")
+    page.get_by_role("button", name="Save", exact=True).click()
+    page.wait_for_selector("text=available", timeout=5000)
+    page.get_by_role("button", name="Wastage").click()
+    page.select_option("#m-ing", label="Chicken (kg)")
+    page.fill("#m-qty", "5")
+    page.get_by_role("button", name="Save", exact=True).click()
+    page.wait_for_selector("text=Saved", timeout=5000)
+    visit(page, "/inventory/forecast", "i_forecast", wait="table tbody tr")
+    visit(page, "/inventory/reorder", "i_reorder", wait="table, .text-center")
+    r = page.goto(BASE + "/kitchen")
     assert r.status == 403, r.status
     ctx.close()
 

@@ -1,6 +1,43 @@
 {% extends "base.html" %}
 {% block title %}Kitchen - SmartRestaurant{% endblock %}
 {% block content %}
-<h1 class="h4">Kitchen dashboard</h1>
-<p class="text-muted">Placeholder: this page is built in a later slice.</p>
+<div id="app" v-cloak>
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <h1 class="h4 m-0">Kitchen: [[ ui.date(date) ]]</h1>
+    <sr-date-nav v-model="date" @change="load"></sr-date-nav>
+  </div>
+  <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
+  <div v-if="loading" class="text-center py-5"><div class="spinner-border" role="status"><span class="visually-hidden">Loading</span></div></div>
+  <template v-else-if="d">
+    <div class="row g-3 mb-3">
+      <div class="col-6 col-lg-3"><sr-stat-tile label="Items to prepare" :value="d.tiles.items_to_prepare" href="/kitchen/prep"></sr-stat-tile></div>
+      <div class="col-6 col-lg-3"><sr-stat-tile label="Prepared / planned" :value="d.tiles.prepared_total + ' / ' + d.tiles.planned_total"></sr-stat-tile></div>
+      <div class="col-6 col-lg-3"><sr-stat-tile label="Ingredient shortages" :value="d.tiles.shortage_count" :tone="d.tiles.shortage_count ? 'danger' : ''" href="/kitchen/requirements"></sr-stat-tile></div>
+      <div class="col-6 col-lg-3"><sr-stat-tile label="Open alerts" :value="d.tiles.open_alerts" :tone="d.tiles.open_alerts ? 'warning' : ''"></sr-stat-tile></div>
+    </div>
+    <div class="row g-3">
+      <div class="col-12 col-xl-8">
+        <div class="card"><div class="card-body">
+          <div class="d-flex justify-content-between"><h2 class="h6">Today's plan</h2><a href="/kitchen/prep" class="small">Open prep plan</a></div>
+          <div class="table-responsive"><table class="table table-sm align-middle mb-0">
+            <thead><tr><th>Item</th><th class="text-end">Forecast</th><th class="text-end">Recommended</th><th class="text-end">Final</th><th class="text-end">Prepared</th><th>Status</th></tr></thead>
+            <tbody><tr v-for="r in d.plan" :key="r.menu_item_id">
+              <td>[[ r.name ]]</td><td class="text-end">[[ ui.num(r.forecast_qty, 1) ]]</td><td class="text-end">[[ r.recommended_qty ]]</td>
+              <td class="text-end">[[ r.final_qty === null ? '-' : r.final_qty ]]</td><td class="text-end">[[ r.prepared ]]</td>
+              <td><sr-status-badge :status="r.status"></sr-status-badge></td></tr></tbody></table></div>
+        </div></div>
+      </div>
+      <div class="col-12 col-xl-4">
+        <div class="card mb-3"><div class="card-body">
+          <h2 class="h6">Ingredient shortages</h2>
+          <sr-empty v-if="!d.shortages.length" message="No shortages for this plan."></sr-empty>
+          <ul v-else class="list-group list-group-flush"><li class="list-group-item" v-for="s in d.shortages" :key="s.ingredient_id">
+            <strong>[[ s.name ]]</strong> short by [[ ui.qty(s.short_by, s.unit) ]] <span class="text-muted small">(need [[ ui.qty(s.required, s.unit) ]], have [[ ui.qty(s.usable_stock, s.unit) ]])</span></li></ul>
+        </div></div>
+        <div class="card"><div class="card-body"><h2 class="h6">Alerts</h2><sr-alert-list :alerts="d.alerts" @acknowledge="ack"></sr-alert-list></div></div>
+      </div>
+    </div>
+  </template>
+</div>
 {% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/pages/kitchen_dashboard.js') }}"></script>{% endblock %}

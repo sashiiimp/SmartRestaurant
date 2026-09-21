@@ -2,9 +2,10 @@
 
 NAV = {
     "admin": [("Dashboard", "/admin")],
-    "kitchen": [("Dashboard", "/kitchen"), ("Prep plan", "/kitchen/prep"), ("Forecast", "/kitchen/forecast"),
+    "kitchen": [("Dashboard", "/kitchen"), ("Prep plan", "/kitchen/prep"), ("Forecast", "/kitchen/forecast"), ("Ingredients", "/kitchen/requirements"),
                 ("Served & waste", "/kitchen/record")],
-    "inventory": [("Dashboard", "/inventory")],
+    "inventory": [("Dashboard", "/inventory"), ("Stock", "/inventory/stock"), ("Record stock", "/inventory/movements"),
+                  ("Ingredient demand", "/inventory/forecast"), ("Reorder", "/inventory/reorder")],
 }
 
 

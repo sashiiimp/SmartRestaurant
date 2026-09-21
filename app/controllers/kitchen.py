@@ -25,3 +25,8 @@ def prep():
 @bp.route("/record")
 def record():
     return render_template("kitchen/record.html")
+
+
+@bp.route("/requirements")
+def requirements():
+    return render_template("kitchen/requirements.html")

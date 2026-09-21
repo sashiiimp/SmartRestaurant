@@ -2,8 +2,11 @@
 from datetime import date
 
 from app.extensions import db
-from app.models import FoodWaste, PreparationRecord, SalesRecord
+from app.models import FoodWaste
+from app.services import alert_service
+from app.services import inventory_service as inv
 from app.services import recommendation_service as rec
+from app.utils.dates import today
 
 
 def kitchen_daily_summary(outlet_id: int, day: date) -> dict:
@@ -23,3 +26,34 @@ def kitchen_daily_summary(outlet_id: int, day: date) -> dict:
                      "recommended_qty": r["recommended_qty"], "final_qty": r["final_qty"], "status": r["status"],
                      "prepared": r["prepared_so_far"], "served": r["served_so_far"], "wasted": wasted, "flags": flags})
     return {"date": day.isoformat(), "items": rows}
+
+
+# ---- K1, I1 dashboards ---------------------------------------------------------------------------------
+def kitchen_dashboard(outlet_id: int, day: date, role: str = "kitchen") -> dict:
+    summary = kitchen_daily_summary(outlet_id, day)
+    reqs = rec.get_requirements(outlet_id, day)
+    alerts = alert_service.list_alerts(outlet_id, role)
+    rows = summary["items"]
+    planned = sum((r["final_qty"] if r["final_qty"] is not None else (r["recommended_qty"] or 0)) for r in rows)
+    shorts = [r for r in reqs["ingredients"] if r["status"] == "short"]
+    return {"date": day.isoformat(),
+            "tiles": {"items_to_prepare": sum(1 for r in rows if (r["recommended_qty"] or 0) > 0),
+                      "planned_total": planned, "prepared_total": sum(r["prepared"] for r in rows),
+                      "shortage_count": len(shorts), "open_alerts": len(alerts["rows"])},
+            "plan": rows, "shortages": shorts, "cannot_compute": reqs["cannot_compute"], "alerts": alerts["rows"][:8]}
+
+
+def inventory_dashboard(outlet_id: int, role: str = "inventory") -> dict:
+    day = today()
+    levels = inv.stock_levels(outlet_id, day)
+    counts = {"ok": 0, "low": 0, "out": 0}
+    for r in levels:
+        counts[r["status"]] += 1
+    alerts = alert_service.list_alerts(outlet_id, role)
+    forecast = rec.get_ingredient_forecast(outlet_id, day, 7)
+    need_vs_stock = sorted(({"name": r["name"], "unit": r["unit"], "need": r["total_need"], "usable": r["usable_stock"]}
+                            for r in forecast["ingredients"] if r["total_need"] > 0),
+                           key=lambda r: r["usable"] - r["need"])[:10]
+    return {"date": day.isoformat(), "counts": counts, "alerts": alerts["rows"][:8], "alert_counts": alerts["counts"],
+            "reorder": rec.get_reorder_suggestions(outlet_id, day)[:5], "need_vs_stock": need_vs_stock,
+            "expiring": inv.list_batches(outlet_id, expiring_within_days=3)[:10]}

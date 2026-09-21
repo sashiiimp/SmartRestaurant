@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Stock movements - SmartRestaurant{% endblock %}
+{% block content %}
+<div id="app" v-cloak>
+  <h1 class="h4 mb-3">Record stock</h1>
+  <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
+  <div class="row g-4">
+    <div class="col-12 col-lg-5">
+      <div class="card"><div class="card-body">
+        <ul class="nav nav-pills mb-3" role="tablist">
+          <li class="nav-item"><button class="nav-link" :class="{ active: tab === 'in' }" type="button" @click="tab = 'in'; errors = {}">Stock in</button></li>
+          <li class="nav-item"><button class="nav-link" :class="{ active: tab === 'out' }" type="button" @click="tab = 'out'; errors = {}">Stock out</button></li>
+          <li class="nav-item"><button class="nav-link" :class="{ active: tab === 'wastage' }" type="button" @click="tab = 'wastage'; errors = {}">Wastage</button></li>
+        </ul>
+        <div class="mb-2"><label class="form-label" for="m-ing">Ingredient</label>
+          <select id="m-ing" class="form-select" v-model.number="form.ingredient_id"><option v-for="i in ingredients" :key="i.id" :value="i.id">[[ i.name ]] ([[ i.unit ]])</option></select>
+          <sr-field-error :errors="errors" name="ingredient_id"></sr-field-error></div>
+        <div class="mb-2"><label class="form-label" for="m-qty">Quantity [[ unit ? '(' + unit + ')' : '' ]]</label>
+          <input id="m-qty" class="form-control" inputmode="decimal" v-model="form.quantity"><sr-field-error :errors="errors" name="quantity"></sr-field-error></div>
+        <template v-if="tab === 'in'">
+          <div class="row g-2 mb-2">
+            <div class="col-6"><label class="form-label" for="m-rec">Date received</label><input id="m-rec" type="date" class="form-control" v-model="form.received_date"><sr-field-error :errors="errors" name="received_date"></sr-field-error></div>
+            <div class="col-6"><label class="form-label" for="m-exp">Expiry date</label><input id="m-exp" type="date" class="form-control" v-model="form.expiry_date"><sr-field-error :errors="errors" name="expiry_date"></sr-field-error></div>
+            <div class="col-6"><label class="form-label" for="m-batch">Batch number</label><input id="m-batch" class="form-control" v-model="form.batch_no"></div>
+            <div class="col-6"><label class="form-label" for="m-cost">Unit cost (LKR)</label><input id="m-cost" class="form-control" inputmode="decimal" v-model="form.unit_cost"><sr-field-error :errors="errors" name="unit_cost"></sr-field-error></div>
+          </div>
+        </template>
+        <template v-else>
+          <div class="row g-2 mb-2">
+            <div class="col-6"><label class="form-label" for="m-date">Date</label><input id="m-date" type="date" class="form-control" v-model="form.movement_date"><sr-field-error :errors="errors" name="movement_date"></sr-field-error></div>
+            <div class="col-6"><label class="form-label" for="m-reason">Reason</label>
+              <select id="m-reason" class="form-select" v-model="form.reason">
+                <template v-if="tab === 'out'"><option value="issued_to_kitchen">Issued to kitchen</option><option value="other">Other</option></template>
+                <template v-else><option value="expired">Expired</option><option value="damaged">Damaged</option><option value="spoiled">Spoiled</option><option value="other">Other</option></template>
+              </select><sr-field-error :errors="errors" name="reason"></sr-field-error></div>
+          </div>
+        </template>
+        <button class="btn btn-primary" type="button" :disabled="saving" @click="save">Save</button>
+      </div></div>
+    </div>
+    <div class="col-12 col-lg-7">
+      <div class="d-flex align-items-center gap-2 mb-2"><label for="filter-ing" class="form-label m-0">Show</label>
+        <select id="filter-ing" class="form-select" style="max-width: 16rem" v-model="filterIng" @change="refresh"><option value="">All ingredients</option><option v-for="i in ingredients" :key="i.id" :value="i.id">[[ i.name ]]</option></select></div>
+      <h2 class="h6">Movement history <span class="text-muted small">([[ total ]] total, latest 30)</span></h2>
+      <div class="table-responsive mb-4" style="max-height: 22rem; overflow: auto"><table class="table table-sm">
+        <thead><tr><th>Date</th><th>Ingredient</th><th>Type</th><th class="text-end">Quantity</th><th>Reason</th></tr></thead>
+        <tbody><tr v-for="m in moves" :key="m.id"><td>[[ ui.date(m.date) ]]</td><td>[[ m.ingredient ]]</td><td>[[ m.type.replace('_', ' ') ]]</td>
+          <td class="text-end" :class="m.quantity < 0 ? 'text-danger' : 'text-success'">[[ m.quantity > 0 ? '+' : '' ]][[ ui.qty(m.quantity, m.unit) ]]</td><td>[[ (m.reason || '').replace('_', ' ') ]]</td></tr></tbody></table></div>
+      <h2 class="h6">Batches in stock (earliest expiry first)</h2>
+      <div class="table-responsive" style="max-height: 18rem; overflow: auto"><table class="table table-sm">
+        <thead><tr><th>Ingredient</th><th>Batch</th><th class="text-end">Remaining</th><th>Expiry</th></tr></thead>
+        <tbody><tr v-for="b in batches" :key="b.id" :class="b.expired ? 'table-danger' : ''"><td>[[ b.ingredient ]]</td><td>[[ b.batch_no ]]</td><td class="text-end">[[ ui.qty(b.qty_remaining, b.unit) ]]</td>
+          <td>[[ b.expiry_date ? ui.date(b.expiry_date) : 'none' ]] <span v-if="b.expired" class="badge text-bg-danger">expired</span></td></tr></tbody></table></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/pages/inventory_movements.js') }}"></script>{% endblock %}
