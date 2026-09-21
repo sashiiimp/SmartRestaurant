@@ -123,6 +123,60 @@ def inventory(browser):
     ctx.close()
 
 
+def admin(browser):
+    import datetime
+    import tempfile
+
+    ctx = browser.new_context(viewport={"width": 1280, "height": 900})
+    page = ctx.new_page()
+    page.on("dialog", lambda d: d.accept())
+    login(page, "admin")
+    assert page.url.endswith("/admin"), page.url
+    visit(page, "/admin", "a_dashboard", wait=".stat-tile")
+    assert page.locator(".stat-tile").count() == 4
+    visit(page, "/admin/monitor", "a_monitor_sales", wait="canvas")
+    page.get_by_role("button", name="Forecast accuracy").click()
+    page.wait_for_selector("text=Forecasts compared", timeout=8000)
+    page.screenshot(path=os.path.join(SHOTS, "a_monitor_forecast.png"), full_page=True)
+    page.get_by_role("button", name="Waste", exact=True).click()
+    page.wait_for_selector("text=Prepared-food waste", timeout=8000)
+    visit(page, "/admin/models", "a_models", wait=".card")
+    page.get_by_role("button", name="Train new model").click()
+    page.wait_for_selector("text=Trained v", timeout=90000)
+    page.get_by_role("button", name="Activate").first.click()
+    page.wait_for_selector("text=is now active", timeout=8000)
+    page.get_by_role("button", name="Run forecast now").click()
+    page.wait_for_selector("text=Forecast run ok", timeout=15000)
+    visit(page, "/admin/data", "a_data", wait="input[type=file]")
+    today = datetime.date.today().isoformat()
+    with tempfile.NamedTemporaryFile("w", suffix=".csv", delete=False) as f:
+        f.write(f"date,item,quantity\n{today},Chicken Burger,55\n{today},Chiken Burger,5\n")
+    page.set_input_files("input[type=file]", f.name)
+    page.get_by_role("button", name="Check file").click()
+    page.wait_for_selector("text=1 rows accepted, 1 rejected", timeout=8000)
+    assert "Unknown menu item" in page.inner_text("main")
+    page.get_by_role("button", name="Save 1 rows").click()
+    page.wait_for_selector("text=1 rows saved", timeout=8000)
+    visit(page, "/admin/catalog", "a_catalog", wait="table tbody tr")
+    page.get_by_role("button", name="Recipe").first.click()
+    page.wait_for_selector("text=Save recipe", timeout=4000)
+    page.get_by_role("button", name="Cancel").click()
+    visit(page, "/admin/users", "a_users", wait="table tbody tr")
+    page.get_by_role("button", name="Add user").click()
+    page.get_by_role("button", name="Create").click()
+    page.wait_for_selector("text=is required", timeout=4000)
+    page.fill("#u-name", "Temp Kitchen"); page.fill("#u-user", "tempk"); page.fill("#u-pw", "temppass1")
+    page.get_by_role("button", name="Create").click()
+    page.wait_for_selector("text=tempk", timeout=5000)
+    page.locator("tr", has_text="tempk").get_by_role("button", name="Deactivate").click()
+    page.wait_for_selector("tr:has-text('tempk') >> text=Deactivated", timeout=5000)
+    page.locator("tr", has_text="admin").first.get_by_role("button", name="Deactivate").click()
+    page.wait_for_selector("text=last active administrator", timeout=5000)
+    r = page.goto(BASE + "/kitchen")
+    assert r.status == 403, r.status
+    ctx.close()
+
+
 if __name__ == "__main__":
     which = [a for a in sys.argv[1:] if not a.startswith("--")] or ["all"]
     if "--shots" in sys.argv:

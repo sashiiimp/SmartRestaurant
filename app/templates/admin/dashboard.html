@@ -1,6 +1,37 @@
 {% extends "base.html" %}
 {% block title %}Admin - SmartRestaurant{% endblock %}
 {% block content %}
-<h1 class="h4">Admin dashboard</h1>
-<p class="text-muted">Placeholder: this page is built in a later slice.</p>
+<div id="app" v-cloak>
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <h1 class="h4 m-0">System overview</h1>
+    <div class="btn-group" role="group" aria-label="Range"><button class="btn btn-outline-secondary" :class="{ active: range === 7 }" @click="range = 7; load()">Last 7 days</button><button class="btn btn-outline-secondary" :class="{ active: range === 30 }" @click="range = 30; load()">Last 30 days</button></div>
+  </div>
+  <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
+  <div v-if="loading" class="text-center py-5"><div class="spinner-border" role="status"><span class="visually-hidden">Loading</span></div></div>
+  <template v-else-if="d">
+    <div v-if="d.items_without_recipe.length" class="alert alert-warning py-2">Menu items without a recipe (their ingredient needs count as zero): [[ d.items_without_recipe.join(', ') ]]. <a href="/admin/catalog">Add recipes</a></div>
+    <div v-if="!d.active_model" class="alert alert-warning py-2">No active forecasting model. <a href="/admin/models">Train and activate one</a>.</div>
+    <div class="row g-3 mb-3">
+      <div class="col-6 col-lg-3"><sr-stat-tile label="Portions sold" :value="ui.num(d.sales.quantity, 0)" :hint="'Revenue ' + ui.money(d.sales.revenue)" href="/admin/monitor"></sr-stat-tile></div>
+      <div class="col-6 col-lg-3"><sr-stat-tile label="Forecast, next 7 days" :value="ui.num(d.forecast_next7_total, 0)" hint="portions" href="/admin/models"></sr-stat-tile></div>
+      <div class="col-6 col-lg-3"><sr-stat-tile label="Low or out of stock" :value="d.low_stock_count" :tone="d.low_stock_count ? 'warning' : ''"></sr-stat-tile></div>
+      <div class="col-6 col-lg-3"><sr-stat-tile label="Food waste" :value="ui.num(d.waste.quantity, 0) + ' portions'" :hint="ui.money(d.waste.value) + ' at selling price'" href="/admin/monitor"></sr-stat-tile></div>
+    </div>
+    <div class="row g-3">
+      <div class="col-12 col-xl-7"><div class="card"><div class="card-body">
+        <div class="d-flex justify-content-between"><h2 class="h6">Open alerts ([[ d.alert_counts.critical ]] critical, [[ d.alert_counts.warning ]] warning)</h2>
+          <button class="btn btn-sm btn-outline-primary" :disabled="running" @click="runAlerts">Run alert check</button></div>
+        <sr-alert-list :alerts="d.alerts" @acknowledge="ack"></sr-alert-list></div></div></div>
+      <div class="col-12 col-xl-5">
+        <div class="card mb-3"><div class="card-body"><h2 class="h6">Forecasting</h2>
+          <div v-if="d.active_model">Active model: <strong>[[ d.active_model.label ]]</strong> ([[ d.active_model.algorithm ]])
+            <span :class="d.active_model.beats_baseline ? 'text-success' : 'text-warning'">[[ d.active_model.beats_baseline ? 'beats the baseline' : 'does not beat the baseline' ]]</span></div>
+          <div v-if="d.last_run" class="small text-muted">Last run [[ ui.dateTime(d.last_run.started_at) ]]: [[ d.last_run.status ]]<span v-if="d.last_run.reason"> ([[ d.last_run.reason ]])</span></div></div></div>
+        <div class="card"><div class="card-body"><h2 class="h6">Recent activity</h2>
+          <ul class="list-unstyled small mb-0"><li v-for="(a, i) in d.recent_activity" :key="i">[[ ui.dateTime(a.time) ]]: [[ a.action ]]</li></ul></div></div>
+      </div>
+    </div>
+  </template>
+</div>
 {% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/pages/admin_dashboard.js') }}"></script>{% endblock %}

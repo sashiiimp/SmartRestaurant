@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Data - SmartRestaurant{% endblock %}
+{% block content %}
+<div id="app" v-cloak>
+  <h1 class="h4 mb-3">Sales and contextual data</h1>
+  <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
+  <ul class="nav nav-tabs mb-3"><li class="nav-item" v-for="t in [['sales','Sales import'],['promos','Promotions'],['holidays','Holidays'],['weather','Weather']]" :key="t[0]">
+    <button class="nav-link" :class="{ active: tab === t[0] }" @click="tab = t[0]">[[ t[1] ]]</button></li></ul>
+  <div v-if="tab === 'sales'"><p class="text-muted">CSV with columns <code>date, item, quantity</code> and optionally <code>unit_price</code>. Rows are checked first; nothing is saved until you confirm. Unknown item names are reported, never created.</p>
+    <sr-csv-import endpoint="/sales/import" label="Sales CSV"></sr-csv-import></div>
+  <div v-if="tab === 'holidays'"><p class="text-muted">CSV with columns <code>date, name, type</code> (type: public, poya, school, other).</p><sr-csv-import endpoint="/holidays/import" label="Holidays CSV"></sr-csv-import></div>
+  <div v-if="tab === 'weather'"><p class="text-muted">CSV with columns <code>date, rain_mm</code> and optionally <code>temp_c</code>. Weather entered for a future date is used by the forecast instead of the seasonal average.</p><sr-csv-import endpoint="/weather/import" label="Weather CSV"></sr-csv-import></div>
+  <div v-if="tab === 'promos'">
+    <div class="d-flex justify-content-between mb-2"><p class="text-muted m-0">Promotions raise the forecast for the items they cover. Enter them before running the forecast.</p><button class="btn btn-primary" @click="add">Add promotion</button></div>
+    <div v-if="form" class="card mb-3"><div class="card-body"><div class="row g-2">
+      <div class="col-12 col-md-4"><label class="form-label" for="p-name">Name</label><input id="p-name" class="form-control" v-model="form.name"><sr-field-error :errors="errors" name="name"></sr-field-error></div>
+      <div class="col-6 col-md-2"><label class="form-label" for="p-start">Start</label><input id="p-start" type="date" class="form-control" v-model="form.start_date"><sr-field-error :errors="errors" name="start_date"></sr-field-error></div>
+      <div class="col-6 col-md-2"><label class="form-label" for="p-end">End</label><input id="p-end" type="date" class="form-control" v-model="form.end_date"><sr-field-error :errors="errors" name="end_date"></sr-field-error></div>
+      <div class="col-6 col-md-2"><label class="form-label" for="p-pct">Discount %</label><input id="p-pct" class="form-control" inputmode="decimal" v-model="form.discount_pct"><sr-field-error :errors="errors" name="discount_pct"></sr-field-error></div>
+      <div class="col-6 col-md-2 d-flex align-items-end"><div class="form-check"><input id="p-all" type="checkbox" class="form-check-input" v-model="form.applies_to_all"><label class="form-check-label" for="p-all">All items</label></div></div>
+      <div class="col-12" v-if="!form.applies_to_all"><label class="form-label">Items</label><div class="d-flex flex-wrap gap-3">
+        <div class="form-check" v-for="i in items" :key="i.id"><input :id="'pi' + i.id" type="checkbox" class="form-check-input" :value="i.id" v-model="form.item_ids"><label class="form-check-label" :for="'pi' + i.id">[[ i.name ]]</label></div></div>
+        <sr-field-error :errors="errors" name="item_ids"></sr-field-error></div></div>
+      <div class="mt-3 d-flex gap-2"><button class="btn btn-primary" :disabled="saving" @click="save">Save</button><button class="btn btn-outline-secondary" @click="form = null">Cancel</button></div></div></div>
+    <div class="table-responsive"><table class="table table-sm align-middle"><thead><tr><th>Name</th><th>From</th><th>To</th><th class="text-end">Discount</th><th>Items</th><th>Active</th></tr></thead>
+      <tbody><tr v-for="p in promos" :key="p.id" :class="p.is_active ? '' : 'text-muted'"><td>[[ p.name ]]</td><td>[[ ui.date(p.start_date) ]]</td><td>[[ ui.date(p.end_date) ]]</td><td class="text-end">[[ p.discount_pct ]]%</td><td>[[ names(p) ]]</td>
+        <td><div class="form-check form-switch"><input class="form-check-input" type="checkbox" role="switch" :aria-label="'Active: ' + p.name" :checked="p.is_active" @change="toggle(p)"></div></td></tr></tbody></table></div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/pages/admin_data.js') }}"></script>{% endblock %}

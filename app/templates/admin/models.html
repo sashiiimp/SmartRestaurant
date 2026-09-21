@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Forecast models - SmartRestaurant{% endblock %}
+{% block content %}
+<div id="app" v-cloak>
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3"><h1 class="h4 m-0">Forecast models</h1>
+    <div class="d-flex gap-2"><button class="btn btn-outline-primary" :disabled="!!busy" @click="train"><span v-if="busy === 'train'" class="spinner-border spinner-border-sm me-1"></span>Train new model</button>
+      <button class="btn btn-primary" :disabled="!!busy || !active" @click="runForecast"><span v-if="busy === 'run'" class="spinner-border spinner-border-sm me-1"></span>Run forecast now</button></div></div>
+  <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
+  <div v-if="busy === 'train'" class="alert alert-info">Training compares the baselines, Random Forest and XGBoost on the last 56 days. This takes about 10 to 20 seconds.</div>
+  <div v-if="loading" class="text-center py-5"><div class="spinner-border" role="status"><span class="visually-hidden">Loading</span></div></div>
+  <template v-else>
+    <div class="card mb-3"><div class="card-body">
+      <h2 class="h6">Active model</h2>
+      <div v-if="!active" class="text-muted">No active model. Train one, then activate it.</div>
+      <div v-else><strong>[[ active.version_label ]]</strong> ([[ active.algorithm ]]), trained [[ ui.dateTime(active.trained_at) ]]
+        <div class="small" :class="active.beats_baseline ? 'text-success' : 'text-warning'">[[ active.selection_reason ]]</div>
+        <div class="small text-muted">Hold-out: [[ ui.date(active.holdout.start) ]] to [[ ui.date(active.holdout.end) ]] (chronological, never seen in training). Weather in the hold-out is the seasonal estimate, as it is when forecasting tomorrow.</div>
+        <div class="table-responsive mt-2"><table class="table table-sm mb-0" style="max-width: 46rem"><thead><tr><th>Model</th><th class="text-end">MAE</th><th class="text-end">RMSE</th><th class="text-end">MAPE %</th><th class="text-end">WAPE %</th><th class="text-end">R2</th><th class="text-end">Bias</th></tr></thead>
+          <tbody><tr v-for="c in active.metrics.comparison" :key="c.model" :class="c.model === active.algorithm ? 'table-success' : ''"><td>[[ c.model ]]</td><td class="text-end">[[ ui.num(c.mae, 2) ]]</td><td class="text-end">[[ ui.num(c.rmse, 2) ]]</td><td class="text-end">[[ ui.num(c.mape, 1) ]]</td><td class="text-end">[[ ui.num(c.wape, 1) ]]</td><td class="text-end">[[ ui.num(c.r2, 3) ]]</td><td class="text-end">[[ ui.num(c.bias, 2) ]]</td></tr></tbody></table></div>
+        <div v-if="active.metrics.oracle_mae" class="small text-muted mt-1">Best possible MAE on this synthetic data (noise floor): [[ ui.num(active.metrics.oracle_mae, 2) ]]. These figures are for synthetic data and say nothing about a real restaurant.</div>
+        <div v-if="active.metrics.feature_importance.length" class="small mt-2"><strong>Most influential inputs:</strong> [[ active.metrics.feature_importance.slice(0, 5).map(f => f.feature + ' (' + ui.num(f.importance * 100, 0) + '%)').join(', ') ]]</div>
+      </div></div></div>
+    <div class="row g-3">
+      <div class="col-12 col-xl-6"><div class="card"><div class="card-body"><h2 class="h6">Versions</h2>
+        <div class="table-responsive"><table class="table table-sm align-middle mb-0"><thead><tr><th>Version</th><th>Algorithm</th><th class="text-end">MAE</th><th>Status</th><th></th></tr></thead>
+          <tbody><tr v-for="v in versions" :key="v.id"><td>[[ v.version_label ]]</td><td>[[ v.algorithm ]]</td><td class="text-end">[[ ui.num(m(v, v.algorithm).mae, 2) ]]</td><td><sr-status-badge :status="v.status === 'active' ? 'ok' : (v.status === 'retired' ? 'acknowledged' : 'suggested')"></sr-status-badge> [[ v.status ]]</td>
+            <td><button v-if="v.status !== 'active'" class="btn btn-sm btn-outline-primary" @click="activate(v)">Activate</button></td></tr></tbody></table></div></div></div></div>
+      <div class="col-12 col-xl-6"><div class="card"><div class="card-body"><h2 class="h6">Forecast runs</h2>
+        <div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Started</th><th>As of</th><th>Type</th><th>Status</th><th class="text-end">Items</th></tr></thead>
+          <tbody><tr v-for="r in runs" :key="r.id"><td>[[ ui.dateTime(r.started_at) ]]</td><td>[[ ui.date(r.as_of) ]]</td><td>[[ r.trigger ]]</td>
+            <td>[[ r.status ]]<div v-if="r.reason" class="small text-muted">[[ r.reason ]]</div></td><td class="text-end">[[ r.items_forecast ]]</td></tr></tbody></table></div></div></div></div>
+    </div>
+  </template>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/pages/admin_models.js') }}"></script>{% endblock %}

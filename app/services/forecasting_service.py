@@ -11,7 +11,7 @@ import pandas as pd
 
 from app.extensions import db
 from app.ml import registry
-from app.ml.evaluate import oracle_mae
+from app.ml.evaluate import metrics, oracle_mae
 from app.ml.features import build_features
 from app.ml.predict import BASELINES, predict
 from app.ml.train import HOLDOUT_DAYS, train_and_compare
@@ -305,3 +305,44 @@ def model_version_dict(mv: ModelVersion) -> dict:
             "metrics": {"comparison": [{"model": k, **v} for k, v in overall.items()],
                         "oracle_mae": (mv.metrics or {}).get("oracle_mae"),
                         "feature_importance": (mv.metrics or {}).get("feature_importance", [])}}
+
+
+# ---- forecast accuracy (A9) ----------------------------------------------------------------------
+def accuracy(outlet_id: int, start: date, end: date, item_id: int | None = None) -> dict:
+    """Actual vs the latest forecast whose run has as_of_date <= target date, so a forecast made after the fact never
+    counts (DATABASE.md 2.6). Reports MAE, RMSE, MAPE, WAPE, bias overall and per item, plus a daily series."""
+    from app.models import SalesRecord
+
+    fq = (db.session.query(Forecast.menu_item_id, Forecast.target_date, Forecast.predicted_qty, Forecast.run_id,
+                           ForecastRun.trigger_type)
+          .join(ForecastRun, ForecastRun.id == Forecast.run_id)
+          .filter(Forecast.outlet_id == outlet_id, Forecast.target_date >= start, Forecast.target_date <= end,
+                  ForecastRun.as_of_date <= Forecast.target_date, ForecastRun.status.in_(("ok", "partial"))))
+    if item_id:
+        fq = fq.filter(Forecast.menu_item_id == item_id)
+    best: dict = {}
+    for mid, d, qty, run_id, trig in fq.order_by(Forecast.run_id):
+        best[(mid, d)] = (float(qty), trig)          # later runs overwrite earlier ones
+    sq = db.session.query(SalesRecord.menu_item_id, SalesRecord.sale_date, SalesRecord.quantity_sold).filter(
+        SalesRecord.outlet_id == outlet_id, SalesRecord.sale_date >= start, SalesRecord.sale_date <= end)
+    actual = {(m, d): q for m, d, q in sq}
+    names = {m.id: m.name for m in MenuItem.query.filter_by(outlet_id=outlet_id)}
+    keys = sorted(k for k in best if k in actual)
+    if not keys:
+        return {"overall": None, "per_item": [], "series": [], "pairs": 0,
+                "note": "No forecast has a matching actual sale yet."}
+    yt = [actual[k] for k in keys]
+    yp = [best[k][0] for k in keys]
+    overall = _num(metrics(yt, yp))
+    per_item = []
+    for mid in sorted({k[0] for k in keys}, key=lambda i: names.get(i, "")):
+        ks = [k for k in keys if k[0] == mid]
+        per_item.append({"menu_item_id": mid, "item": names.get(mid, str(mid)),
+                         **_num(metrics([actual[k] for k in ks], [best[k][0] for k in ks]))})
+    by_day: dict = {}
+    for k in keys:
+        f, a = by_day.get(k[1], (0.0, 0))
+        by_day[k[1]] = (f + best[k][0], a + actual[k])
+    series = [{"date": d.isoformat(), "forecast": round(f, 1), "actual": a} for d, (f, a) in sorted(by_day.items())]
+    sources = sorted({best[k][1] for k in keys})
+    return {"overall": overall, "per_item": per_item, "series": series, "pairs": len(keys), "run_types": sources}

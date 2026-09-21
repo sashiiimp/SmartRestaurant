@@ -55,3 +55,10 @@ def train():
 def activate(version_id):
     mv = fs.activate_model(current_outlet_id(), version_id, current_user.id)
     return ok(fs.model_version_dict(mv))
+
+
+@bp.route("/forecasts/accuracy")
+@roles_required("admin")
+def accuracy():
+    end = date_arg("to", today() - timedelta(days=1))
+    return ok(fs.accuracy(current_outlet_id(), date_arg("from", end - timedelta(days=27)), end, int_arg("item_id")))

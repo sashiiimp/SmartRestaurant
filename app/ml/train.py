@@ -122,8 +122,12 @@ def train_and_compare(sales: pd.DataFrame, holidays: pd.DataFrame, promos: pd.Da
         artifact["model"] = final
         imp = getattr(final, "feature_importances_", None)
         if imp is not None:
-            importance = [{"feature": c, "importance": round(float(v), 4)}
-                          for c, v in sorted(zip(cols, imp), key=lambda t: -t[1])[:12]]
+            grouped: dict = {}
+            for c, v in zip(cols, imp):  # one-hot item columns are reported together as "which menu item"
+                key = "menu_item (which item)" if c.startswith("item_") else c
+                grouped[key] = grouped.get(key, 0.0) + float(v)
+            importance = [{"feature": k, "importance": round(v, 4)}
+                          for k, v in sorted(grouped.items(), key=lambda t: -t[1])[:12]]
 
     all_metrics = {"overall": overall, "per_item": per_item, "holdout_rows": int(len(hold)),
                    "oracle_mae": None, "feature_importance": importance}
