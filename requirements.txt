@@ -15,3 +15,4 @@ sqlalchemy==2.0.54
 tzdata==2026.4
 werkzeug==3.1.8
 xgboost-cpu==3.4.1
+gunicorn==26.2.0
