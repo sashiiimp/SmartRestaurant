@@ -5,6 +5,10 @@ SR.createApp({
   },
   async mounted() { await this.load(); },
   computed: {
+    csvUrl() {
+      const base = { sales: '/api/v1/reports/sales', forecast: '/api/v1/forecasts/accuracy', waste: '/api/v1/reports/waste' }[this.tab];
+      return base + '?format=csv&from=' + this.from + '&to=' + this.to + (this.tab !== 'forecast' ? '&group_by=' + this.groupBy : '');
+    },
     salesLabels() { return this.sales ? this.sales.rows.map(r => r.period) : []; },
     salesData() { return this.sales ? [{ label: 'Portions sold', data: this.sales.rows.map(r => r.quantity) }] : []; },
     accLabels() { return this.acc && this.acc.series ? this.acc.series.map(r => ui.date(r.date)) : []; },

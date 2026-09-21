@@ -125,3 +125,18 @@ def bool_arg(name: str, default=False) -> bool:
     if v is None:
         return default
     return v.lower() in ("1", "true", "yes")
+
+
+def csv_response(filename: str, header: list[str], rows: list[list]):
+    """Download the same rows the screen shows (A13)."""
+    import csv as _csv
+    import io
+
+    from flask import Response
+
+    buf = io.StringIO()
+    w = _csv.writer(buf)
+    w.writerow(header)
+    w.writerows(rows)
+    return Response(buf.getvalue(), mimetype="text/csv",
+                    headers={"Content-Disposition": f'attachment; filename="{filename}"'})

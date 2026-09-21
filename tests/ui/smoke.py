@@ -150,7 +150,7 @@ def admin(browser):
     visit(page, "/admin/data", "a_data", wait="input[type=file]")
     today = datetime.date.today().isoformat()
     with tempfile.NamedTemporaryFile("w", suffix=".csv", delete=False) as f:
-        f.write(f"date,item,quantity\n{today},Chicken Burger,55\n{today},Chiken Burger,5\n")
+        f.write(f"date,item,quantity\n{today},Lime Juice,55\n{today},Lime Juise,5\n")
     page.set_input_files("input[type=file]", f.name)
     page.get_by_role("button", name="Check file").click()
     page.wait_for_selector("text=1 rows accepted, 1 rejected", timeout=8000)
@@ -177,6 +177,30 @@ def admin(browser):
     ctx.close()
 
 
+PAGES = {
+    "kitchen1": ["/kitchen", "/kitchen/prep", "/kitchen/forecast", "/kitchen/record", "/kitchen/requirements"],
+    "inventory1": ["/inventory", "/inventory/stock", "/inventory/movements", "/inventory/forecast", "/inventory/reorder"],
+    "admin": ["/admin", "/admin/monitor", "/admin/models", "/admin/data", "/admin/catalog", "/admin/users", "/admin/settings"],
+}
+
+
+def responsive(browser):
+    """NFR4: every page at 360, 768 and 1280 px wide has no page-level horizontal scroll."""
+    for user, paths in PAGES.items():
+        for width in (360, 768, 1280):
+            ctx = browser.new_context(viewport={"width": width, "height": 800})
+            page = ctx.new_page()
+            login(page, user)
+            for path in paths:
+                page.goto(BASE + path)
+                page.wait_for_load_state("networkidle")
+                page.wait_for_timeout(300)
+                over = page.evaluate("document.documentElement.scrollWidth - window.innerWidth")
+                if over > 1:
+                    problems.append(f"{path} at {width}px: page scrolls sideways by {over}px")
+            ctx.close()
+
+
 if __name__ == "__main__":
     which = [a for a in sys.argv[1:] if not a.startswith("--")] or ["all"]
     if "--shots" in sys.argv:
@@ -185,7 +209,7 @@ if __name__ == "__main__":
         BASE = sys.argv[sys.argv.index("--base") + 1]
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        for name in ("kitchen", "inventory", "admin"):
+        for name in ("kitchen", "inventory", "admin", "responsive"):
             if "all" in which or name in which:
                 fn = globals().get(name)
                 if fn:

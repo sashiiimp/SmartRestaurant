@@ -111,3 +111,21 @@ def test_get_forecasts_reports_missing_dates_and_active_model(world):
     assert len(out["rows"]) == 6
     assert out["meta"]["missing_dates"] == [(TODAY + timedelta(days=i)).isoformat() for i in range(3, 7)]
     assert out["meta"]["active_model"].startswith("v20260925-")
+
+
+def test_backfill_uses_the_train_only_model(world):
+    """The shipped model is refit on all history; backfill must use the copy that never saw the hold-out days."""
+    train(world)
+    from app.ml import registry
+    art = registry.load_artifact(fs.get_active_model(1).artifact_path)
+    assert art["eval_model"] is not None and art["eval_model"] is not art["model"]
+    seen = []
+    import app.services.forecasting_service as mod
+    real = mod.predict
+    mod.predict = lambda a, f: (seen.append(a.get("model")) or real(a, f))
+    try:
+        fs.backfill(1, date(2026, 9, 20), date(2026, 9, 20))
+        fs.run_forecast(1)
+    finally:
+        mod.predict = real
+    assert seen[0] is not None and seen[1] is not None and seen[0] is not seen[1]   # eval copy vs shipped model

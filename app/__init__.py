@@ -14,6 +14,8 @@ def create_app(config_name: str | None = None, overrides: dict | None = None) ->
     app.config.from_object(get_config(config_name))
     app.config.update(overrides or {})
     os.makedirs(app.instance_path, exist_ok=True)
+    if app.config.get("SECRET_KEY") == "dev-only-change-me" and os.environ.get("APP_ENV") == "prod":
+        raise RuntimeError("Set SECRET_KEY in the environment before running with APP_ENV=prod.")
 
     db.init_app(app)
     migrate.init_app(app, db)

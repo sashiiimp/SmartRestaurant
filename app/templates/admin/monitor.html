@@ -7,6 +7,7 @@
   <div class="row g-2 align-items-end mb-3">
     <div class="col-6 col-md-2"><label class="form-label" for="m-from">From</label><input id="m-from" type="date" class="form-control" v-model="from" @change="load"></div>
     <div class="col-6 col-md-2"><label class="form-label" for="m-to">To</label><input id="m-to" type="date" class="form-control" v-model="to" @change="load"></div>
+    <div class="col-12 col-md-3 ms-md-auto text-md-end"><a class="btn btn-outline-secondary" :href="csvUrl">Download CSV</a></div>
     <div class="col-6 col-md-2" v-if="tab !== 'forecast'"><label class="form-label" for="m-group">Group by</label><select id="m-group" class="form-select" v-model="groupBy" @change="load"><option value="day">Day</option><option value="week">Week</option><option value="month">Month</option></select></div>
   </div>
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
@@ -29,7 +30,7 @@
         <sr-line-chart :labels="accLabels" :datasets="accData" y-title="Portions per day" title="Forecast vs actual"></sr-line-chart>
         <div class="table-responsive mt-3"><table class="table table-sm"><thead><tr><th>Item</th><th class="text-end">MAE</th><th class="text-end">RMSE</th><th class="text-end">MAPE %</th><th class="text-end">WAPE %</th><th class="text-end">Bias</th></tr></thead>
           <tbody><tr v-for="r in acc.per_item" :key="r.menu_item_id"><td>[[ r.item ]]</td><td class="text-end">[[ ui.num(r.mae, 2) ]]</td><td class="text-end">[[ ui.num(r.rmse, 2) ]]</td><td class="text-end">[[ ui.num(r.mape, 1) ]]</td><td class="text-end">[[ ui.num(r.wape, 1) ]]</td><td class="text-end">[[ ui.num(r.bias, 2) ]]</td></tr></tbody></table></div>
-        <div class="small text-muted">Only forecasts made on or before the day count. Backfilled forecasts ([[ (acc.run_types || []).join(', ') ]]) use the model trained before those days and estimated weather, so they are out-of-sample. Synthetic data.</div>
+        <div class="small text-muted">Only forecasts made on or before the day count. Backfilled forecasts ([[ (acc.run_types || []).join(', ') ]]) use the copy of the model fitted before the 56-day hold-out and estimated weather, so they are out-of-sample for the hold-out days; days before that were part of training. Synthetic data.</div>
       </template>
     </div>
     <div v-if="tab === 'waste' && waste">

@@ -1,0 +1,5 @@
+-r requirements.txt
+# Test tools. playwright is only needed for tests/ui/smoke.py (python -m playwright install chromium).
+playwright==1.63.0
+pytest-cov==7.1.0
+pytest==9.1.1

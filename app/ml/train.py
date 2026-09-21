@@ -114,7 +114,7 @@ def train_and_compare(sales: pd.DataFrame, holidays: pd.DataFrame, promos: pd.Da
     artifact = {"algorithm": winner, "feature_columns": cols, "item_ids": items, "model": None,
                 "library_versions": {"sklearn": sklearn.__version__, "xgboost": xgboost.__version__,
                                      "pandas": pd.__version__, "numpy": np.__version__},
-                "climatology": full_clim}
+                "climatology": full_clim, "eval_model": fitted.get(winner), "holdout_start": str(hold_start.date())}
     importance = []
     if winner not in BASELINES:
         final = make_model(winner)

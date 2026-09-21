@@ -6,7 +6,9 @@ from flask_login import current_user
 from app.controllers.api import bp
 from app.services import forecasting_service as fs
 from app.utils.dates import today
-from app.utils.responses import date_arg, int_arg, json_body, ok
+from flask import request
+
+from app.utils.responses import csv_response, date_arg, int_arg, json_body, ok
 from app.utils.security import current_outlet_id, roles_required
 
 
@@ -61,4 +63,9 @@ def activate(version_id):
 @roles_required("admin")
 def accuracy():
     end = date_arg("to", today() - timedelta(days=1))
-    return ok(fs.accuracy(current_outlet_id(), date_arg("from", end - timedelta(days=27)), end, int_arg("item_id")))
+    start = date_arg("from", end - timedelta(days=27))
+    out = fs.accuracy(current_outlet_id(), start, end, int_arg("item_id"))
+    if request.args.get("format") == "csv":
+        rows = [[r["item"], r["mae"], r["rmse"], r["mape"], r["wape"], r["bias"], r["n"]] for r in out["per_item"]]
+        return csv_response(f"forecast_accuracy_{start}_{end}.csv", ["item", "mae", "rmse", "mape_pct", "wape_pct", "bias", "n"], rows)
+    return ok(out)

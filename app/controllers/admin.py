@@ -35,3 +35,8 @@ def models():
 @bp.route("/monitor")
 def monitor():
     return render_template("admin/monitor.html")
+
+
+@bp.route("/settings")
+def settings():
+    return render_template("admin/settings.html")

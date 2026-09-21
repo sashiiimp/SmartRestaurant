@@ -144,7 +144,8 @@ def run_forecast(outlet_id: int, as_of: date | None = None, horizon: int | None 
     db.session.commit()
     run_id = run.id
     try:
-        summary = _do_run(outlet_id, run, mv, as_of, horizon, use_estimated_weather, _data)
+        summary = _do_run(outlet_id, run, mv, as_of, horizon, use_estimated_weather, _data,
+                          use_eval_model=(trigger == "backfill"))
         summary["duration_ms"] = _ms(started)
         return summary
     except Exception as exc:  # readable message for the user, full trace in the log (NFR3)
@@ -161,8 +162,12 @@ def _ms(started) -> int:
     return int((time.perf_counter() - started) * 1000)
 
 
-def _do_run(outlet_id, run, mv, as_of, horizon, use_estimated_weather, data) -> dict:
+def _do_run(outlet_id, run, mv, as_of, horizon, use_estimated_weather, data, use_eval_model=False) -> dict:
     artifact = registry.load_active(mv.id, mv.artifact_path)
+    if use_eval_model and artifact.get("eval_model") is not None:
+        # Backfill uses the copy fitted on the training period only, so forecasts for the hold-out days are
+        # genuinely out-of-sample. The shipped model was refit on all history and has seen those days.
+        artifact = {**artifact, "model": artifact["eval_model"]}
     data = data or _load_data(outlet_id)
     sales = data.sales[data.sales["date"] < pd.Timestamp(as_of)]
     items = [m for m in MenuItem.query.filter_by(outlet_id=outlet_id, is_active=True).order_by(MenuItem.id)]

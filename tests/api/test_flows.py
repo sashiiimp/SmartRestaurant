@@ -169,3 +169,42 @@ def test_alerts_endpoint_filters_by_role(app, as_role, users):
     kitchen = _client(app, users["kitchen"])
     assert kitchen.get("/api/v1/alerts").get_json()["data"] == []
     assert kitchen.post(f"/api/v1/alerts/{alert_id}/acknowledge", json={}).status_code == 404
+
+
+def test_settings_change_takes_effect_and_is_validated(as_role):
+    client = as_role("admin")
+    got = client.get("/api/v1/settings").get_json()["data"]
+    assert next(v for v in got["values"] if v["key"] == "safety_buffer_pct")["value"] == 10
+    r = client.put("/api/v1/settings", json={"safety_buffer_pct": 25, "alerts": {"alert.low_stock.enabled": False}})
+    assert r.status_code == 200
+    from app.services import settings
+    assert settings.get_decimal(1, "safety_buffer_pct") == 25 and not settings.get_bool(1, "alert.low_stock.enabled")
+    bad = client.put("/api/v1/settings", json={"safety_buffer_pct": 500, "expiry_warning_days": "x"})
+    assert bad.status_code == 422 and set(bad.get_json()["error"]["fields"]) == {"safety_buffer_pct", "expiry_warning_days"}
+    assert settings.get_decimal(1, "safety_buffer_pct") == 25          # nothing partially applied
+
+
+def test_csv_export_matches_the_on_screen_rows(as_role):
+    """A13: the download is built from the same service rows as the JSON."""
+    from app.models import SalesRecord
+    client = as_role("admin")
+    item = make_item(name="Burger")
+    for d, q in (("2026-09-20", 10), ("2026-09-21", 12)):
+        db.session.add(SalesRecord(outlet_id=1, menu_item_id=item.id, sale_date=date.fromisoformat(d), quantity_sold=q,
+                                   unit_price=Decimal("100"), source="manual"))
+    db.session.commit()
+    q = "?from=2026-09-01&to=2026-09-24&group_by=day"
+    rows = client.get("/api/v1/reports/sales" + q).get_json()["data"]["rows"]
+    resp = client.get("/api/v1/reports/sales" + q + "&format=csv")
+    assert resp.mimetype == "text/csv" and "attachment" in resp.headers["Content-Disposition"]
+    lines = resp.get_data(as_text=True).strip().splitlines()
+    assert lines[0] == "period,portions_sold,revenue_lkr"
+    assert [l.split(",")[:2] for l in lines[1:]] == [[r["period"], str(r["quantity"])] for r in rows]
+    assert client.get("/api/v1/reports/waste" + q + "&format=csv").status_code == 200
+
+
+def test_prod_refuses_the_default_secret_key(monkeypatch):
+    monkeypatch.setenv("APP_ENV", "prod")
+    monkeypatch.setattr("app.config.Config.SECRET_KEY", "dev-only-change-me")
+    with pytest.raises(RuntimeError):
+        create_app("prod")

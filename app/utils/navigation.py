@@ -2,7 +2,7 @@
 
 NAV = {
     "admin": [("Dashboard", "/admin"), ("Monitoring", "/admin/monitor"), ("Models", "/admin/models"), ("Data", "/admin/data"),
-              ("Menu & recipes", "/admin/catalog"), ("Users", "/admin/users")],
+              ("Menu & recipes", "/admin/catalog"), ("Users", "/admin/users"), ("Settings", "/admin/settings")],
     "kitchen": [("Dashboard", "/kitchen"), ("Prep plan", "/kitchen/prep"), ("Forecast", "/kitchen/forecast"), ("Ingredients", "/kitchen/requirements"),
                 ("Served & waste", "/kitchen/record")],
     "inventory": [("Dashboard", "/inventory"), ("Stock", "/inventory/stock"), ("Record stock", "/inventory/movements"),
