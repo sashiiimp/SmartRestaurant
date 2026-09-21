@@ -4,7 +4,8 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 from app.extensions import db
-from app.models import AuditLog, FoodWaste, Ingredient, MenuItem, SalesRecord, StockBatch, StockMovement
+from app.models import (AuditLog, FoodWaste, Holiday, Ingredient, MenuItem, PreparationRecord, Promotion, SalesRecord,
+                        StockBatch, StockMovement)
 from app.services import alert_service
 from app.services import data_management_service as dm
 from app.services import forecasting_service as fs
@@ -238,3 +239,60 @@ def movement_report(outlet_id: int, start: date, end: date, ingredient_id: int |
              "quantity": float(m.quantity), "reason": m.reason, "note": m.note, "reference": (f"{m.reference_type} #{m.reference_id}" if m.reference_type else None)}
             for m, i in q.all()]
     return {"from": start.isoformat(), "to": end.isoformat(), "total": total, "shown": len(rows), "rows": rows}
+
+
+# ---- analytics (A12) --------------------------------------------------------------------------------------------
+WEEKDAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+MIN_DAYS_FOR_COMPARISON = 3     # fewer days in a group than this are shown but flagged as too few to compare
+
+
+def _avg(values: list) -> float | None:
+    return round(sum(values) / len(values), 1) if values else None
+
+
+def analytics(outlet_id: int, start: date, end: date) -> dict:
+    """Descriptive analytics over a period, every figure a plain average or ratio of recorded data (no modelling):
+    demand by weekday, ordinary days against holiday and promotion days, forecast error over time, waste rate over time.
+    Differences between day groups describe the data; they do not prove that a holiday or a promotion caused them."""
+    _check_range(start, end, "day")
+    day_total = {d: int(q) for d, q in db.session.query(SalesRecord.sale_date, db.func.sum(SalesRecord.quantity_sold)).filter(
+        SalesRecord.outlet_id == outlet_id, SalesRecord.sale_date >= start, SalesRecord.sale_date <= end).group_by(SalesRecord.sale_date)}
+
+    by_weekday = [[] for _ in range(7)]
+    for d, q in day_total.items():
+        by_weekday[d.weekday()].append(q)
+    weekday = [{"weekday": WEEKDAYS[i], "days": len(v), "average": _avg(v)} for i, v in enumerate(by_weekday)]
+
+    types_by_day: dict = defaultdict(set)
+    for h in Holiday.query.filter(Holiday.outlet_id == outlet_id, Holiday.holiday_date >= start, Holiday.holiday_date <= end):
+        types_by_day[h.holiday_date].add(h.holiday_type)
+    calendar = []
+    for label, kinds in (("Public holiday", {"public"}), ("Poya day", {"poya"}), ("School holiday", {"school"})):
+        vals = [q for d, q in day_total.items() if types_by_day.get(d, set()) & kinds]
+        calendar.append({"group": label, "days": len(vals), "average": _avg(vals)})
+    ordinary = [q for d, q in day_total.items() if not types_by_day.get(d, set()) & {"public", "poya", "school"}]
+    calendar.append({"group": "Ordinary day", "days": len(ordinary), "average": _avg(ordinary)})
+
+    promo_days: set = set()
+    for p in Promotion.query.filter(Promotion.outlet_id == outlet_id, Promotion.is_active.is_(True),
+                                    Promotion.end_date >= start, Promotion.start_date <= end):
+        d = max(p.start_date, start)
+        while d <= min(p.end_date, end):
+            promo_days.add(d)
+            d += timedelta(days=1)
+    on = [q for d, q in day_total.items() if d in promo_days]
+    off = [q for d, q in day_total.items() if d not in promo_days]
+    promotion = [{"group": "Promotion running", "days": len(on), "average": _avg(on)},
+                 {"group": "No promotion", "days": len(off), "average": _avg(off)}]
+
+    acc = fs.accuracy(outlet_id, start, end)
+    prepared = {d: int(q) for d, q in db.session.query(PreparationRecord.prep_date, db.func.sum(PreparationRecord.quantity)).filter(
+        PreparationRecord.outlet_id == outlet_id, PreparationRecord.prep_date >= start, PreparationRecord.prep_date <= end).group_by(PreparationRecord.prep_date)}
+    wasted = {d: int(q) for d, q in db.session.query(FoodWaste.waste_date, db.func.sum(FoodWaste.quantity)).filter(
+        FoodWaste.outlet_id == outlet_id, FoodWaste.waste_date >= start, FoodWaste.waste_date <= end).group_by(FoodWaste.waste_date)}
+    waste = [{"date": d.isoformat(), "prepared": prepared[d], "wasted": wasted.get(d, 0),
+              "rate": round(wasted.get(d, 0) / prepared[d] * 100, 1)} for d in sorted(prepared)]
+    return {"from": start.isoformat(), "to": end.isoformat(), "data_source": settings_label(outlet_id),
+            "days_with_sales": len(day_total), "min_days_for_comparison": MIN_DAYS_FOR_COMPARISON,
+            "weekday": weekday, "calendar": calendar, "promotion": promotion,
+            "forecast_error": acc["error_series"], "forecast_pairs": acc["pairs"], "waste": waste}

@@ -2,12 +2,14 @@
 {% block title %}Orders - SmartRestaurant{% endblock %}
 {% block content %}
 <div id="app" v-cloak>
-  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-    <h1 class="h4 m-0">Pre-orders</h1>
+  <h1 class="h4 mb-3">Orders</h1>
+  <ul class="nav nav-tabs mb-3"><li class="nav-item" v-for="t in [['pre', 'Pre-orders'], ['daily', 'Daily orders']]" :key="t[0]"><button class="nav-link" :class="{ active: tab === t[0] }" type="button" @click="tab = t[0]">[[ t[1] ]]</button></li></ul>
+  <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
+  <div v-if="tab === 'pre'">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+    <p class="text-muted small m-0">Customer pre-orders for a future day. Only <strong>confirmed</strong> pre-orders are counted when the preparation quantity is recommended; pending and cancelled ones are ignored.</p>
     <button class="btn btn-primary" type="button" @click="startNew">Add pre-order</button>
   </div>
-  <p class="text-muted small">Customer pre-orders for a future day. Only <strong>confirmed</strong> pre-orders are counted when the preparation quantity is recommended; pending and cancelled ones are ignored.</p>
-  <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
   <div v-if="notice" class="alert alert-warning py-2" role="status">[[ notice ]] <a href="/kitchen/prep">Open the prep plan</a></div>
 
   <div v-if="form" class="card mb-3"><div class="card-body">
@@ -42,6 +44,42 @@
         <button v-if="r.status === 'pending'" class="btn btn-sm btn-success me-1" type="button" @click="setStatus(r, 'confirmed')">Confirm</button>
         <button class="btn btn-sm btn-outline-secondary me-1" type="button" @click="edit(r)">Edit</button>
         <button class="btn btn-sm btn-outline-danger" type="button" @click="setStatus(r, 'cancelled')">Cancel</button></template></td></tr></tbody></table></div>
+  </div>
+
+  <div v-if="tab === 'daily'">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+      <p class="text-muted small m-0">The day's food orders as an internal record: what was ordered, and whether it is still open. It does not change the forecast or the preparation quantity. Orders for a future day are entered as pre-orders.</p>
+      <div class="d-flex gap-2 align-items-center"><sr-date-nav v-model="orderDate" @change="loadOrders"></sr-date-nav></div>
+    </div>
+    <div v-if="orderDate <= today" class="card mb-3"><div class="card-body">
+      <h2 class="h6">[[ oform.id ? 'Edit order' : 'New order for ' + ui.date(orderDate) ]]</h2>
+      <div class="row g-2">
+        <div class="col-12 col-md-4"><label class="form-label" for="o-item">Menu item</label>
+          <select id="o-item" class="form-select" v-model.number="oform.menu_item_id" :disabled="!!oform.id"><option value="">Choose an item</option><option v-for="i in items" :key="i.id" :value="i.id">[[ i.name ]]</option></select>
+          <sr-field-error :errors="oerrors" name="menu_item_id"></sr-field-error></div>
+        <div class="col-6 col-md-2"><label class="form-label" for="o-qty">Quantity</label><input id="o-qty" class="form-control" inputmode="numeric" v-model="oform.quantity"><sr-field-error :errors="oerrors" name="quantity"></sr-field-error></div>
+        <div class="col-12 col-md-6"><label class="form-label" for="o-note">Note (optional)</label><input id="o-note" class="form-control" maxlength="255" v-model="oform.customer_note"><sr-field-error :errors="oerrors" name="customer_note"></sr-field-error></div>
+      </div>
+      <sr-field-error :errors="oerrors" name="order_date"></sr-field-error>
+      <div class="mt-3 d-flex gap-2"><button class="btn btn-primary" type="button" :disabled="osaving" @click="saveOrder">[[ oform.id ? 'Save changes' : 'Add order' ]]</button>
+        <button v-if="oform.id" class="btn btn-outline-secondary" type="button" @click="resetOrderForm">Cancel</button></div>
+    </div></div>
+    <div v-else class="alert alert-info py-2 small">This is a future day. Use the Pre-orders tab for orders placed ahead of time.</div>
+    <sr-loading v-if="oloading"></sr-loading>
+    <sr-empty v-else-if="!orders.length" message="No orders for this day." icon="bag"></sr-empty>
+    <template v-else>
+      <div class="small text-muted mb-2">[[ openCount ]] open ([[ openPortions ]] portions) &middot; [[ orders.length ]] in total</div>
+      <div class="table-responsive"><table class="table table-sm align-middle">
+        <thead><tr><th>Item</th><th class="text-end">Quantity</th><th>Note</th><th>Status</th><th></th></tr></thead>
+        <tbody><tr v-for="r in orders" :key="r.id" :class="r.status === 'cancelled' ? 'text-muted' : ''">
+          <td>[[ r.item ]]</td><td class="text-end">[[ r.quantity ]]</td><td>[[ r.customer_note ]]</td>
+          <td><sr-status-badge :status="r.status === 'fulfilled' ? 'accepted' : r.status === 'open' ? 'suggested' : r.status"></sr-status-badge></td>
+          <td class="text-nowrap"><template v-if="r.status === 'open'">
+            <button class="btn btn-sm btn-success me-1" type="button" @click="setOrderStatus(r, 'fulfilled')">Fulfilled</button>
+            <button class="btn btn-sm btn-outline-secondary me-1" type="button" @click="editOrder(r)">Edit</button>
+            <button class="btn btn-sm btn-outline-danger" type="button" @click="setOrderStatus(r, 'cancelled')">Cancel</button></template></td></tr></tbody></table></div>
+    </template>
+  </div>
 </div>
 {% endblock %}
 {% block scripts %}<script src="{{ url_for('static', filename='js/pages/kitchen_orders.js') }}"></script>{% endblock %}

@@ -47,6 +47,27 @@
         <button class="btn btn-outline-danger btn-lg-touch" type="button" :disabled="savingWaste" @click="saveWaste">Record waste</button>
       </div></div>
     </div>
+    <div class="col-12">
+      <div class="card"><div class="card-body">
+        <h2 class="h6">Ingredient usage</h2>
+        <p class="text-muted small">Expected use is what was prepared today times the recipe. Enter the amount actually used where it differs or where you measured it; recording again replaces the figure. This does not change the stock: the inventory manager records what leaves the store.</p>
+        <div v-if="usage && usage.items_without_recipe.length" class="alert alert-warning py-2 small">No recipe, so no expected usage for: [[ usage.items_without_recipe.join(', ') ]].</div>
+        <sr-empty v-if="usage && !usage.rows.length" message="Nothing prepared on this date yet, so there is no expected usage." icon="clipboard"></sr-empty>
+        <div v-else-if="usage" class="table-responsive"><table class="table table-sm align-middle mb-2">
+          <thead><tr><th>Ingredient</th><th class="text-end">Expected</th><th style="min-width: 8rem">Actually used</th><th class="text-end">Difference</th><th>Note</th><th></th></tr></thead>
+          <tbody><tr v-for="r in usage.rows" :key="r.ingredient_id">
+            <td>[[ r.ingredient ]]</td><td class="text-end">[[ ui.qty(r.expected, r.unit) ]]</td>
+            <td><input class="form-control form-control-sm" inputmode="decimal" :aria-label="'Actual use of ' + r.ingredient" v-model="use[r.ingredient_id].quantity"></td>
+            <td class="text-end" :class="r.variance > 0 ? 'text-danger' : (r.variance < 0 ? 'text-success' : '')">[[ r.variance === null ? '' : (r.variance > 0 ? '+' : '') + ui.num(r.variance, 3) ]]</td>
+            <td><input class="form-control form-control-sm" maxlength="255" :aria-label="'Note for ' + r.ingredient" v-model="use[r.ingredient_id].note"></td>
+            <td class="text-nowrap"><button class="btn btn-sm btn-outline-primary me-1" type="button" @click="saveUsage(r)">Save</button>
+              <button v-if="r.usage_id" class="btn btn-sm btn-outline-secondary" type="button" @click="clearUsage(r)">Clear</button>
+              <div v-if="usageErrors[r.ingredient_id]" class="text-danger small">[[ usageErrors[r.ingredient_id] ]]</div></td></tr></tbody></table></div>
+        <div v-if="usage" class="d-flex flex-wrap gap-2 align-items-center">
+          <select class="form-select form-select-sm" style="max-width: 14rem" aria-label="Another ingredient" v-model.number="otherIng"><option value="">Another ingredient...</option><option v-for="g in otherIngredients" :key="g.id" :value="g.id">[[ g.name ]] ([[ g.unit ]])</option></select>
+          <button class="btn btn-sm btn-outline-primary" type="button" :disabled="!otherIng" @click="addOther">Add row</button></div>
+      </div></div>
+    </div>
   </div>
 </div>
 {% endblock %}

@@ -38,5 +38,6 @@ window.api = (function () {
     post: (path, body) => call('POST', path, body === undefined ? {} : body),
     put: (path, body) => call('PUT', path, body),
     patch: (path, body) => call('PATCH', path, body),
+    delete: (path) => call('DELETE', path),
   };
 })();

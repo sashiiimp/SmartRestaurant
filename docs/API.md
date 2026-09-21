@@ -130,6 +130,12 @@ Abbreviations: **A** admin, **K** kitchen, **I** inventory. **(R)** means read-o
 | `GET /kitchen/stock-requests?status=` | A(R) K | S | K11 | with lines and status; the reject reason is shown to the kitchen |
 | `POST /kitchen/stock-requests` | K | S | K11 | `{needed_date?, note?, lines: [{ingredient_id, quantity}]}`; status `pending` |
 | `POST /kitchen/stock-requests/{id}/cancel` | K | S | K11 | pending only, else 409 |
+| `GET /kitchen/orders?date=&from=&to=&status=&menu_item_id=` | A(R) K | S | K10 | daily orders, newest first; `date` is shorthand for `from = to` |
+| `POST /kitchen/orders` | K | S | K10 | `{menu_item_id, quantity, order_date?, customer_note?}`; date defaults to today and cannot be in the future (future days are pre-orders); status `open` |
+| `PATCH /kitchen/orders/{id}` | K | S | K10 | any of `quantity, order_date, customer_note, status` (`open`, `fulfilled`, `cancelled`); only an open order can change (409 otherwise). Internal record only: no prices, no payment, no effect on forecasts |
+| `GET /kitchen/ingredient-usage?date=` | A(R) K | S | K8 | per ingredient: `expected` (prepared x recipe), `recorded` (or null), `variance`, `note`; `items_without_recipe` lists prepared items with no recipe |
+| `POST /kitchen/ingredient-usage` | K | S | K8 | `{date?, ingredient_id, quantity >= 0, note?}`; one recorded figure per ingredient and day, recording again replaces it (200, first time 201); never changes stock |
+| `DELETE /kitchen/ingredient-usage/{id}` | K | S | K8 | removes a recorded figure |
 | `POST /kitchen/shortage-reports` | K | S | K12 | `{ingredient_id, note?}` creates a critical `manual_shortage` alert visible to Admin and Inventory (201); a second report for the same ingredient updates the open alert (200). The alert closes itself (`closed_reason = restocked`) when that ingredient later gets a positive stock movement |
 
 ### 3.5 Alerts, dashboards, reports
@@ -147,6 +153,7 @@ Abbreviations: **A** admin, **K** kitchen, **I** inventory. **(R)** means read-o
 | `GET /reports/stock-levels` | A | S (built 21 Sep) | A10, A13 | snapshot of every ingredient today (same rows as `/stock/levels`); `format=csv` |
 | `GET /reports/inventory-trend?ingredient_id=&from=&to=` | A | S (built 21 Sep) | A13 | one ingredient day by day rebuilt from the movements: `opening`, per-day signed `stock_in`, `stock_out`, `wastage`, `adjustment`, and `closing`; the last closing equals on-hand stock; `format=csv` |
 | `GET /reports/movements?from=&to=&ingredient_id=&type=` | A | S (built 21 Sep) | A13 | movements in a period, newest first; JSON shows at most 500 rows (`meta.total` is the full count), `format=csv` exports all |
+| `GET /reports/analytics?from=&to=` | A | S (built 21 Sep) | A12 | plain averages and ratios of recorded data: `weekday` (average portions per day by weekday), `calendar` (public, Poya, school holiday and ordinary days), `promotion` (promotion running or not), `forecast_error` (per day MAE and WAPE), `waste` (per day prepared, wasted, rate); default range is the last 90 days; day groups describe the data and do not prove cause |
 | `GET /reports/sales` and `/reports/waste` with `format=csv` | A | S (built) | A13 | the CSV is built from the same service rows as the JSON |
 | `GET /restaurant`, `PUT /restaurant` | A | S (built 21 Sep) | A6 | `{name, address?, contact?, opening_days?, opening_hours?}`; `name` required; `timezone` is returned but cannot be changed |
 | `GET /settings`, `PUT /settings` | A | S (built) | A6, A7 | thresholds, data-source banner, alert type switches |

@@ -136,11 +136,13 @@ Undecided plans are computed live and not stored.
 **Portable partial-unique trick:** `open_key` = `dedupe_key` while status is `open` or `acknowledged`, else NULL, with UNIQUE (`outlet_id`, `open_key`). NULLs never collide in MySQL/MariaDB or SQLite, so at most one open alert exists per condition without a partial index, and a concurrent duplicate insert fails cleanly and is ignored.
 Who sees which type is a service constant listed in `API.md` section 6.
 
-### 2.7 Tables added after the first release (21 Sep 2026)
+### 2.7 Tables added after the first release (21 Sep 2026: all four are built)
 
 **stock_requests** (K11 / I15, built; migration `b8b8048fad45`). `outlet_id`, `requested_by` FK users, `needed_date` NULL, `note`, `status` CHECK in (`pending`,`approved`,`issued`,`rejected`,`cancelled`), `reject_reason` (CHECK: required when `rejected`), `decided_by`, `decided_at`, timestamps. Index (`outlet_id`, `status`). **stock_request_lines**: `stock_request_id`, `ingredient_id`, `qty_requested` > 0, `qty_issued` >= 0 and <= `qty_requested`. The kitchen creates a request (`pending`) and may cancel it while pending; the inventory manager approves, rejects (reason) or issues. Issuing draws FEFO from usable stock, one `stock_out` movement per batch with reason `issued_to_kitchen`, `reference_type = 'stock_request'`, `reference_id` = the request. The request becomes `issued` when every line is complete or the manager closes it; otherwise it stays `approved`.
 
-**Still to build (Tier 3):** `orders` (daily orders, K10): item, quantity, date, status (`open`, `fulfilled`, `cancelled`), customer note; and `ingredient_usage` (K8): date, ingredient, quantity, note.
+**orders** (K10 daily orders, built; migration `165b04a3da7c`). `outlet_id`, `menu_item_id`, `order_date`, `quantity` > 0, `status` CHECK in (`open`,`fulfilled`,`cancelled`), `customer_note`, `created_by`. Index (`outlet_id`, `order_date`). An internal record only (no prices, no payment); it feeds no calculation. The date cannot be in the future (a future day is a pre-order). Only an `open` order can change.
+
+**ingredient_usage** (K8, built; same migration). `outlet_id`, `ingredient_id`, `usage_date`, `quantity` >= 0, `note`, `created_by`; UNIQUE (`outlet_id`, `ingredient_id`, `usage_date`): one recorded figure per ingredient and day, recording again replaces it. The expected figure (prepared x recipe) is computed, never stored. Recording never creates a stock movement (DB8).
 
 ## 3. Integrity rules (NFR8): where each is enforced
 

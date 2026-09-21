@@ -3,8 +3,9 @@ SR.createApp({
     const end = ui.addDays(ui.todayIso(), -1);
     return {
       tab: 'sales', from: ui.addDays(end, -27), to: end, groupBy: 'day', itemId: '', ingId: '', mtype: '', demandStart: ui.todayIso(),
-      tabs: [['sales', 'Sales and revenue'], ['demand', 'Demand forecast'], ['forecast', 'Forecast accuracy'], ['inventory', 'Inventory'], ['movements', 'Stock movements'], ['waste', 'Waste']],
-      items: [], ingredients: [], sales: null, acc: null, waste: null, trend: null, moves: null, demand: { rows: [], meta: {} },
+      tabs: [['sales', 'Sales and revenue'], ['demand', 'Demand forecast'], ['forecast', 'Forecast accuracy'], ['analytics', 'Analytics'], ['inventory', 'Inventory'], ['movements', 'Stock movements'], ['waste', 'Waste']],
+      shortGroup: { 'Public holiday': 'Public', 'Poya day': 'Poya', 'School holiday': 'School', 'Ordinary day': 'Ordinary', 'Promotion running': 'Promotion', 'No promotion': 'No promo' },
+      items: [], ingredients: [], sales: null, acc: null, waste: null, trend: null, moves: null, an: null, demand: { rows: [], meta: {} },
       loading: false, error: null, ui,
     };
   },
@@ -53,6 +54,7 @@ SR.createApp({
         if (this.tab === 'sales') this.sales = (await api.get('/reports/sales', { ...p, group_by: this.groupBy })).data;
         else if (this.tab === 'demand') { const r = await api.get('/forecasts', { from: this.demandStart, to: ui.addDays(this.demandStart, 6) }); this.demand = { rows: r.data, meta: r.meta }; }
         else if (this.tab === 'forecast') this.acc = (await api.get('/forecasts/accuracy', { ...p, item_id: this.itemId })).data;
+        else if (this.tab === 'analytics') this.an = (await api.get('/reports/analytics', p)).data;
         else if (this.tab === 'inventory') this.trend = this.ingId ? (await api.get('/reports/inventory-trend', { ...p, ingredient_id: this.ingId })).data : null;
         else if (this.tab === 'movements') { const r = await api.get('/reports/movements', { ...p, ingredient_id: this.ingId, type: this.mtype }); this.moves = { data: r.data, meta: r.meta }; }
         else this.waste = (await api.get('/reports/waste', { ...p, group_by: this.groupBy })).data;
@@ -63,6 +65,8 @@ SR.createApp({
       // stock movements are recorded up to today, so these two tabs include today by default
       if ((t === 'inventory' || t === 'movements') && this.to < ui.todayIso()) this.to = ui.todayIso();
       if (t === 'movements') this.ingId = '';
+      // analytics needs a longer window than the other tabs to say anything about weekdays and holidays
+      if (t === 'analytics' && (new Date(this.to) - new Date(this.from)) / 86400000 < 60) this.from = ui.addDays(this.to, -89);
       if (t === 'inventory' && !this.ingId && this.ingredients.length) this.ingId = this.ingredients[0].id;
       this.load();
     },

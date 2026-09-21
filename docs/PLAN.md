@@ -6,7 +6,7 @@ Read after `REQUIREMENTS.md`, `ARCHITECTURE.md`, `DATABASE.md`, `API.md`, `ML_PL
 
 **M1 and M2 are complete and tested** (144 automated tests, 91% service/ML coverage, browser tests of all three roles, all 17 pages checked at 360/768/1280 px; see `TEST_LOG.md`). Stretch items built: CSV download of reports (A13) and the settings and alert configuration page (A6, A7). Not built: pre-orders, availability toggle, expiry page, adjustments, manual shortage report, suppliers/purchase orders, admin inventory overview, server deployment, feature ablation. Actual ML results are in `ML_EVALUATION.md`.
 
-**Scope change approved 21 Sep 2026:** every function in the approved proposal is now in scope, including all former S and X items that the proposal lists. Section 3A is the plan for the remaining work; section 4 is superseded for those items. The work is done in tiers 1 to 3 and each group is tested on a copy of the database (`smartrest_work`) before the live demo database is upgraded.
+**All 15 functions of section 3A are built and tested on the work copy (21 Sep 2026); deployment to the live demo database is the remaining step.** **Scope change approved 21 Sep 2026:** every function in the approved proposal is now in scope, including all former S and X items that the proposal lists. Section 3A is the plan for the remaining work; section 4 is superseded for those items. The work is done in tiers 1 to 3 and each group is tested on a copy of the database (`smartrest_work`) before the live demo database is upgraded.
 
 ## 1. Situation
 
@@ -78,9 +78,9 @@ Basis: audit of the implementation against `docs/proposal.pdf` and the role func
 | 10 | System Reports: inventory and movements, CSV | Admin | 2 | 2.5 | done 21 Sep (tested on the work copy) |
 | 14 | Shortage Reporting (manual report creating a `manual_shortage` alert) | Kitchen | 2 | 2.0 | done 21 Sep (tested on the work copy) |
 | 15 | Restaurant Information Management (name, address, contact, opening days and hours) | Admin | 2 | 1.5 | done 21 Sep (tested on the work copy) |
-| 11 | Manage Daily Order | Kitchen | 3 | 3.5 | todo |
-| 12 | Record Ingredient Usage | Kitchen | 3 | 3.5 | todo |
-| 13 | System Analytics | Admin | 3 | 4.0 | todo |
+| 11 | Manage Daily Order | Kitchen | 3 | 3.5 | done 21 Sep (tested on the work copy) |
+| 12 | Record Ingredient Usage | Kitchen | 3 | 3.5 | done 21 Sep (tested on the work copy) |
+| 13 | System Analytics | Admin | 3 | 4.0 | done 21 Sep (tested on the work copy) |
 
 Functions 14 and 15 were found in a second check of the proposal tables after the first audit. Food Preparation Management is treated as covered by the prep plan decisions plus prepared recording; no separate status workflow is added.
 

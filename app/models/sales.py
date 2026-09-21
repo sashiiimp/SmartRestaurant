@@ -3,6 +3,7 @@ from app.models.base import BigInt, OutletScopedMixin, TimestampMixin, check, in
 
 SALES_SOURCES = ("import", "kitchen", "synthetic", "manual")
 PREORDER_STATUSES = ("pending", "confirmed", "cancelled")
+ORDER_STATUSES = ("open", "fulfilled", "cancelled")
 
 
 class SalesRecord(OutletScopedMixin, TimestampMixin, db.Model):
@@ -37,5 +38,23 @@ class PreOrder(OutletScopedMixin, TimestampMixin, db.Model):
     target_date = db.Column(db.Date, nullable=False)
     quantity = db.Column(db.Integer, nullable=False)
     status = db.Column(db.String(20), nullable=False, default="pending")
+    customer_note = db.Column(db.String(255))
+    created_by = db.Column(db.Integer, db.ForeignKey("users.id"))
+
+
+class Order(OutletScopedMixin, TimestampMixin, db.Model):
+    """A daily food order kept as an internal record (K10). No prices, no payment; it feeds no calculation."""
+
+    __tablename__ = "orders"
+    __table_args__ = (
+        check("qty", "quantity > 0"),
+        check("status", in_list("status", ORDER_STATUSES)),
+        db.Index("ix_orders_date", "outlet_id", "order_date"),
+    )
+    id = db.Column(db.Integer, primary_key=True)
+    menu_item_id = db.Column(db.Integer, db.ForeignKey("menu_items.id"), nullable=False)
+    order_date = db.Column(db.Date, nullable=False)
+    quantity = db.Column(db.Integer, nullable=False)
+    status = db.Column(db.String(20), nullable=False, default="open")
     customer_note = db.Column(db.String(255))
     created_by = db.Column(db.Integer, db.ForeignKey("users.id"))

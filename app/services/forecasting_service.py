@@ -344,7 +344,7 @@ def accuracy(outlet_id: int, start: date, end: date, item_id: int | None = None)
     names = {m.id: m.name for m in MenuItem.query.filter_by(outlet_id=outlet_id)}
     keys = sorted(k for k in best if k in actual)
     if not keys:
-        return {"overall": None, "per_item": [], "series": [], "pairs": 0,
+        return {"overall": None, "per_item": [], "series": [], "error_series": [], "pairs": 0,
                 "note": "No forecast has a matching actual sale yet."}
     yt = [actual[k] for k in keys]
     yp = [best[k][0] for k in keys]
@@ -359,5 +359,13 @@ def accuracy(outlet_id: int, start: date, end: date, item_id: int | None = None)
         f, a = by_day.get(k[1], (0.0, 0))
         by_day[k[1]] = (f + best[k][0], a + actual[k])
     series = [{"date": d.isoformat(), "forecast": round(f, 1), "actual": a} for d, (f, a) in sorted(by_day.items())]
+    # error by day across the items forecast that day: mean absolute error per item and WAPE (share of the day's sales)
+    day_err: dict = {}
+    for k in keys:
+        e = day_err.setdefault(k[1], [0.0, 0.0, 0])
+        e[0] += abs(best[k][0] - actual[k]); e[1] += actual[k]; e[2] += 1
+    error_series = [{"date": d.isoformat(), "mae": round(a / n, 2), "wape": round(a / act * 100, 1) if act > 0 else None}
+                    for d, (a, act, n) in sorted(day_err.items())]
     sources = sorted({best[k][1] for k in keys})
-    return {"overall": overall, "per_item": per_item, "series": series, "pairs": len(keys), "run_types": sources}
+    return {"overall": overall, "per_item": per_item, "series": series, "error_series": error_series, "pairs": len(keys),
+            "run_types": sources}

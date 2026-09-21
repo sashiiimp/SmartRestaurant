@@ -1,13 +1,40 @@
 SR.createApp({
   data() {
     const t = ui.todayIso();
-    return { today: t, from: t, to: ui.addDays(t, 13), status: '', items: [], rows: [], loading: true, error: null, notice: null, form: null, errors: {}, saving: false, ui };
+    return { tab: 'pre', orderDate: t, orders: [], oloading: false, oform: { id: null, menu_item_id: '', quantity: '', customer_note: '' }, oerrors: {}, osaving: false, today: t, from: t, to: ui.addDays(t, 13), status: '', items: [], rows: [], loading: true, error: null, notice: null, form: null, errors: {}, saving: false, ui };
   },
   async mounted() {
     try { this.items = (await api.get('/menu-items', { active: true })).data; } catch (e) { this.error = ui.errorText(e); }
     await this.load();
+    await this.loadOrders();
+  },
+  computed: {
+    openCount() { return this.orders.filter(o => o.status === 'open').length; },
+    openPortions() { return this.orders.filter(o => o.status === 'open').reduce((a, o) => a + o.quantity, 0); },
   },
   methods: {
+    async loadOrders() {
+      this.oloading = true;
+      try { this.orders = (await api.get('/kitchen/orders', { date: this.orderDate })).data; }
+      catch (e) { this.error = ui.errorText(e); } finally { this.oloading = false; }
+    },
+    resetOrderForm() { this.oform = { id: null, menu_item_id: '', quantity: '', customer_note: '' }; this.oerrors = {}; },
+    editOrder(r) { this.oform = { id: r.id, menu_item_id: r.menu_item_id, quantity: r.quantity, customer_note: r.customer_note || '' }; this.oerrors = {}; window.scrollTo({ top: 0, behavior: 'smooth' }); },
+    async saveOrder() {
+      this.osaving = true; this.oerrors = {};
+      const f = this.oform;
+      try {
+        if (f.id) await api.patch('/kitchen/orders/' + f.id, { quantity: f.quantity, customer_note: f.customer_note });
+        else await api.post('/kitchen/orders', { menu_item_id: f.menu_item_id, quantity: f.quantity, customer_note: f.customer_note, order_date: this.orderDate });
+        ui.toast('Order saved.'); this.resetOrderForm(); await this.loadOrders();
+      } catch (e) { this.oerrors = e.fields || {}; if (!Object.keys(this.oerrors).length) ui.toast(ui.errorText(e), 'danger'); }
+      finally { this.osaving = false; }
+    },
+    async setOrderStatus(r, status) {
+      if (status === 'cancelled' && !confirm('Cancel the order for ' + r.quantity + ' x ' + r.item + '?')) return;
+      try { await api.patch('/kitchen/orders/' + r.id, { status }); ui.toast('Order ' + status + '.'); await this.loadOrders(); }
+      catch (e) { ui.toast(ui.errorText(e), 'danger'); await this.loadOrders(); }
+    },
     editable(r) { return r.status !== 'cancelled' && r.target_date >= this.today; },
     async load() {
       this.loading = true; this.error = null;

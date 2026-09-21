@@ -33,3 +33,20 @@ class FoodWaste(OutletScopedMixin, TimestampMixin, db.Model):
     unit_price = db.Column(db.Numeric(12, 2), nullable=False, default=0)
     note = db.Column(db.String(255))
     created_by = db.Column(db.Integer, db.ForeignKey("users.id"))
+
+
+class IngredientUsage(OutletScopedMixin, TimestampMixin, db.Model):
+    """The kitchen's recorded actual ingredient use for a day (K8). It never moves stock (DATABASE.md DB8); the expected
+    figure (prepared x recipe) is computed, not stored."""
+
+    __tablename__ = "ingredient_usage"
+    __table_args__ = (
+        db.UniqueConstraint("outlet_id", "ingredient_id", "usage_date", name="uq_ingredient_usage_day"),
+        check("qty", "quantity >= 0"),
+    )
+    id = db.Column(db.Integer, primary_key=True)
+    ingredient_id = db.Column(db.Integer, db.ForeignKey("ingredients.id"), nullable=False)
+    usage_date = db.Column(db.Date, nullable=False)
+    quantity = db.Column(db.Numeric(12, 3), nullable=False)
+    note = db.Column(db.String(255))
+    created_by = db.Column(db.Integer, db.ForeignKey("users.id"))

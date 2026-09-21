@@ -83,3 +83,43 @@ def cancel_stock_request(request_id):
 def report_shortage():
     result = alerts.report_shortage(current_outlet_id(), json_body(), current_user.id)
     return ok(result, status=201 if result["created"] else 200)
+
+
+@bp.route("/kitchen/orders")
+@roles_required("admin", "kitchen")
+def list_orders():
+    day = date_arg("date")
+    rows = kit.list_orders(current_outlet_id(), day or date_arg("from"), day or date_arg("to"),
+                           request.args.get("status"), int_arg("menu_item_id"))
+    return ok(rows, {"total": len(rows)})
+
+
+@bp.route("/kitchen/orders", methods=["POST"])
+@roles_required("kitchen")
+def create_order():
+    return ok(kit.create_order(current_outlet_id(), json_body(), current_user.id), status=201)
+
+
+@bp.route("/kitchen/orders/<int:order_id>", methods=["PATCH"])
+@roles_required("kitchen")
+def update_order(order_id):
+    return ok(kit.update_order(current_outlet_id(), order_id, json_body(), current_user.id))
+
+
+@bp.route("/kitchen/ingredient-usage")
+@roles_required("admin", "kitchen")
+def get_ingredient_usage():
+    return ok(kit.ingredient_usage_for(current_outlet_id(), date_arg("date", today())))
+
+
+@bp.route("/kitchen/ingredient-usage", methods=["POST"])
+@roles_required("kitchen")
+def record_ingredient_usage():
+    result = kit.record_ingredient_usage(current_outlet_id(), json_body(), current_user.id)
+    return ok(result, status=201 if result["created"] else 200)
+
+
+@bp.route("/kitchen/ingredient-usage/<int:usage_id>", methods=["DELETE"])
+@roles_required("kitchen")
+def clear_ingredient_usage(usage_id):
+    return ok(kit.clear_ingredient_usage(current_outlet_id(), usage_id, current_user.id))

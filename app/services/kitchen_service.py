@@ -1,11 +1,13 @@
 """Prepared / served / waste recording (Kitchen Operations service, ARCH section 3)."""
 from datetime import datetime
+from decimal import Decimal
 
 from app.extensions import db
-from app.models import FoodWaste, MenuItem, PreOrder, PreparationRecord, Recommendation, SalesRecord
+from app.models import (FoodWaste, Ingredient, IngredientUsage, MenuItem, Order, PreOrder, PreparationRecord,
+                        RecipeLine, Recommendation, SalesRecord)
 from app.models.base import utcnow
 from app.models.kitchen import WASTE_REASONS
-from app.models.sales import PREORDER_STATUSES
+from app.models.sales import ORDER_STATUSES, PREORDER_STATUSES
 from app.services import audit
 from app.services import data_management_service as dm
 from app.services.errors import ConflictError, NotFoundError, ValidationError
@@ -210,3 +212,144 @@ def update_pre_order(outlet_id: int, pre_order_id: int, data: dict, actor_id: in
             warnings += _decision_warning(outlet_id, p.menu_item_id, old_day)
     db.session.commit()
     return {**pre_order_dict(p, db.session.get(MenuItem, p.menu_item_id).name), "warnings": warnings}
+
+
+# ---- daily orders (K10) -------------------------------------------------------------------------------
+# An internal record of the day's food orders: item, quantity, note, status. No prices or payments, and nothing here feeds
+# a forecast or a calculation. Only an open order can change; fulfilled and cancelled orders are history.
+def order_dict(o: Order, item_name: str) -> dict:
+    return {"id": o.id, "menu_item_id": o.menu_item_id, "item": item_name, "order_date": o.order_date.isoformat(),
+            "quantity": o.quantity, "status": o.status, "customer_note": o.customer_note}
+
+
+def get_order(outlet_id: int, order_id: int) -> Order:
+    o = Order.query.filter_by(id=order_id, outlet_id=outlet_id).first()
+    if not o:
+        raise NotFoundError("Order not found.")
+    return o
+
+
+def list_orders(outlet_id: int, start=None, end=None, status: str | None = None, item_id: int | None = None) -> list[dict]:
+    q = db.session.query(Order, MenuItem.name).join(MenuItem, MenuItem.id == Order.menu_item_id).filter(Order.outlet_id == outlet_id)
+    if start:
+        q = q.filter(Order.order_date >= start)
+    if end:
+        q = q.filter(Order.order_date <= end)
+    if status:
+        if status not in ORDER_STATUSES:
+            raise ValidationError("Please fix the highlighted fields.", {"status": "unknown status"})
+        q = q.filter(Order.status == status)
+    if item_id:
+        q = q.filter(Order.menu_item_id == item_id)
+    return [order_dict(o, name) for o, name in q.order_by(Order.order_date.desc(), Order.id.desc()).all()]
+
+
+def create_order(outlet_id: int, data: dict, actor_id: int | None = None) -> dict:
+    f = Fields(data)
+    item_id = f.integer("menu_item_id", gt=0)
+    day = f.date("order_date", not_future=True, default=today())
+    qty = f.integer("quantity", gt=0)
+    note = f.text("customer_note", required=False, max_len=255)
+    f.check()
+    item = dm.get_menu_item(outlet_id, item_id)
+    if not item.is_active:
+        raise ValidationError("That menu item is not active.", {"menu_item_id": "is not active"})
+    o = Order(outlet_id=outlet_id, menu_item_id=item.id, order_date=day, quantity=qty, status="open",
+              customer_note=note, created_by=actor_id)
+    db.session.add(o)
+    db.session.flush()
+    audit.record(outlet_id, actor_id, "order.create", "order", o.id, {"item": item.name, "date": day.isoformat(), "quantity": qty})
+    db.session.commit()
+    return order_dict(o, item.name)
+
+
+def update_order(outlet_id: int, order_id: int, data: dict, actor_id: int | None = None) -> dict:
+    """Edit quantity, date or note of an open order, or mark it fulfilled or cancelled."""
+    o = get_order(outlet_id, order_id)
+    if o.status != "open":
+        raise ConflictError(f"A {o.status} order cannot be changed.")
+    merged = {"quantity": o.quantity, "order_date": o.order_date, "customer_note": o.customer_note, "status": o.status}
+    merged.update({k: data[k] for k in merged if k in data})
+    f = Fields(merged)
+    qty = f.integer("quantity", gt=0)
+    day = f.date("order_date", not_future=True)
+    note = f.text("customer_note", required=False, max_len=255)
+    status = f.choice("status", ORDER_STATUSES)
+    f.check()
+    before = (o.quantity, o.order_date, o.status)
+    o.quantity, o.order_date, o.customer_note, o.status = qty, day, note, status
+    audit.record(outlet_id, actor_id, "order.update", "order", o.id,
+                 {"from": [before[0], before[1].isoformat(), before[2]], "to": [qty, day.isoformat(), status]})
+    db.session.commit()
+    return order_dict(o, db.session.get(MenuItem, o.menu_item_id).name)
+
+
+# ---- ingredient usage (K8) ---------------------------------------------------------------------------------
+# Expected use = what was prepared x the recipe. The kitchen may record the actual amount for an ingredient and day (one
+# figure per ingredient and day; recording again replaces it). Recording never changes stock: stock only falls through
+# the inventory manager's movements (DATABASE.md DB8).
+_Q3 = Decimal("0.001")
+
+
+def ingredient_usage_for(outlet_id: int, day) -> dict:
+    prepared = dict(db.session.query(PreparationRecord.menu_item_id, db.func.sum(PreparationRecord.quantity)).filter(
+        PreparationRecord.outlet_id == outlet_id, PreparationRecord.prep_date == day).group_by(PreparationRecord.menu_item_id).all())
+    recipes: dict = {}
+    if prepared:
+        for line in RecipeLine.query.filter(RecipeLine.menu_item_id.in_(list(prepared))):
+            recipes.setdefault(line.menu_item_id, []).append(line)
+    expected: dict = {}
+    for item_id, qty in prepared.items():
+        for line in recipes.get(item_id, []):
+            expected[line.ingredient_id] = expected.get(line.ingredient_id, Decimal(0)) + Decimal(int(qty)) * line.quantity_per_portion
+    no_recipe = [m.name for m in MenuItem.query.filter(MenuItem.id.in_(list(prepared))) if m.id not in recipes] if prepared else []
+    recorded = {u.ingredient_id: u for u in IngredientUsage.query.filter_by(outlet_id=outlet_id, usage_date=day)}
+    ids = set(expected) | set(recorded)
+    ings = {i.id: i for i in Ingredient.query.filter(Ingredient.id.in_(ids))} if ids else {}
+    rows = []
+    for ing_id in sorted(ids, key=lambda i: ings[i].name):
+        exp, rec = expected.get(ing_id), recorded.get(ing_id)
+        exp_q = exp.quantize(_Q3) if exp is not None else Decimal(0)
+        rows.append({"ingredient_id": ing_id, "ingredient": ings[ing_id].name, "unit": ings[ing_id].unit,
+                     "expected": float(exp_q), "recorded": float(rec.quantity) if rec else None,
+                     "variance": float(rec.quantity - exp_q) if rec else None, "note": rec.note if rec else None,
+                     "usage_id": rec.id if rec else None})
+    return {"date": day.isoformat(), "rows": rows, "items_without_recipe": sorted(no_recipe),
+            "prepared_items": len(prepared)}
+
+
+def record_ingredient_usage(outlet_id: int, data: dict, actor_id: int | None = None) -> dict:
+    f = Fields(data)
+    day = f.date("date", not_future=True, default=today())
+    ing_id = f.integer("ingredient_id", gt=0)
+    qty = f.decimal("quantity", min=0)
+    note = f.text("note", required=False, max_len=255)
+    f.check()
+    ing = Ingredient.query.filter_by(id=ing_id, outlet_id=outlet_id, is_active=True).first()
+    if not ing:
+        raise ValidationError("Please fix the highlighted fields.", {"ingredient_id": "unknown or inactive ingredient"})
+    qty = qty.quantize(_Q3)
+    u = IngredientUsage.query.filter_by(outlet_id=outlet_id, ingredient_id=ing.id, usage_date=day).first()
+    created = u is None
+    if created:
+        u = IngredientUsage(outlet_id=outlet_id, ingredient_id=ing.id, usage_date=day)
+        db.session.add(u)
+    u.quantity, u.note, u.created_by = qty, note, actor_id
+    db.session.flush()
+    audit.record(outlet_id, actor_id, "usage.record", "ingredient", ing.id,
+                 {"date": day.isoformat(), "quantity": float(qty), "replaced": not created})
+    db.session.commit()
+    return {"usage_id": u.id, "ingredient_id": ing.id, "ingredient": ing.name, "unit": ing.unit, "date": day.isoformat(),
+            "quantity": float(qty), "note": note, "created": created}
+
+
+def clear_ingredient_usage(outlet_id: int, usage_id: int, actor_id: int | None = None) -> dict:
+    """Remove a recorded figure, so the row falls back to the expected usage."""
+    u = IngredientUsage.query.filter_by(id=usage_id, outlet_id=outlet_id).first()
+    if not u:
+        raise NotFoundError("Usage record not found.")
+    audit.record(outlet_id, actor_id, "usage.clear", "ingredient", u.ingredient_id,
+                 {"date": u.usage_date.isoformat(), "quantity": float(u.quantity)})
+    db.session.delete(u)
+    db.session.commit()
+    return {"cleared": usage_id}

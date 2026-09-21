@@ -147,3 +147,58 @@ def test_restaurant_information(app, users):
         assert c.get("/api/v1/restaurant").status_code == 403
         assert c.put("/api/v1/restaurant", json={"name": "X"}).status_code == 403
         assert "Lanka Bites" in c.get({"inventory": "/inventory", "kitchen": "/kitchen"}[role]).get_data(as_text=True)
+
+
+def test_orders_over_http_and_roles(app, users):
+    from tests.factories import make_item
+    item = make_item(name="Burger")
+    kitchen, admin, inventory = (as_user(app, users, r) for r in ("kitchen", "admin", "inventory"))
+    r = kitchen.post("/api/v1/kitchen/orders", json={"menu_item_id": item.id, "quantity": 3, "customer_note": "takeaway"})
+    assert r.status_code == 201 and r.get_json()["data"]["status"] == "open"
+    oid = r.get_json()["data"]["id"]
+    assert kitchen.post("/api/v1/kitchen/orders", json={"menu_item_id": item.id, "quantity": 3, "order_date": "2026-09-30"}).status_code == 422
+    assert kitchen.patch(f"/api/v1/kitchen/orders/{oid}", json={"quantity": 5}).get_json()["data"]["quantity"] == 5
+    assert kitchen.get("/api/v1/kitchen/orders?date=2026-09-25").get_json()["meta"]["total"] == 1
+    assert kitchen.patch(f"/api/v1/kitchen/orders/{oid}", json={"status": "fulfilled"}).status_code == 200
+    assert kitchen.patch(f"/api/v1/kitchen/orders/{oid}", json={"quantity": 1}).status_code == 409
+    assert kitchen.patch("/api/v1/kitchen/orders/999", json={"quantity": 1}).status_code == 404
+    assert admin.get("/api/v1/kitchen/orders").status_code == 200
+    assert admin.post("/api/v1/kitchen/orders", json={"menu_item_id": item.id, "quantity": 1}).status_code == 403
+    assert inventory.get("/api/v1/kitchen/orders").status_code == 403
+
+
+def test_ingredient_usage_over_http_and_roles(app, users):
+    from app.extensions import db
+    from app.models import PreparationRecord
+    from tests.factories import add_recipe, make_item
+    item, chicken = make_item(name="Fried Chicken"), make_ingredient(name="Chicken", unit="kg")
+    add_recipe(item, [(chicken, "0.300")])
+    db.session.add(PreparationRecord(outlet_id=1, menu_item_id=item.id, prep_date=date(2026, 9, 25), quantity=30)); db.session.commit()
+    kitchen, admin, inventory = (as_user(app, users, r) for r in ("kitchen", "admin", "inventory"))
+    got = kitchen.get("/api/v1/kitchen/ingredient-usage?date=2026-09-25").get_json()["data"]
+    assert got["rows"][0]["expected"] == 9.0 and got["rows"][0]["recorded"] is None
+    r = kitchen.post("/api/v1/kitchen/ingredient-usage", json={"date": "2026-09-25", "ingredient_id": chicken.id, "quantity": 9.5})
+    assert r.status_code == 201
+    assert kitchen.post("/api/v1/kitchen/ingredient-usage", json={"date": "2026-09-25", "ingredient_id": chicken.id, "quantity": 9.2}).status_code == 200
+    assert kitchen.post("/api/v1/kitchen/ingredient-usage", json={"ingredient_id": chicken.id, "quantity": -1}).status_code == 422
+    row = kitchen.get("/api/v1/kitchen/ingredient-usage?date=2026-09-25").get_json()["data"]["rows"][0]
+    assert (row["recorded"], row["variance"]) == (9.2, 0.2)
+    assert admin.get("/api/v1/kitchen/ingredient-usage").status_code == 200
+    assert admin.post("/api/v1/kitchen/ingredient-usage", json={"ingredient_id": chicken.id, "quantity": 1}).status_code == 403
+    assert admin.delete(f"/api/v1/kitchen/ingredient-usage/{row['usage_id']}").status_code == 403
+    assert inventory.get("/api/v1/kitchen/ingredient-usage").status_code == 403
+    assert kitchen.delete(f"/api/v1/kitchen/ingredient-usage/{row['usage_id']}").status_code == 200
+    assert kitchen.delete(f"/api/v1/kitchen/ingredient-usage/{row['usage_id']}").status_code == 404
+
+
+def test_analytics_endpoint_and_roles(app, users):
+    admin = as_user(app, users, "admin")
+    r = admin.get("/api/v1/reports/analytics?from=2026-09-01&to=2026-09-24")
+    assert r.status_code == 200
+    d = r.get_json()["data"]
+    assert set(d) >= {"weekday", "calendar", "promotion", "forecast_error", "waste", "data_source", "days_with_sales"}
+    assert len(d["weekday"]) == 7
+    assert admin.get("/api/v1/reports/analytics?from=2026-09-24&to=2026-09-01").status_code == 422
+    assert admin.get("/api/v1/reports/analytics").status_code == 200                 # default range
+    for role in ("inventory", "kitchen"):
+        assert as_user(app, users, role).get("/api/v1/reports/analytics").status_code == 403

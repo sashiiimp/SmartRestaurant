@@ -139,3 +139,25 @@ Defects found by the new tests and fixed: the trend report answered 404 instead 
 my own hand calculations were wrong (the code was right).
 
 Not done: perf tests (they write to the live database); live deployment.
+
+## 9. Tier 3 of the proposal-completion work (21 Sep 2026)
+
+Scope: `PLAN.md` section 3A functions 11 to 13: daily orders, ingredient usage, admin analytics. Migration `165b04a3da7c`
+(tables `orders` and `ingredient_usage`) was applied to `smartrest_work` only; the live database is still at the
+first revision.
+
+| Check | Result |
+|---|---|
+| Automated suite without the perf tests (`pytest -q -m "not perf"`, includes MariaDB tests) | 241 passed |
+| New tests: `test_orders_and_usage`, `test_analytics`, additions to `tests/api/test_tier2_api.py` | pass |
+| Hand-calculated cases: 54 burgers and 30 fried chicken give expected usage bun 54, lettuce 0.81, chicken 15.48, oil 1.5 (burgers prepared in two entries of 24 and 30 are summed); a recorded 16 kg gives variance +0.52; analytics on a five-day dataset gives weekday averages Monday 110, Saturday 190, ordinary days 123.3, promotion days 180 against 127.5, forecast error 5.0 MAE and 10 % WAPE, waste rate 10 % | pass |
+| Ingredient usage never changes stock or creates a movement; orders never change the prep quantity | pass |
+| RBAC: kitchen writes orders and usage; admin reads them; inventory gets 403; analytics is admin only; new pages 403 for other roles | pass |
+| Browser check on the work copy (Chromium, three roles, 30 assertions incl. 360 px width) | pass |
+
+Defects found and fixed: a shared chart component ignored a bare `all-labels` attribute (it arrives as an empty string), so
+every other bar label was hidden on the new analytics chart and on the existing kitchen dashboard chart; the daily-orders
+page overflowed a 360 px screen by 5 px because of a hidden helper span (removed). Two of my own test expectations
+were wrong (the code was right).
+
+Not done: perf tests (they write to the live database); live deployment.

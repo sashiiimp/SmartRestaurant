@@ -15,7 +15,7 @@
       <div class="col-6 col-md-2" v-if="tab === 'forecast'"><label class="form-label" for="m-item">Menu item</label><select id="m-item" class="form-select" v-model="itemId" @change="load"><option value="">All items</option><option v-for="i in items" :key="i.id" :value="i.id">[[ i.name ]]</option></select></div>
       <div class="col-6 col-md-3" v-if="tab === 'inventory' || tab === 'movements'"><label class="form-label" for="m-ing">Ingredient</label><select id="m-ing" class="form-select" v-model="ingId" @change="load"><option v-if="tab === 'movements'" value="">All ingredients</option><option v-for="g in ingredients" :key="g.id" :value="g.id">[[ g.name ]]</option></select></div>
       <div class="col-6 col-md-2" v-if="tab === 'movements'"><label class="form-label" for="m-type">Type</label><select id="m-type" class="form-select" v-model="mtype" @change="load"><option value="">All types</option><option value="stock_in">Stock in</option><option value="stock_out">Stock out</option><option value="wastage">Wastage</option><option value="adjustment">Adjustment</option></select></div>
-      <div class="col-12 col-md-3 ms-md-auto text-md-end"><a class="btn btn-outline-secondary" :href="csvUrl">Download CSV</a></div>
+      <div class="col-12 col-md-3 ms-md-auto text-md-end" v-if="tab !== 'analytics'"><a class="btn btn-outline-secondary" :href="csvUrl">Download CSV</a></div>
       <div class="col-6 col-md-2" v-if="tab === 'sales' || tab === 'waste'"><label class="form-label" for="m-group">Group by</label><select id="m-group" class="form-select" v-model="groupBy" @change="load"><option value="day">Day</option><option value="week">Week</option><option value="month">Month</option></select></div>
     </div>
   </div></div>
@@ -36,6 +36,31 @@
           <tfoot><tr class="fw-semibold"><td>All items</td><td v-for="(v, i) in demandDayTotals" :key="i" class="text-end">[[ ui.num(v, 0) ]]</td><td class="text-end">[[ ui.num(demandGrand, 0) ]]</td></tr></tfoot></table></div>
         <div class="small text-muted mb-3">Portions per day. * simple estimate (same day last week). P = Poya day. Weather is estimated from the seasonal average unless it was entered.</div>
         <div class="card"><div class="card-body"><sr-line-chart :labels="demandDates.map(ui.date)" :datasets="demandChart" y-title="Portions per day" title="Forecast, all items"></sr-line-chart></div></div>
+      </template>
+    </div>
+    <div v-if="tab === 'analytics' && an">
+      <div class="small text-muted mb-3">Period [[ ui.date(an.from) ]] to [[ ui.date(an.to) ]] &middot; [[ an.days_with_sales ]] days with sales &middot; Data source: [[ an.data_source ]]. All figures are plain averages and ratios of the recorded data.</div>
+      <sr-empty v-if="!an.days_with_sales" message="No sales in this period."></sr-empty>
+      <template v-else>
+      <div class="row g-3 mb-3">
+        <div class="col-12 col-xl-6"><div class="card h-100"><div class="card-body"><h2 class="h6">Average portions sold per day, by day of the week</h2>
+          <sr-bar-chart all-labels :labels="an.weekday.map(w => w.weekday.slice(0, 3))" :datasets="[{ label: 'Average portions per day', data: an.weekday.map(w => w.average) }]" y-title="Portions per day" :height="240"></sr-bar-chart>
+          <table class="table table-sm mt-2 mb-0"><thead><tr><th>Day</th><th class="text-end">Days</th><th class="text-end">Average</th></tr></thead>
+            <tbody><tr v-for="w in an.weekday" :key="w.weekday"><td>[[ w.weekday ]]</td><td class="text-end">[[ w.days ]]</td><td class="text-end">[[ w.average === null ? '' : ui.num(w.average, 1) ]]</td></tr></tbody></table></div></div></div>
+        <div class="col-12 col-xl-6"><div class="card h-100"><div class="card-body"><h2 class="h6">Holidays and promotions against other days</h2>
+          <sr-bar-chart all-labels :labels="an.calendar.concat(an.promotion).map(c => shortGroup[c.group] || c.group)" :datasets="[{ label: 'Average portions per day', data: an.calendar.map(c => c.average).concat(an.promotion.map(c => c.average)) }]" y-title="Portions per day" :height="240"></sr-bar-chart>
+          <table class="table table-sm mt-2 mb-1"><thead><tr><th>Kind of day</th><th class="text-end">Days</th><th class="text-end">Average</th></tr></thead>
+            <tbody><tr v-for="c in an.calendar.concat(an.promotion)" :key="c.group"><td>[[ c.group ]] <span v-if="c.days < an.min_days_for_comparison" class="badge text-bg-light" title="Too few days to compare reliably">few days</span></td><td class="text-end">[[ c.days ]]</td><td class="text-end">[[ c.average === null ? '' : ui.num(c.average, 1) ]]</td></tr></tbody></table>
+          <div class="small text-muted">A day can count in several groups (for example a Poya day during a promotion). The difference between groups describes the data; it does not prove that the holiday or promotion caused it.</div></div></div></div>
+      </div>
+      <div class="row g-3">
+        <div class="col-12 col-xl-6"><div class="card h-100"><div class="card-body"><h2 class="h6">Forecast error over time (WAPE, % of the day's sales)</h2>
+          <sr-empty v-if="!an.forecast_error.length" message="No forecast has a matching actual sale in this period."></sr-empty>
+          <sr-line-chart v-else :labels="an.forecast_error.map(r => ui.date(r.date))" :datasets="[{ label: 'WAPE %', data: an.forecast_error.map(r => r.wape) }]" y-title="WAPE %" :height="240"></sr-line-chart></div></div></div>
+        <div class="col-12 col-xl-6"><div class="card h-100"><div class="card-body"><h2 class="h6">Prepared-food waste rate over time (% of prepared)</h2>
+          <sr-empty v-if="!an.waste.length" message="No preparation was recorded in this period."></sr-empty>
+          <sr-line-chart v-else :labels="an.waste.map(r => ui.date(r.date))" :datasets="[{ label: 'Waste rate %', data: an.waste.map(r => r.rate) }]" y-title="Waste as % of prepared" :height="240"></sr-line-chart></div></div></div>
+      </div>
       </template>
     </div>
     <div v-if="tab === 'inventory' && trend">

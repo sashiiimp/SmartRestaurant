@@ -132,7 +132,7 @@ window.SR = (function () {
           if (this.chart) this.chart.destroy();
           const colors = palette();
           const sets = (this.datasets || []).map((d, i) => ({ backgroundColor: colors[i % colors.length], borderRadius: 6, maxBarThickness: 34, borderSkipped: false, ...d }));
-          const x = { stacked: !!this.stacked, grid: { display: false }, ticks: this.allLabels ? { autoSkip: false, maxRotation: 40, minRotation: 0 } : { maxRotation: 0, autoSkip: true, maxTicksLimit: 14 } };
+          const x = { stacked: !!this.stacked, grid: { display: false }, ticks: (this.allLabels !== undefined && this.allLabels !== false) ? { autoSkip: false, maxRotation: 40, minRotation: 0 } : { maxRotation: 0, autoSkip: true, maxTicksLimit: 14 } };
           const y = yScale(this, this.stacked);
           this.chart = new Chart(this.$refs.canvas, {
             type: 'bar', data: { labels: this.labels, datasets: sets },

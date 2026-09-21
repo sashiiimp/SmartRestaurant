@@ -91,3 +91,10 @@ def report_movements():
         return csv_response(f"stock_movements_{out['from']}_{out['to']}.csv",
                             ["date", "ingredient", "unit", "type", "quantity", "reason", "note", "reference"], rows)
     return ok(out["rows"], {"total": out["total"], "shown": out["shown"], "from": out["from"], "to": out["to"]})
+
+
+@bp.route("/reports/analytics")
+@roles_required("admin")
+def report_analytics():
+    end = date_arg("to", today() - timedelta(days=1))
+    return ok(dash.analytics(current_outlet_id(), date_arg("from", end - timedelta(days=89)), end))
