@@ -60,3 +60,24 @@ def add_batch(ing, qty, received=date(2026, 9, 20), expiry=None, batch_no=None, 
                                  quantity=qty, movement_date=received))
     db.session.commit()
     return batch
+
+
+def sales_csv(items, start=date(2026, 3, 1), end=date(2026, 9, 24), seed=1, pattern=None):
+    """CSV text of a deterministic weekly-pattern history: weekends busier, a little noise. items: MenuItem list."""
+    import csv
+    import io
+    import numpy as np
+    from datetime import timedelta
+
+    rng = np.random.default_rng(seed)
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["date", "item", "quantity"])
+    d = start
+    while d <= end:
+        for k, item in enumerate(items):
+            base = 40 + 10 * k
+            qty = int(round(base * (1.4 if d.weekday() >= 4 else 1.0) + rng.normal(0, 2)))
+            w.writerow([d.isoformat(), item.name, max(qty, 0)])
+        d += timedelta(days=1)
+    return buf.getvalue()

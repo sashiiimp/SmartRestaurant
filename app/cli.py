@@ -20,6 +20,69 @@ def seed_cmd(reset):
     click.echo("seed complete")
 
 
+@group.command("generate-data")
+@click.option("--start", default="2024-09-01", show_default=True)
+@click.option("--end", default=None, help="Last day of history (default: yesterday).")
+@click.option("--seed", default=42, show_default=True)
+def generate_cmd(start, end, seed):
+    """Generate the labelled synthetic history and load it through the import services."""
+    from datetime import date
+
+    from app.seed.generate import generate
+
+    result = generate(1, date.fromisoformat(start), date.fromisoformat(end) if end else None, seed)
+    for k, v in result.items():
+        click.echo(f"{k}: {v}")
+
+
+@group.command("train")
+@click.option("--activate", is_flag=True, help="Make the new version active.")
+def train_cmd(activate):
+    """Train Random Forest, XGBoost and baselines; compare on the hold-out; save the winner."""
+    from flask import current_app
+
+    from app.services import forecasting_service as fs
+
+    r = fs.train_model(1, current_app.config["MODEL_DIR"], activate=activate)
+    click.echo(f"version {r['version_label']}  winner: {r['algorithm']}  beats baseline: {r['beats_baseline']}")
+    click.echo(r["selection_reason"])
+    click.echo(f"hold-out {r['holdout']['start']} .. {r['holdout']['end']}")
+    click.echo(f"{'model':16} {'MAE':>7} {'RMSE':>7} {'MAPE%':>7} {'WAPE%':>7} {'R2':>7} {'bias':>7}")
+    for m in r["comparison"]:
+        click.echo(f"{m['model']:16} {m['mae']:7.2f} {m['rmse']:7.2f} {m['mape']:7.2f} {m['wape']:7.2f} "
+                   f"{m['r2']:7.3f} {m['bias']:7.2f}")
+    if r["oracle_mae"] is not None:
+        click.echo(f"oracle MAE (noise floor of the synthetic data): {r['oracle_mae']:.2f}")
+
+
+@group.command("activate")
+@click.argument("version_label")
+def activate_cmd(version_label):
+    from app.services import forecasting_service as fs
+
+    mv = fs.activate_model(1, version_label)
+    click.echo(f"active model: {mv.version_label} ({mv.algorithm})")
+
+
+@group.command("forecast")
+@click.option("--as-of", "as_of", default=None, help="Forecast start date (default: today).")
+@click.option("--from", "from_", default=None, help="Backfill start date.")
+@click.option("--to", "to_", default=None, help="Backfill end date.")
+def forecast_cmd(as_of, from_, to_):
+    """Run the 7-day forecast, or with --from/--to a single-day backfill per past date."""
+    from datetime import date
+
+    from app.services import forecasting_service as fs
+
+    if from_ or to_:
+        if not (from_ and to_):
+            raise click.UsageError("--from and --to must be used together")
+        click.echo(fs.backfill(1, date.fromisoformat(from_), date.fromisoformat(to_)))
+        return
+    r = fs.run_forecast(1, date.fromisoformat(as_of) if as_of else None, trigger="cli")
+    click.echo(r)
+
+
 @group.command("create-user")
 @click.option("--username", prompt=True)
 @click.option("--full-name", prompt=True)
