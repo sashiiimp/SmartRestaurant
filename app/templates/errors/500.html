@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Something went wrong{% endblock %}
+{% block content %}
+<div class="text-center py-5">
+  <h1 class="display-6">Something went wrong</h1>
+  <p class="lead">Please try again. If it keeps happening, tell the administrator.</p>
+  <p class="text-muted small">Reference: {{ request_id }}</p>
+  <a class="btn btn-primary" href="/">Back to home</a>
+</div>
+{% endblock %}

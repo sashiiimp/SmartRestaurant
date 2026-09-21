@@ -1,0 +1,10 @@
+[v-cloak] { display: none; }
+.stat-tile .value { font-size: 1.6rem; font-weight: 600; }
+.status-ok { color: #146c43; } .status-low { color: #997404; } .status-out, .status-critical { color: #b02a37; }
+.table th { white-space: nowrap; }
+.card-item { border-left: 4px solid #0d6efd; }
+.card-item.accepted { border-left-color: #198754; }
+.card-item.overridden { border-left-color: #fd7e14; }
+.card-item.no_forecast { border-left-color: #adb5bd; }
+.btn-lg-touch { min-height: 44px; }
+main { max-width: 1400px; margin: 0 auto; }

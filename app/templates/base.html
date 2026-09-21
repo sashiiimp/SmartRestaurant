@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <title>{% block title %}SmartRestaurant{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap.min.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+<body>
+{% if current_user.is_authenticated %}
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="/">SmartRestaurant</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav" aria-controls="nav" aria-expanded="false" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button>
+    <div class="collapse navbar-collapse" id="nav">
+      <ul class="navbar-nav me-auto">
+        {% for label, href in nav_links(current_user.role) %}
+        <li class="nav-item"><a class="nav-link {{ 'active' if request.path == href else '' }}" href="{{ href }}">{{ label }}</a></li>
+        {% endfor %}
+      </ul>
+      <div class="d-flex align-items-center gap-3 text-light">
+        <a class="text-light text-decoration-none" href="{{ home_href }}" id="alert-bell" title="Open alerts">
+          Alerts <span class="badge bg-secondary" id="alert-count">0</span>
+        </a>
+        <span class="small">{{ current_user.full_name }} ({{ current_user.role }})</span>
+        <form method="post" action="{{ url_for('auth.logout') }}" class="m-0">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-sm btn-outline-light" type="submit">Log out</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</nav>
+{% if data_source_label %}<div class="bg-warning-subtle text-center small py-1 border-bottom" role="note">{{ data_source_label }}</div>{% endif %}
+{% endif %}
+<main class="container-fluid py-3">
+  {% block content %}{% endblock %}
+</main>
+<script src="{{ url_for('static', filename='vendor/bootstrap.bundle.min.js') }}"></script>
+{% if current_user.is_authenticated %}
+<script src="{{ url_for('static', filename='vendor/vue.global.prod.js') }}"></script>
+<script src="{{ url_for('static', filename='js/api.js') }}"></script>
+<script src="{{ url_for('static', filename='js/ui.js') }}"></script>
+<script src="{{ url_for('static', filename='js/components.js') }}"></script>
+<script src="{{ url_for('static', filename='js/bell.js') }}"></script>
+{% endif %}
+{% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Log in - SmartRestaurant{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-sm-8 col-md-5 col-lg-4">
+    <h1 class="h3 text-center mb-4 mt-4">SmartRestaurant</h1>
+    <div class="card shadow-sm"><div class="card-body">
+      <h2 class="h5 mb-3">Log in</h2>
+      {% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
+      <form method="post" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="mb-3"><label class="form-label" for="username">Username</label>
+          <input class="form-control" id="username" name="username" value="{{ username }}" autocomplete="username" required autofocus></div>
+        <div class="mb-3"><label class="form-label" for="password">Password</label>
+          <input class="form-control" id="password" name="password" type="password" autocomplete="current-password" required></div>
+        <button class="btn btn-primary w-100" type="submit">Log in</button>
+      </form>
+    </div></div>
+    <p class="text-center text-muted small mt-3">Demand forecasting and inventory decision support</p>
+  </div>
+</div>
+{% endblock %}
