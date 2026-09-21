@@ -52,3 +52,42 @@ def report_waste():
         rows += [["ingredient", r["period"], r["quantity"], f"{r['value']:.2f}"] for r in out["ingredient"]["rows"]]
         return csv_response(f"waste_{out['from']}_{out['to']}.csv", ["type", "period", "quantity", "value_lkr"], rows)
     return ok(out)
+
+
+@bp.route("/reports/stock-levels")
+@roles_required("admin")
+def report_stock_levels():
+    out = dash.stock_levels_report(current_outlet_id())
+    if request.args.get("format") == "csv":
+        rows = [[r["name"], r["unit"], r["usable"], r["on_hand"], r["min_stock"], r["reorder_level"], r["status"],
+                 r["last_movement_date"] or ""] for r in out["rows"]]
+        return csv_response(f"stock_levels_{out['as_of']}.csv",
+                            ["ingredient", "unit", "usable", "on_hand", "min_stock", "reorder_level", "status", "last_movement"], rows)
+    return ok(out)
+
+
+@bp.route("/reports/inventory-trend")
+@roles_required("admin")
+def report_inventory_trend():
+    end = date_arg("to", today())
+    out = dash.inventory_trend(current_outlet_id(), int_arg("ingredient_id"), date_arg("from", end - timedelta(days=29)), end)
+    if request.args.get("format") == "csv":
+        rows = [[r["date"], r["stock_in"], r["stock_out"], r["wastage"], r["adjustment"], r["closing"]] for r in out["rows"]]
+        return csv_response(f"stock_trend_{out['ingredient'].replace(' ', '_')}_{out['from']}_{out['to']}.csv",
+                            ["date", "stock_in", "stock_out", "wastage", "adjustment", "closing_on_hand"], rows)
+    return ok(out)
+
+
+@bp.route("/reports/movements")
+@roles_required("admin")
+def report_movements():
+    end = date_arg("to", today())
+    csv = request.args.get("format") == "csv"
+    out = dash.movement_report(current_outlet_id(), date_arg("from", end - timedelta(days=29)), end, int_arg("ingredient_id"),
+                               request.args.get("type"), limit=None if csv else dash.MOVEMENT_LIMIT_ON_SCREEN)
+    if csv:
+        rows = [[r["date"], r["ingredient"], r["unit"], r["type"], r["quantity"], r["reason"] or "", r["note"] or "",
+                 r["reference"] or ""] for r in out["rows"]]
+        return csv_response(f"stock_movements_{out['from']}_{out['to']}.csv",
+                            ["date", "ingredient", "unit", "type", "quantity", "reason", "note", "reference"], rows)
+    return ok(out["rows"], {"total": out["total"], "shown": out["shown"], "from": out["from"], "to": out["to"]})

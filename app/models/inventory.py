@@ -3,6 +3,7 @@ from app.models.base import BigInt, OutletScopedMixin, TimestampMixin, check, in
 
 MOVEMENT_TYPES = ("stock_in", "stock_out", "wastage", "adjustment")
 PO_STATUSES = ("draft", "sent", "partially_received", "received", "cancelled")
+STOCK_REQUEST_STATUSES = ("pending", "approved", "issued", "rejected", "cancelled")
 
 
 class Supplier(OutletScopedMixin, TimestampMixin, db.Model):
@@ -119,3 +120,35 @@ class PurchaseOrderLine(db.Model):
     qty_ordered = db.Column(db.Numeric(12, 3), nullable=False)
     qty_received = db.Column(db.Numeric(12, 3), nullable=False, default=0)
     unit_cost = db.Column(db.Numeric(12, 2))
+
+
+class StockRequest(OutletScopedMixin, TimestampMixin, db.Model):
+    """Ingredients the kitchen asks the inventory section for (K11); the inventory manager approves, rejects or issues (I15)."""
+
+    __tablename__ = "stock_requests"
+    __table_args__ = (
+        check("status", in_list("status", STOCK_REQUEST_STATUSES)),
+        check("reject", "status <> 'rejected' OR reject_reason IS NOT NULL"),
+        db.Index("ix_stock_requests_status", "outlet_id", "status"),
+    )
+    id = db.Column(db.Integer, primary_key=True)
+    requested_by = db.Column(db.Integer, db.ForeignKey("users.id"))
+    needed_date = db.Column(db.Date)
+    note = db.Column(db.String(255))
+    status = db.Column(db.String(20), nullable=False, default="pending")
+    reject_reason = db.Column(db.String(255))
+    decided_by = db.Column(db.Integer, db.ForeignKey("users.id"))
+    decided_at = db.Column(db.DateTime)
+
+    lines = db.relationship("StockRequestLine", backref="stock_request", cascade="all, delete-orphan",
+                            order_by="StockRequestLine.id")
+
+
+class StockRequestLine(db.Model):
+    __tablename__ = "stock_request_lines"
+    __table_args__ = (check("qty", "qty_requested > 0 AND qty_issued >= 0 AND qty_issued <= qty_requested"),)
+    id = db.Column(db.Integer, primary_key=True)
+    stock_request_id = db.Column(db.Integer, db.ForeignKey("stock_requests.id"), nullable=False, index=True)
+    ingredient_id = db.Column(db.Integer, db.ForeignKey("ingredients.id"), nullable=False)
+    qty_requested = db.Column(db.Numeric(12, 3), nullable=False)
+    qty_issued = db.Column(db.Numeric(12, 3), nullable=False, default=0)

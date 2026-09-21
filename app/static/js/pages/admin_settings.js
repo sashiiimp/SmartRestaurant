@@ -1,9 +1,16 @@
 SR.createApp({
-  data() { return { s: null, loading: true, error: null, saving: false, errors: {}, ui }; },
+  data() { return { s: null, r: { name: '', address: '', contact: '', opening_days: '', opening_hours: '' }, rErrors: {}, savingR: false, loading: true, error: null, saving: false, errors: {}, ui }; },
   async mounted() {
-    try { this.s = (await api.get('/settings')).data; } catch (e) { this.error = ui.errorText(e); } finally { this.loading = false; }
+    try { this.s = (await api.get('/settings')).data; this.r = this.blankToText((await api.get('/restaurant')).data); } catch (e) { this.error = ui.errorText(e); } finally { this.loading = false; }
   },
   methods: {
+    blankToText(r) { return { name: r.name || '', address: r.address || '', contact: r.contact || '', opening_days: r.opening_days || '', opening_hours: r.opening_hours || '' }; },
+    async saveRestaurant() {
+      this.savingR = true; this.rErrors = {};
+      try { this.r = this.blankToText((await api.put('/restaurant', this.r)).data); ui.toast('Restaurant information saved. The name shows in the sidebar from the next page.'); }
+      catch (e) { this.rErrors = e.fields || {}; if (!Object.keys(this.rErrors).length) ui.toast(ui.errorText(e), 'danger'); }
+      finally { this.savingR = false; }
+    },
     async save() {
       this.saving = true; this.errors = {};
       const body = { data_source_label: this.s.data_source_label, alerts: {} };

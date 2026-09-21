@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Stock requests - SmartRestaurant{% endblock %}
+{% block content %}
+<div id="app" v-cloak>
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <h1 class="h4 m-0">Stock requests</h1>
+    <button class="btn btn-primary" type="button" @click="startNew">New request</button>
+  </div>
+  <p class="text-muted small">Ask the inventory section for ingredients. You can cancel a request while it is still pending; a rejected request shows the reason.</p>
+  <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
+
+  <div v-if="form" class="card mb-3"><div class="card-body">
+    <h2 class="h6">New stock request</h2>
+    <div class="row g-2 mb-2">
+      <div class="col-6 col-md-3"><label class="form-label" for="r-date">Needed by (optional)</label><input id="r-date" type="date" class="form-control" :min="today" v-model="form.needed_date"><sr-field-error :errors="errors" name="needed_date"></sr-field-error></div>
+      <div class="col-12 col-md-9"><label class="form-label" for="r-note">Note (optional)</label><input id="r-note" class="form-control" maxlength="255" v-model="form.note"><sr-field-error :errors="errors" name="note"></sr-field-error></div>
+    </div>
+    <div class="row g-2 mb-2 align-items-center" v-for="(l, n) in form.lines" :key="n">
+      <div class="col-7 col-md-5"><select class="form-select" :aria-label="'Ingredient ' + (n + 1)" v-model.number="l.ingredient_id"><option value="">Choose an ingredient</option><option v-for="g in ingredients" :key="g.id" :value="g.id">[[ g.name ]] ([[ g.unit ]])</option></select></div>
+      <div class="col-3 col-md-2"><input class="form-control" inputmode="decimal" :aria-label="'Quantity ' + (n + 1)" placeholder="Quantity" v-model="l.quantity"></div>
+      <div class="col-2 col-md-2"><button class="btn btn-sm btn-outline-danger" type="button" @click="form.lines.splice(n, 1)">Remove</button></div>
+      <div class="col-12"><sr-field-error :errors="errors" :name="'lines[' + n + ']'"></sr-field-error></div>
+    </div>
+    <sr-field-error :errors="errors" name="lines"></sr-field-error>
+    <div class="d-flex gap-2 mt-2"><button class="btn btn-outline-primary" type="button" @click="form.lines.push({ ingredient_id: '', quantity: '' })">Add ingredient</button>
+      <button class="btn btn-primary" type="button" :disabled="saving" @click="save">Send request</button>
+      <button class="btn btn-outline-secondary" type="button" @click="form = null">Cancel</button></div>
+  </div></div>
+
+  <div class="row g-2 mb-2"><div class="col-6 col-md-3"><label class="form-label" for="f-status">Show</label>
+    <select id="f-status" class="form-select" v-model="status" @change="load"><option value="">All requests</option><option value="pending">Pending</option><option value="approved">Approved</option><option value="issued">Issued</option><option value="rejected">Rejected</option><option value="cancelled">Cancelled</option></select></div></div>
+  <sr-loading v-if="loading"></sr-loading>
+  <sr-empty v-else-if="!rows.length" message="No stock requests yet." icon="inbox"></sr-empty>
+  <div v-else class="row g-3">
+    <div class="col-12 col-lg-6" v-for="r in rows" :key="r.id"><div class="card h-100"><div class="card-body">
+      <div class="d-flex justify-content-between align-items-start mb-1"><h2 class="h6 mb-0">Request #[[ r.id ]]</h2><sr-status-badge :status="r.status"></sr-status-badge></div>
+      <div class="small text-muted mb-2">[[ ui.dateTime(r.created_at) ]]<span v-if="r.needed_date"> &middot; needed by [[ ui.date(r.needed_date) ]]</span><span v-if="r.note"> &middot; [[ r.note ]]</span></div>
+      <table class="table table-sm mb-2"><thead><tr><th>Ingredient</th><th class="text-end">Requested</th><th class="text-end">Issued</th></tr></thead>
+        <tbody><tr v-for="l in r.lines" :key="l.id"><td>[[ l.ingredient ]]</td><td class="text-end">[[ ui.qty(l.qty_requested, l.unit) ]]</td><td class="text-end">[[ ui.qty(l.qty_issued, l.unit) ]]</td></tr></tbody></table>
+      <div v-if="r.status === 'rejected'" class="alert alert-danger py-2 small mb-2"><strong>Rejected:</strong> [[ r.reject_reason ]]</div>
+      <div v-if="r.status === 'approved'" class="small text-muted mb-2">Approved by [[ r.decided_by ]]; waiting to be issued.</div>
+      <div v-if="r.status === 'issued'" class="small text-muted mb-2">Issued by the inventory section ([[ r.decided_by ]]).</div>
+      <button v-if="r.status === 'pending'" class="btn btn-sm btn-outline-danger" type="button" @click="cancel(r)">Cancel request</button>
+    </div></div></div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/pages/kitchen_stock_requests.js') }}"></script>{% endblock %}

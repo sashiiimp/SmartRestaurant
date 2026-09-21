@@ -76,7 +76,7 @@ ol, ul { padding-left: 1.2rem; }
   background: linear-gradient(135deg, var(--accent) 0%, rgba(var(--accent-rgb), .6) 140%); box-shadow: 0 4px 12px rgba(0, 0, 0, .25);
 }
 .brand-text { font-weight: 700; letter-spacing: -.01em; line-height: 1.15; }
-.brand-text small { display: block; font-weight: 500; font-size: .7rem; color: var(--nav-text); letter-spacing: .02em; opacity: .85; }
+.brand-text small { display: block; max-width: 10.5rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; font-size: .7rem; color: var(--nav-text); letter-spacing: .02em; opacity: .85; }
 .role-chip {
   display: inline-flex; align-items: center; gap: .5rem; align-self: flex-start; margin: 0 .35rem 1rem; padding: .3rem .7rem;
   font-size: .68rem; font-weight: 650; text-transform: uppercase; letter-spacing: .05em; color: #fff; white-space: nowrap;

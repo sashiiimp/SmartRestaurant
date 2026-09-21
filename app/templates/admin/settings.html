@@ -6,6 +6,17 @@
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
   <sr-loading v-if="loading"></sr-loading>
   <template v-else-if="s">
+    <div class="card mb-3"><div class="card-body"><h2 class="h6">Restaurant information</h2>
+      <p class="text-muted small">Shown to every user in the sidebar. The time zone is fixed to Asia/Colombo.</p>
+      <div class="row g-3">
+        <div class="col-12 col-md-6"><label class="form-label" for="r-name">Restaurant name</label><input id="r-name" class="form-control" maxlength="120" v-model="r.name"><sr-field-error :errors="rErrors" name="name"></sr-field-error></div>
+        <div class="col-12 col-md-6"><label class="form-label" for="r-contact">Contact</label><input id="r-contact" class="form-control" maxlength="120" v-model="r.contact"><sr-field-error :errors="rErrors" name="contact"></sr-field-error></div>
+        <div class="col-12"><label class="form-label" for="r-address">Address</label><input id="r-address" class="form-control" maxlength="255" v-model="r.address"><sr-field-error :errors="rErrors" name="address"></sr-field-error></div>
+        <div class="col-6 col-md-3"><label class="form-label" for="r-days">Opening days</label><input id="r-days" class="form-control" maxlength="60" placeholder="Mon-Sun" v-model="r.opening_days"><sr-field-error :errors="rErrors" name="opening_days"></sr-field-error></div>
+        <div class="col-6 col-md-3"><label class="form-label" for="r-hours">Opening hours</label><input id="r-hours" class="form-control" maxlength="60" placeholder="10:00-22:00" v-model="r.opening_hours"><sr-field-error :errors="rErrors" name="opening_hours"></sr-field-error></div>
+      </div>
+      <button class="btn btn-primary mt-3" type="button" :disabled="savingR" @click="saveRestaurant">Save restaurant information</button>
+    </div></div>
     <div class="card mb-3"><div class="card-body"><h2 class="h6">Thresholds</h2><div class="row g-3">
       <div class="col-12 col-md-6 col-xl-4" v-for="v in s.values" :key="v.key"><label class="form-label" :for="v.key">[[ v.label ]]</label>
         <input :id="v.key" class="form-control" inputmode="decimal" v-model.number="v.value"><div class="form-text">[[ v.min ]] to [[ v.max ]]</div><sr-field-error :errors="errors" :name="v.key"></sr-field-error></div>

@@ -6,7 +6,7 @@
     <h1 class="h4 m-0">Purchase orders</h1>
     <div class="d-flex gap-2 align-items-center">
       <label for="po-status" class="form-label m-0 small">Show</label>
-      <select id="po-status" class="form-select form-select-sm" style="max-width: 12rem" v-model="status" @change="load">
+      <select id="po-status" class="form-select form-select-sm" style="max-width: 15rem" v-model="status" @change="load">
         <option value="">All orders</option><option value="draft">Draft</option><option value="sent">Sent</option><option value="partially_received">Partially received</option><option value="received">Received</option><option value="cancelled">Cancelled</option></select>
       <button class="btn btn-primary" type="button" @click="startNew">New purchase order</button>
     </div>

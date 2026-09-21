@@ -136,9 +136,11 @@ Undecided plans are computed live and not stored.
 **Portable partial-unique trick:** `open_key` = `dedupe_key` while status is `open` or `acknowledged`, else NULL, with UNIQUE (`outlet_id`, `open_key`). NULLs never collide in MySQL/MariaDB or SQLite, so at most one open alert exists per condition without a partial index, and a concurrent duplicate insert fails cleanly and is ignored.
 Who sees which type is a service constant listed in `API.md` section 6.
 
-### 2.7 Deferred tables (not created; sketch for the report)
+### 2.7 Tables added after the first release (21 Sep 2026)
 
-`orders` (daily orders, K10): item, quantity, date, status. `stock_requests` and `stock_request_lines` (K11/I15): ingredient, quantity, status (`pending`,`approved`,`issued`,`rejected`), reject reason, link to the issuing `stock_out` movement. Not built before 28 Sep.
+**stock_requests** (K11 / I15, built; migration `b8b8048fad45`). `outlet_id`, `requested_by` FK users, `needed_date` NULL, `note`, `status` CHECK in (`pending`,`approved`,`issued`,`rejected`,`cancelled`), `reject_reason` (CHECK: required when `rejected`), `decided_by`, `decided_at`, timestamps. Index (`outlet_id`, `status`). **stock_request_lines**: `stock_request_id`, `ingredient_id`, `qty_requested` > 0, `qty_issued` >= 0 and <= `qty_requested`. The kitchen creates a request (`pending`) and may cancel it while pending; the inventory manager approves, rejects (reason) or issues. Issuing draws FEFO from usable stock, one `stock_out` movement per batch with reason `issued_to_kitchen`, `reference_type = 'stock_request'`, `reference_id` = the request. The request becomes `issued` when every line is complete or the manager closes it; otherwise it stays `approved`.
+
+**Still to build (Tier 3):** `orders` (daily orders, K10): item, quantity, date, status (`open`, `fulfilled`, `cancelled`), customer note; and `ingredient_usage` (K8): date, ingredient, quantity, note.
 
 ## 3. Integrity rules (NFR8): where each is enforced
 

@@ -49,6 +49,11 @@
               <div><span><span class="legend-dot" style="background:#b42318"></span>Out of stock</span><strong>[[ d.counts.out ]]</strong></div></div></div>
           </div>
         </div></div>
+        <div class="card mb-3"><div class="card-body">
+          <div class="card-head"><h2 class="h6">Kitchen requests</h2><a href="/inventory/requests">Open requests</a></div>
+          <div v-if="d.pending_requests" class="d-flex align-items-baseline gap-2"><span class="fs-3 fw-semibold">[[ d.pending_requests ]]</span><span class="text-muted">waiting for a decision</span></div>
+          <sr-empty v-else message="No pending kitchen requests." icon="inbox"></sr-empty>
+        </div></div>
         <div class="card"><div class="card-body"><div class="card-head"><h2 class="h6">Alerts</h2></div><sr-alert-list :alerts="d.alerts" @acknowledge="ack"></sr-alert-list></div></div>
       </div>
     </div>

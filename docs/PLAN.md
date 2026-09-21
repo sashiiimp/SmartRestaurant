@@ -72,12 +72,12 @@ Basis: audit of the implementation against `docs/proposal.pdf` and the role func
 | 4 | Manage Food Availability (toggle on the prep page) | Kitchen | 1 | 1.5 | done 21 Sep (tested on the work copy) |
 | 5 | Manage Pre-Order | Kitchen | 1 | 4.0 | done 21 Sep (tested on the work copy) |
 | 6 | Inventory Monitoring and Inventory Demand Forecast Monitoring (admin page) | Admin | 1 | 2.0 | done 21 Sep (tested on the work copy) |
-| 7 | Request Kitchen Stock and Manage Kitchen Stock Requests | Kitchen, Inventory | 2 | 8.0 | todo |
-| 8 | Validate Inventory Data (consistency check) | Inventory | 2 | 1.5 | todo |
-| 9 | Food Demand Forecast Monitoring (admin forecast tab) | Admin | 2 | 2.0 | todo |
-| 10 | System Reports: inventory and movements, CSV | Admin | 2 | 2.5 | todo |
-| 14 | Shortage Reporting (manual report creating a `manual_shortage` alert) | Kitchen | 2 | 2.0 | todo |
-| 15 | Restaurant Information Management (name, address, contact, opening days and hours) | Admin | 2 | 1.5 | todo |
+| 7 | Request Kitchen Stock and Manage Kitchen Stock Requests | Kitchen, Inventory | 2 | 8.0 | done 21 Sep (tested on the work copy) |
+| 8 | Validate Inventory Data (consistency check) | Inventory | 2 | 1.5 | done 21 Sep (tested on the work copy) |
+| 9 | Food Demand Forecast Monitoring (admin forecast tab) | Admin | 2 | 2.0 | done 21 Sep (tested on the work copy) |
+| 10 | System Reports: inventory and movements, CSV | Admin | 2 | 2.5 | done 21 Sep (tested on the work copy) |
+| 14 | Shortage Reporting (manual report creating a `manual_shortage` alert) | Kitchen | 2 | 2.0 | done 21 Sep (tested on the work copy) |
+| 15 | Restaurant Information Management (name, address, contact, opening days and hours) | Admin | 2 | 1.5 | done 21 Sep (tested on the work copy) |
 | 11 | Manage Daily Order | Kitchen | 3 | 3.5 | todo |
 | 12 | Record Ingredient Usage | Kitchen | 3 | 3.5 | todo |
 | 13 | System Analytics | Admin | 3 | 4.0 | todo |

@@ -11,10 +11,13 @@
     <p class="text-muted small">Based on the accepted quantity where you accepted or overrode one, otherwise the recommended quantity. Only usable (not expired) stock is counted.</p>
     <sr-empty v-if="!r.ingredients.length" message="No requirements yet: there is no plan for this date."></sr-empty>
     <div v-else class="table-responsive"><table class="table table-sm align-middle">
-      <thead><tr><th>Ingredient</th><th class="text-end">Required</th><th class="text-end">Usable stock</th><th>Status</th><th class="text-end">Short by</th></tr></thead>
+      <thead><tr><th>Ingredient</th><th class="text-end">Required</th><th class="text-end">Usable stock</th><th>Status</th><th class="text-end">Short by</th><th></th></tr></thead>
       <tbody><tr v-for="i in r.ingredients" :key="i.ingredient_id" :class="i.status === 'short' ? 'table-danger' : ''">
         <td>[[ i.name ]]</td><td class="text-end">[[ ui.qty(i.required, i.unit) ]]</td><td class="text-end">[[ ui.qty(i.usable_stock, i.unit) ]]</td>
-        <td><sr-status-badge :status="i.status"></sr-status-badge></td><td class="text-end">[[ i.short_by ? ui.qty(i.short_by, i.unit) : '' ]]</td></tr></tbody></table></div>
+        <td><sr-status-badge :status="i.status"></sr-status-badge></td><td class="text-end">[[ i.short_by ? ui.qty(i.short_by, i.unit) : '' ]]</td>
+        <td class="text-nowrap text-end"><a v-if="i.status === 'short'" class="btn btn-sm btn-outline-primary me-1" :href="'/kitchen/stock-requests?ingredient=' + i.ingredient_id + '&qty=' + i.short_by">Request stock</a>
+          <button class="btn btn-sm" :class="i.status === 'short' ? 'btn-outline-danger' : 'btn-outline-secondary'" type="button" @click="report(i)">Report shortage</button></td></tr></tbody></table></div>
+    <div class="small text-muted">Request stock asks the inventory section for the missing quantity. Report shortage tells the Inventory &amp; Procurement Manager that you found less than the system says.</div>
     <div v-if="r.cannot_compute.length" class="alert alert-warning">
       <strong>Cannot compute:</strong>
       <span v-for="c in r.cannot_compute" :key="c.menu_item_id + c.reason" class="d-block">[[ c.name ]]: [[ c.reason === 'no_recipe' ? 'no recipe defined' : 'no forecast yet' ]]</span>

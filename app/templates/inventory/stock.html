@@ -36,7 +36,26 @@
       <td class="text-end">[[ ui.num(r.min_stock, 3) ]]</td><td class="text-end">[[ ui.num(r.reorder_level, 3) ]]</td>
       <td><sr-status-badge :status="r.is_critical && r.status !== 'out' ? 'critical' : r.status"></sr-status-badge></td>
       <td>[[ ui.date(r.last_movement_date) ]]</td><td><button class="btn btn-sm btn-outline-secondary" type="button" @click="edit(r)">Edit</button></td></tr></tbody></table></div>
-  <div class="small text-muted">Usable excludes expired stock. When On hand is higher, the difference is expired stock that still needs a wastage record.</div>
+  <div class="card mt-3"><div class="card-body">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+      <div><h2 class="h6 mb-0">Data check</h2><div class="small text-muted">Checks that the stored stock agrees with the recorded movements. It changes nothing.</div></div>
+      <button class="btn btn-outline-primary" type="button" :disabled="checking" @click="runCheck">Run data check</button></div>
+    <div v-if="check" class="mt-3">
+      <div class="alert py-2" :class="check.consistent ? 'alert-success' : 'alert-danger'" role="status">
+        [[ check.consistent ? 'No problems found.' : 'Problems found: the stored stock does not match the movements.' ]]
+        <span class="small">Checked [[ check.ingredients_checked ]] ingredients and [[ check.batches_checked ]] batches on [[ ui.date(check.checked_on) ]].</span></div>
+      <div v-if="check.mismatches.length"><h3 class="h6">Movements do not match the batches</h3>
+        <table class="table table-sm"><thead><tr><th>Ingredient</th><th class="text-end">Movements add up to</th><th class="text-end">Batches hold</th><th class="text-end">Difference</th></tr></thead>
+          <tbody><tr v-for="m in check.mismatches" :key="m.ingredient_id"><td>[[ m.ingredient ]]</td><td class="text-end">[[ ui.qty(m.movements, m.unit) ]]</td><td class="text-end">[[ ui.qty(m.batches, m.unit) ]]</td><td class="text-end text-danger">[[ ui.qty(m.difference, m.unit) ]]</td></tr></tbody></table></div>
+      <div v-if="check.batches_over_received.length"><h3 class="h6">Batches with more left than was received</h3>
+        <table class="table table-sm"><thead><tr><th>Ingredient</th><th>Batch</th><th class="text-end">Received</th><th class="text-end">Left</th></tr></thead>
+          <tbody><tr v-for="b in check.batches_over_received" :key="b.batch_id"><td>[[ b.ingredient ]]</td><td>[[ b.batch_no ]]</td><td class="text-end">[[ b.qty_received ]]</td><td class="text-end text-danger">[[ b.qty_remaining ]]</td></tr></tbody></table></div>
+      <div v-if="check.expired_with_stock.length"><h3 class="h6">Expired stock still on hand (record it as wastage)</h3>
+        <table class="table table-sm mb-0"><thead><tr><th>Ingredient</th><th>Batch</th><th class="text-end">Quantity</th><th>Expired on</th></tr></thead>
+          <tbody><tr v-for="b in check.expired_with_stock" :key="b.id"><td>[[ b.ingredient ]]</td><td>[[ b.batch_no ]]</td><td class="text-end">[[ ui.qty(b.qty_remaining, b.unit) ]]</td><td>[[ ui.date(b.expiry_date) ]]</td></tr></tbody></table></div>
+    </div>
+  </div></div>
+  <div class="small text-muted mt-3">Usable excludes expired stock. When On hand is higher, the difference is expired stock that still needs a wastage record.</div>
 </div>
 {% endblock %}
 {% block scripts %}<script src="{{ url_for('static', filename='js/pages/inventory_stock.js') }}"></script>{% endblock %}

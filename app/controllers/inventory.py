@@ -40,3 +40,8 @@ def suppliers():
 @bp.route("/purchase-orders")
 def purchase_orders():
     return render_template("inventory/purchase_orders.html")
+
+
+@bp.route("/requests")
+def requests():
+    return render_template("inventory/requests.html")

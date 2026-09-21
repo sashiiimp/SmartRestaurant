@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Kitchen requests - SmartRestaurant{% endblock %}
+{% block content %}
+<div id="app" v-cloak>
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <h1 class="h4 m-0">Kitchen requests</h1>
+    <div class="d-flex gap-2 align-items-center"><label for="rq-status" class="form-label m-0 small">Show</label>
+      <select id="rq-status" class="form-select form-select-sm" style="max-width: 15rem" v-model="status" @change="load"><option value="">All requests</option><option value="pending">Pending</option><option value="approved">Approved</option><option value="issued">Issued</option><option value="rejected">Rejected</option><option value="cancelled">Cancelled</option></select></div>
+  </div>
+  <p class="text-muted small">Ingredients the kitchen has asked for. Issuing records a stock-out (earliest expiry first, expired stock is never issued) linked to the request.</p>
+  <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
+
+  <div v-if="req" class="card mb-3"><div class="card-body">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+      <div><h2 class="h6 mb-1">Request #[[ req.id ]] <sr-status-badge :status="req.status"></sr-status-badge></h2>
+        <div class="small text-muted">from [[ req.requested_by ]] &middot; [[ ui.dateTime(req.created_at) ]]<span v-if="req.needed_date"> &middot; needed by [[ ui.date(req.needed_date) ]]</span><span v-if="req.note"> &middot; [[ req.note ]]</span></div></div>
+      <div class="d-flex gap-2">
+        <button v-if="req.status === 'pending'" class="btn btn-outline-primary" type="button" :disabled="busy" @click="approve">Approve</button>
+        <button v-if="req.status === 'pending'" class="btn btn-outline-danger" type="button" @click="rejecting = !rejecting">Reject</button>
+        <button v-if="open" class="btn btn-primary" type="button" @click="startIssue">Issue stock</button>
+        <button class="btn btn-outline-secondary" type="button" @click="req = null; issue = null; rejecting = false">Close</button></div></div>
+    <div v-if="req.status === 'rejected'" class="alert alert-danger py-2 small"><strong>Rejected:</strong> [[ req.reject_reason ]]</div>
+    <div v-if="rejecting" class="border rounded p-3 mb-3">
+      <label class="form-label" for="rj">Reason for rejecting (the kitchen will see it)</label><input id="rj" class="form-control" maxlength="255" v-model="reason"><sr-field-error :errors="errors" name="reason"></sr-field-error>
+      <button class="btn btn-danger mt-2" type="button" :disabled="busy" @click="reject">Reject request</button></div>
+    <div class="table-responsive"><table class="table table-sm align-middle mb-0">
+      <thead><tr><th>Ingredient</th><th class="text-end">Requested</th><th class="text-end">Issued</th><th class="text-end">Outstanding</th><th class="text-end" v-if="open">Usable stock</th></tr></thead>
+      <tbody><tr v-for="l in req.lines" :key="l.id"><td>[[ l.ingredient ]]</td><td class="text-end">[[ ui.qty(l.qty_requested, l.unit) ]]</td><td class="text-end">[[ ui.qty(l.qty_issued, l.unit) ]]</td>
+        <td class="text-end" :class="l.qty_outstanding > 0 ? 'fw-semibold' : 'text-muted'">[[ ui.qty(l.qty_outstanding, l.unit) ]]</td>
+        <td class="text-end" v-if="open" :class="l.usable_stock < l.qty_outstanding ? 'text-danger' : ''">[[ ui.qty(l.usable_stock, l.unit) ]]</td></tr></tbody></table></div>
+    <div v-if="issue" class="border rounded p-3 mt-3">
+      <h3 class="h6">Issue stock</h3>
+      <div class="row g-2 mb-2 align-items-center" v-for="(l, n) in issue.lines" :key="l.line_id">
+        <div class="col-12 col-md-4">[[ l.ingredient ]] <span class="text-muted small">(outstanding [[ ui.qty(l.outstanding, l.unit) ]], usable [[ ui.qty(l.usable, l.unit) ]])</span></div>
+        <div class="col-6 col-md-3"><input class="form-control" inputmode="decimal" :aria-label="'Quantity to issue for ' + l.ingredient" v-model="l.quantity"></div>
+        <div class="col-12"><sr-field-error :errors="errors" :name="'lines[' + n + ']'"></sr-field-error></div></div>
+      <sr-field-error :errors="errors" name="lines"></sr-field-error>
+      <div class="form-check mb-2"><input id="cl" type="checkbox" class="form-check-input" v-model="issue.close"><label class="form-check-label" for="cl">This closes the request even if some lines are only part issued</label></div>
+      <div class="d-flex gap-2"><button class="btn btn-primary" type="button" :disabled="busy" @click="doIssue">Issue</button><button class="btn btn-outline-secondary" type="button" @click="issue = null">Cancel</button></div>
+      <div class="form-text">Leave a quantity empty (or 0) to skip that line. Nothing is issued unless every entered line can be covered by usable stock.</div>
+    </div>
+  </div></div>
+
+  <sr-loading v-if="loading"></sr-loading>
+  <sr-empty v-else-if="!rows.length" message="No kitchen requests." icon="inbox"></sr-empty>
+  <div v-else class="table-responsive"><table class="table table-sm align-middle">
+    <thead><tr><th>Request</th><th>From</th><th>Items</th><th>Needed by</th><th>Status</th><th></th></tr></thead>
+    <tbody><tr v-for="r in rows" :key="r.id" :class="req && req.id === r.id ? 'table-active' : ''">
+      <td class="text-nowrap">#[[ r.id ]] <span class="text-muted small">[[ ui.dateTime(r.created_at) ]]</span></td><td>[[ r.requested_by ]]</td><td>[[ r.summary ]]</td><td>[[ ui.date(r.needed_date) ]]</td>
+      <td><sr-status-badge :status="r.status"></sr-status-badge></td><td><button class="btn btn-sm btn-outline-secondary" type="button" @click="openReq(r.id)">Open</button></td></tr></tbody></table></div>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/pages/inventory_requests.js') }}"></script>{% endblock %}

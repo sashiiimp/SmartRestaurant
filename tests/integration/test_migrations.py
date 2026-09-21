@@ -7,7 +7,7 @@ from sqlalchemy import create_engine, inspect
 from app import create_app
 from app.extensions import db
 
-CHILD_TABLES = {"recipe_lines", "purchase_order_lines", "promotion_items"}   # inherit the outlet via their parent
+CHILD_TABLES = {"recipe_lines", "purchase_order_lines", "promotion_items", "stock_request_lines"}   # inherit the outlet via their parent
 NO_OUTLET = {"outlets", "login_attempts", "model_versions_unused"}          # global by nature
 
 

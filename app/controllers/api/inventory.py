@@ -132,3 +132,40 @@ def receive_purchase_order(po_id):
 @roles_required("inventory")
 def cancel_purchase_order(po_id):
     return ok(inv.cancel_purchase_order(current_outlet_id(), po_id, current_user.id))
+
+
+@bp.route("/stock-requests")
+@roles_required("admin", "inventory")
+def list_stock_requests():
+    rows = inv.list_stock_requests(current_outlet_id(), request.args.get("status"), detail=bool_arg("detail"))
+    return ok(rows, {"total": len(rows), "pending": inv.pending_request_count(current_outlet_id())})
+
+
+@bp.route("/stock-requests/<int:request_id>")
+@roles_required("admin", "inventory")
+def get_stock_request(request_id):
+    return ok(inv.stock_request_dict(inv.get_stock_request(current_outlet_id(), request_id)))
+
+
+@bp.route("/stock-requests/<int:request_id>/approve", methods=["POST"])
+@roles_required("inventory")
+def approve_stock_request(request_id):
+    return ok(inv.approve_stock_request(current_outlet_id(), request_id, current_user.id))
+
+
+@bp.route("/stock-requests/<int:request_id>/reject", methods=["POST"])
+@roles_required("inventory")
+def reject_stock_request(request_id):
+    return ok(inv.reject_stock_request(current_outlet_id(), request_id, json_body(), current_user.id))
+
+
+@bp.route("/stock-requests/<int:request_id>/issue", methods=["POST"])
+@roles_required("inventory")
+def issue_stock_request(request_id):
+    return ok(inv.issue_stock_request(current_outlet_id(), request_id, json_body(), current_user.id))
+
+
+@bp.route("/stock/consistency")
+@roles_required("admin", "inventory")
+def stock_consistency():
+    return ok(inv.consistency_check(current_outlet_id()))

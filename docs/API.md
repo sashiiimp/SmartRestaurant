@@ -75,10 +75,16 @@ Abbreviations: **A** admin, **K** kitchen, **I** inventory. **(R)** means read-o
 | `GET /stock/levels` | A(R) K(R) I | M1 | I3 | per ingredient: `on_hand`, `usable`, `status` (`ok`/`low`/`out`), `is_critical`, `last_movement_date` |
 | `GET /stock/batches?ingredient_id=&expiring_within_days=` | A(R) I | M1 | I12 | sorted by expiry |
 | `GET /stock/movements?ingredient_id=&type=&from=&to=` | A(R) I | M1 | I3 | paged |
+| `GET /stock/consistency` | A(R) I | S | I16 | read-only data check: `mismatches` (sum of movements differs from batch stock), `batches_over_received`, `expired_with_stock`, and `consistent`; also `flask smartrest check-stock` |
 | `POST /stock/in` | I | M1 | I5 | `{ingredient_id, quantity, received_date, expiry_date?, batch_no?, unit_cost?, supplier_id?}` |
 | `POST /stock/out` | I | M1 | I6 | `{ingredient_id, quantity, movement_date, reason}`; 422 `insufficient_stock` with `available` |
 | `POST /stock/wastage` | I | M1 | I13 | `{ingredient_id, quantity, movement_date, reason, batch_id?}` |
 | `POST /stock/adjustments` | I | S | I14 | `{ingredient_id, counted_quantity, movement_date?, note}`; `note` required. Posts `counted - on_hand` (on hand includes expired stock): a shortfall is drawn from the earliest-expiry batches first, a surplus becomes batch `ADJ-<date>` with no expiry. 422 when the difference is 0. Returns `on_hand_before`, `counted`, `difference`, `usable`. |
+| `GET /stock-requests?status=&detail=` | A I | S | I15 | kitchen requests, open ones first; `meta.pending` is the pending count |
+| `GET /stock-requests/{id}` | A I | S | I15 | lines with requested, issued, outstanding and current usable stock |
+| `POST /stock-requests/{id}/approve` | I | S | I15 | pending to approved |
+| `POST /stock-requests/{id}/reject` | I | S | I15 | `{reason}` required; pending only |
+| `POST /stock-requests/{id}/issue` | I | S | I15 | `{lines: [{line_id, quantity}], close?}`; from pending or approved; all lines are checked against usable stock first (422 `insufficient_stock`, nothing saved); draws FEFO with reason `issued_to_kitchen`, `reference_type = stock_request`; status `issued` when every line is complete or `close` is true, else `approved` |
 | `GET /suppliers?active=` | A I | M1 | I10 | `active=true` lists only active suppliers |
 | `POST /suppliers` | I | S | I10 | `name, contact_person?, phone?, email?, lead_time_days?, notes?`; name unique |
 | `PATCH /suppliers/{id}` | I | S | I10 | any of the above plus `is_active`; an inactive supplier cannot be chosen for new ingredients or purchase orders, existing links stay |
@@ -121,7 +127,10 @@ Abbreviations: **A** admin, **K** kitchen, **I** inventory. **(R)** means read-o
 | `GET /kitchen/pre-orders?from=&to=&status=&menu_item_id=` | A(R) K | S | K10 | `from` defaults to today; ordered by date |
 | `POST /kitchen/pre-orders` | K | S | K10 | `{menu_item_id, target_date, quantity, customer_note?, status?}`; `status` is `pending` (default) or `confirmed`; date cannot be in the past; `meta.warnings` when a decision already exists for that item and date |
 | `PATCH /kitchen/pre-orders/{id}` | K | S | K10 | any of `quantity, target_date, customer_note, status` (`pending`, `confirmed`, `cancelled`); cancelled and past-dated pre-orders are read-only (409); only confirmed pre-orders count in the recommendation |
-| `POST /kitchen/shortage-reports` | K | S | K12 | creates a `manual_shortage` alert |
+| `GET /kitchen/stock-requests?status=` | A(R) K | S | K11 | with lines and status; the reject reason is shown to the kitchen |
+| `POST /kitchen/stock-requests` | K | S | K11 | `{needed_date?, note?, lines: [{ingredient_id, quantity}]}`; status `pending` |
+| `POST /kitchen/stock-requests/{id}/cancel` | K | S | K11 | pending only, else 409 |
+| `POST /kitchen/shortage-reports` | K | S | K12 | `{ingredient_id, note?}` creates a critical `manual_shortage` alert visible to Admin and Inventory (201); a second report for the same ingredient updates the open alert (200). The alert closes itself (`closed_reason = restocked`) when that ingredient later gets a positive stock movement |
 
 ### 3.5 Alerts, dashboards, reports
 
@@ -135,7 +144,11 @@ Abbreviations: **A** admin, **K** kitchen, **I** inventory. **(R)** means read-o
 | `GET /dashboards/inventory` | I, A(R) | M1 | I1 | |
 | `GET /reports/sales?from=&to=&group_by=day\|week\|month&item_id=` | A | M2 | A8 | rows plus totals plus top/bottom items |
 | `GET /reports/waste?from=&to=&group_by=` | A | M2 | A11 | `food` and `ingredient` returned as two separate sections (assumption A6 in REQUIREMENTS) |
+| `GET /reports/stock-levels` | A | S (built 21 Sep) | A10, A13 | snapshot of every ingredient today (same rows as `/stock/levels`); `format=csv` |
+| `GET /reports/inventory-trend?ingredient_id=&from=&to=` | A | S (built 21 Sep) | A13 | one ingredient day by day rebuilt from the movements: `opening`, per-day signed `stock_in`, `stock_out`, `wastage`, `adjustment`, and `closing`; the last closing equals on-hand stock; `format=csv` |
+| `GET /reports/movements?from=&to=&ingredient_id=&type=` | A | S (built 21 Sep) | A13 | movements in a period, newest first; JSON shows at most 500 rows (`meta.total` is the full count), `format=csv` exports all |
 | `GET /reports/sales` and `/reports/waste` with `format=csv` | A | S (built) | A13 | the CSV is built from the same service rows as the JSON |
+| `GET /restaurant`, `PUT /restaurant` | A | S (built 21 Sep) | A6 | `{name, address?, contact?, opening_days?, opening_hours?}`; `name` required; `timezone` is returned but cannot be changed |
 | `GET /settings`, `PUT /settings` | A | S (built) | A6, A7 | thresholds, data-source banner, alert type switches |
 | `GET /reports/stock-movements` | A | S (not built) | A13 | use `GET /stock/movements` |
 

@@ -3,8 +3,10 @@ from datetime import date as _date, timedelta
 from decimal import Decimal as _D
 
 from app.extensions import db
-from app.models import Ingredient, PurchaseOrder, PurchaseOrderLine, StockBatch, StockMovement, Supplier
-from app.models.inventory import MOVEMENT_TYPES, PO_STATUSES
+from app.models import (Ingredient, PurchaseOrder, PurchaseOrderLine, StockBatch, StockMovement, StockRequest,
+                        StockRequestLine, Supplier, User)
+from app.models.inventory import MOVEMENT_TYPES, PO_STATUSES, STOCK_REQUEST_STATUSES
+from app.models.base import utcnow
 from app.services import audit
 from app.services.errors import ConflictError, NotFoundError, ValidationError
 from app.services.validation import Fields
@@ -303,7 +305,8 @@ def record_stock_in(outlet_id: int, data: dict, actor_id: int | None = None) -> 
             "usable": float(usable_map(outlet_id).get(ing.id, ZERO))}
 
 
-def _draw_down(outlet_id, ing, batches, qty: _D, mtype: str, day: _date, reason, note, actor_id) -> list[dict]:
+def _draw_down(outlet_id, ing, batches, qty: _D, mtype: str, day: _date, reason, note, actor_id,
+               reference_type=None, reference_id=None) -> list[dict]:
     """Deduct qty from batches in the order given; one movement (negative) per batch touched."""
     left, used = qty, []
     for b in batches:
@@ -313,7 +316,8 @@ def _draw_down(outlet_id, ing, batches, qty: _D, mtype: str, day: _date, reason,
         b.qty_remaining -= take
         left -= take
         db.session.add(StockMovement(outlet_id=outlet_id, ingredient_id=ing.id, batch_id=b.id, movement_type=mtype,
-                                     quantity=-take, movement_date=day, reason=reason, note=note, created_by=actor_id))
+                                     quantity=-take, movement_date=day, reason=reason, note=note, created_by=actor_id,
+                                     reference_type=reference_type, reference_id=reference_id))
         used.append({"batch_id": b.id, "quantity": float(take)})
     return used
 
@@ -584,6 +588,200 @@ def receive_purchase_order(outlet_id: int, po_id: int, data: dict, actor_id: int
     return {"purchase_order": purchase_order_dict(po), "received": got}
 
 
+# ---- kitchen stock requests (K11 / I15) -----------------------------------------------------------
+# The kitchen asks for ingredients; the inventory manager approves, rejects (reason) or issues. Issuing posts the
+# stock-out through the same FEFO path as a manual stock-out, linked to the request. Logic lives here (Inventory service).
+OPEN_REQUEST = ("pending", "approved")
+
+
+def _person(user_id) -> str | None:
+    u = db.session.get(User, user_id) if user_id else None
+    return (u.full_name or u.username) if u else None
+
+
+def stock_request_dict(req: StockRequest, detail: bool = True) -> dict:
+    ings = {i.id: i for i in Ingredient.query.filter(Ingredient.id.in_([l.ingredient_id for l in req.lines]))} if req.lines else {}
+    show_usable = detail and req.status in OPEN_REQUEST          # stock is only relevant while something can still be issued
+    usable = usable_map(req.outlet_id) if show_usable else {}
+    lines = [{"id": l.id, "ingredient_id": l.ingredient_id, "ingredient": ings[l.ingredient_id].name,
+              "unit": ings[l.ingredient_id].unit, "qty_requested": float(l.qty_requested),
+              "qty_issued": float(l.qty_issued), "qty_outstanding": float(l.qty_requested - l.qty_issued),
+              "usable_stock": float(usable.get(l.ingredient_id, ZERO)) if show_usable else None} for l in req.lines]
+    out = {"id": req.id, "status": req.status, "needed_date": req.needed_date.isoformat() if req.needed_date else None,
+           "note": req.note, "reject_reason": req.reject_reason, "requested_by": _person(req.requested_by),
+           "created_at": req.created_at.isoformat() + "Z", "decided_by": _person(req.decided_by),
+           "decided_at": req.decided_at.isoformat() + "Z" if req.decided_at else None,
+           "line_count": len(lines), "summary": ", ".join(f"{l['ingredient']} {l['qty_requested']:g} {l['unit']}" for l in lines)}
+    if detail:
+        out["lines"] = lines
+    return out
+
+
+def get_stock_request(outlet_id: int, request_id: int, lock: bool = False) -> StockRequest:
+    q = StockRequest.query.filter_by(id=request_id, outlet_id=outlet_id)
+    req = (q.with_for_update() if lock else q).first()
+    if not req:
+        raise NotFoundError("Stock request not found.")
+    return req
+
+
+def list_stock_requests(outlet_id: int, status: str | None = None, detail: bool = False) -> list[dict]:
+    q = StockRequest.query.filter_by(outlet_id=outlet_id)
+    if status:
+        if status not in STOCK_REQUEST_STATUSES:
+            raise ValidationError("Please fix the highlighted fields.", {"status": "unknown status"})
+        q = q.filter_by(status=status)
+    # open requests first (oldest first, so nothing waits unseen), then history newest first
+    rows = q.order_by(StockRequest.id.desc()).all()
+    rows.sort(key=lambda r: (0, r.id) if r.status == "pending" else (1, r.id) if r.status == "approved" else (2, -r.id))
+    return [stock_request_dict(r, detail=detail) for r in rows]
+
+
+def pending_request_count(outlet_id: int) -> int:
+    return StockRequest.query.filter_by(outlet_id=outlet_id, status="pending").count()
+
+
+def create_stock_request(outlet_id: int, data: dict, actor_id: int | None = None) -> dict:
+    f = Fields(data)
+    needed = f.date("needed_date", required=False)
+    note = f.text("note", required=False, max_len=255)
+    if needed and needed < today():
+        f.error("needed_date", "cannot be in the past")
+    f.check()
+    raw_lines = data.get("lines")
+    if not isinstance(raw_lines, list) or not raw_lines:
+        raise ValidationError("Please fix the highlighted fields.", {"lines": "add at least one ingredient"})
+    lines, errors, seen = [], {}, set()
+    for i, raw in enumerate(raw_lines):
+        lf = Fields(raw if isinstance(raw, dict) else {})
+        ing_id = lf.integer("ingredient_id", gt=0)
+        qty = lf.decimal("quantity", gt=0)
+        if lf.errors:
+            errors[f"lines[{i}]"] = "; ".join(f"{k} {m}" for k, m in lf.errors.items())
+            continue
+        ing = Ingredient.query.filter_by(id=ing_id, outlet_id=outlet_id, is_active=True).first()
+        if not ing:
+            errors[f"lines[{i}]"] = "unknown or inactive ingredient"
+        elif ing_id in seen:
+            errors[f"lines[{i}]"] = "ingredient appears twice"
+        else:
+            seen.add(ing_id)
+            lines.append(StockRequestLine(ingredient_id=ing_id, qty_requested=qty.quantize(_Q3), qty_issued=ZERO))
+    if errors:
+        raise ValidationError("Please fix the highlighted fields.", errors)
+    req = StockRequest(outlet_id=outlet_id, requested_by=actor_id, needed_date=needed, note=note, status="pending")
+    req.lines = lines
+    db.session.add(req)
+    db.session.flush()
+    audit.record(outlet_id, actor_id, "stock_request.create", "stock_request", req.id, {"lines": len(lines)})
+    db.session.commit()
+    return stock_request_dict(req)
+
+
+def cancel_stock_request(outlet_id: int, request_id: int, actor_id: int | None = None) -> dict:
+    """The kitchen may withdraw a request only while it is still pending."""
+    req = get_stock_request(outlet_id, request_id, lock=True)
+    if req.status != "pending":
+        db.session.rollback()
+        raise ConflictError("Only a pending request can be cancelled.")
+    req.status = "cancelled"
+    audit.record(outlet_id, actor_id, "stock_request.cancel", "stock_request", req.id)
+    db.session.commit()
+    return stock_request_dict(req)
+
+
+def approve_stock_request(outlet_id: int, request_id: int, actor_id: int | None = None) -> dict:
+    req = get_stock_request(outlet_id, request_id, lock=True)
+    if req.status != "pending":
+        db.session.rollback()
+        raise ConflictError("Only a pending request can be approved.")
+    req.status, req.decided_by, req.decided_at = "approved", actor_id, utcnow()
+    audit.record(outlet_id, actor_id, "stock_request.approve", "stock_request", req.id)
+    db.session.commit()
+    return stock_request_dict(req)
+
+
+def reject_stock_request(outlet_id: int, request_id: int, data: dict, actor_id: int | None = None) -> dict:
+    f = Fields(data)
+    reason = f.text("reason", max_len=255)
+    f.check()
+    req = get_stock_request(outlet_id, request_id, lock=True)
+    if req.status != "pending":
+        db.session.rollback()
+        raise ConflictError("Only a pending request can be rejected.")
+    req.status, req.reject_reason, req.decided_by, req.decided_at = "rejected", reason, actor_id, utcnow()
+    audit.record(outlet_id, actor_id, "stock_request.reject", "stock_request", req.id, {"reason": reason})
+    db.session.commit()
+    return stock_request_dict(req)
+
+
+@_retry_on_conflict
+def issue_stock_request(outlet_id: int, request_id: int, data: dict, actor_id: int | None = None) -> dict:
+    """Issue all or part of a request (I15). Nothing is issued unless every entered line can be covered by usable stock.
+
+    The request becomes `issued` when every line is complete, or when the manager closes it (`close: true`) with some
+    lines only part issued; otherwise it stays `approved` and can be issued again."""
+    req = get_stock_request(outlet_id, request_id, lock=True)
+    if req.status not in OPEN_REQUEST:
+        db.session.rollback()
+        raise ConflictError(f"A {req.status} request cannot be issued.")
+    raw_lines = data.get("lines")
+    if not isinstance(raw_lines, list) or not raw_lines:
+        db.session.rollback()
+        raise ValidationError("Please fix the highlighted fields.", {"lines": "enter a quantity for at least one line"})
+    close = bool(data.get("close"))
+    by_id = {l.id: l for l in req.lines}
+    plan, errors, seen, per_ing = [], {}, set(), {}
+    for i, raw in enumerate(raw_lines):
+        lf = Fields(raw if isinstance(raw, dict) else {})
+        line_id = lf.integer("line_id", gt=0)
+        qty = lf.decimal("quantity", gt=0)
+        key = f"lines[{i}]"
+        if lf.errors:
+            errors[key] = "; ".join(f"{k} {m}" for k, m in lf.errors.items())
+            continue
+        line, qty = by_id.get(line_id), qty.quantize(_Q3)
+        if line is None:
+            errors[key] = "not a line of this request"
+        elif line_id in seen:
+            errors[key] = "line appears twice"
+        elif qty > line.qty_requested - line.qty_issued:
+            errors[key] = f"only {(line.qty_requested - line.qty_issued).normalize():f} is still to be issued"
+        else:
+            seen.add(line_id)
+            plan.append((line, qty))
+            per_ing[line.ingredient_id] = per_ing.get(line.ingredient_id, ZERO) + qty
+    if errors:
+        db.session.rollback()
+        raise ValidationError("Please fix the highlighted fields.", errors)
+    # lock ingredient by ingredient in id order so two issues can never wait on each other
+    locked = {}
+    for ing_id in sorted(per_ing):
+        locked[ing_id] = _lock_batches(outlet_id, ing_id, today(), usable_only=True)
+        available = sum((b.qty_remaining for b in locked[ing_id]), ZERO)
+        if per_ing[ing_id] > available:
+            ing = db.session.get(Ingredient, ing_id)
+            db.session.rollback()
+            raise ValidationError(f"Only {available.normalize():f} {ing.unit} of {ing.name} is usable.",
+                                  {"lines": f"{ing.name}: only {available.normalize():f} {ing.unit} usable stock"},
+                                  code="insufficient_stock", extra={"available": float(available), "ingredient_id": ing_id})
+    issued = []
+    for line, qty in plan:
+        ing = db.session.get(Ingredient, line.ingredient_id)
+        _draw_down(outlet_id, ing, locked[ing.id], qty, "stock_out", today(), "issued_to_kitchen",
+                   f"Kitchen request #{req.id}", actor_id, reference_type="stock_request", reference_id=req.id)
+        line.qty_issued = line.qty_issued + qty
+        issued.append({"ingredient": ing.name, "quantity": float(qty), "unit": ing.unit})
+    complete = all(l.qty_issued >= l.qty_requested for l in req.lines)
+    req.status = "issued" if complete or close else "approved"
+    if req.decided_by is None:
+        req.decided_by, req.decided_at = actor_id, utcnow()
+    audit.record(outlet_id, actor_id, "stock_request.issue", "stock_request", req.id,
+                 {"lines": len(issued), "status": req.status})
+    db.session.commit()
+    return {"stock_request": stock_request_dict(req), "issued": issued}
+
+
 def list_batches(outlet_id: int, ingredient_id: int | None = None, expiring_within_days: int | None = None) -> list[dict]:
     q = (StockBatch.query.filter(StockBatch.outlet_id == outlet_id, StockBatch.qty_remaining > 0))
     if ingredient_id:
@@ -619,6 +817,27 @@ def list_movements(outlet_id: int, ingredient_id=None, mtype=None, start=None, e
                                       "type": m.movement_type, "quantity": float(m.quantity), "reason": m.reason,
                                       "note": m.note, "date": m.movement_date.isoformat(), "batch_id": m.batch_id}
                                      for m, i in rows]}
+
+
+def consistency_check(outlet_id: int) -> dict:
+    """I16: checks stored stock against the movement history. Read-only; every list should be empty.
+
+    1. movements vs batches: for each ingredient the sum of all movements must equal the sum of batch quantities left;
+    2. batches with more left than was ever received;
+    3. expired batches that still hold stock (they need a wastage record, they are not an error in the data)."""
+    names = {i.id: i for i in Ingredient.query.filter_by(outlet_id=outlet_id)}
+    mismatches = []
+    for v in stock_invariant_violations(outlet_id):
+        ing = names.get(v["ingredient_id"])
+        mismatches.append({**v, "ingredient": ing.name if ing else str(v["ingredient_id"]), "unit": ing.unit if ing else None,
+                           "difference": round(v["batches"] - v["movements"], 3)})
+    over = [{"batch_id": b.id, "ingredient": b.ingredient.name, "batch_no": b.batch_no,
+             "qty_received": float(b.qty_received), "qty_remaining": float(b.qty_remaining)}
+            for b in StockBatch.query.filter(StockBatch.outlet_id == outlet_id, StockBatch.qty_remaining > StockBatch.qty_received)]
+    expired = [b for b in list_batches(outlet_id) if b["expired"]]
+    return {"checked_on": today().isoformat(), "batches_checked": StockBatch.query.filter_by(outlet_id=outlet_id).count(),
+            "ingredients_checked": len(names), "mismatches": mismatches, "batches_over_received": over,
+            "expired_with_stock": expired, "consistent": not mismatches and not over}
 
 
 def stock_invariant_violations(outlet_id: int) -> list[dict]:

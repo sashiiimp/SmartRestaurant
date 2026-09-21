@@ -10,6 +10,7 @@ from app.services import data_management_service as dm
 from app.services import forecasting_service as fs
 from app.services import inventory_service as inv
 from app.services import recommendation_service as rec
+from app.models.inventory import MOVEMENT_TYPES
 from app.services.errors import ValidationError
 from app.utils.dates import today
 
@@ -62,7 +63,8 @@ def inventory_dashboard(outlet_id: int, role: str = "inventory") -> dict:
                            key=lambda r: r["usable"] - r["need"])[:10]
     return {"date": day.isoformat(), "counts": counts, "alerts": alerts["rows"][:8], "alert_counts": alerts["counts"],
             "reorder": rec.get_reorder_suggestions(outlet_id, day)[:5], "need_vs_stock": need_vs_stock,
-            "expiring": inv.list_batches(outlet_id, expiring_within_days=3)[:10]}
+            "expiring": inv.list_batches(outlet_id, expiring_within_days=3)[:10],
+            "pending_requests": inv.pending_request_count(outlet_id)}
 
 
 # ---- reports (A8, A11) and the admin dashboard (A1) ------------------------------------------------
@@ -176,3 +178,63 @@ def admin_dashboard(outlet_id: int, range_days: int = 7) -> dict:
             "recent_activity": [{"time": a.created_at.isoformat() + "Z", "action": a.action, "entity": a.entity_type,
                                  "entity_id": a.entity_id} for a in recent],
             "data_source": settings_label(outlet_id)}
+
+
+# ---- inventory reports (A13) -------------------------------------------------------------------------------
+MOVEMENT_LIMIT_ON_SCREEN = 500
+
+
+def stock_levels_report(outlet_id: int) -> dict:
+    """Snapshot of every ingredient today: the same rows as the inventory pages (A10)."""
+    rows = inv.stock_levels(outlet_id, today())
+    return {"as_of": today().isoformat(), "rows": rows}
+
+
+def inventory_trend(outlet_id: int, ingredient_id: int, start: date, end: date) -> dict:
+    """Stock of one ingredient day by day, rebuilt from the immutable movements: opening balance, the day's movements
+    by type (signed), and the closing on-hand quantity."""
+    _check_range(start, end, "day")
+    if not ingredient_id:
+        raise ValidationError("Please fix the highlighted fields.", {"ingredient_id": "is required"})
+    ing = inv.get_ingredient(outlet_id, ingredient_id)
+    base = StockMovement.query.filter(StockMovement.outlet_id == outlet_id, StockMovement.ingredient_id == ing.id)
+    opening = base.with_entities(db.func.coalesce(db.func.sum(StockMovement.quantity), 0)).filter(
+        StockMovement.movement_date < start).scalar()
+    per_day: dict = defaultdict(lambda: defaultdict(lambda: Decimal(0)))
+    for d, t, q in base.with_entities(StockMovement.movement_date, StockMovement.movement_type,
+                                      db.func.sum(StockMovement.quantity)).filter(
+            StockMovement.movement_date >= start, StockMovement.movement_date <= end).group_by(
+            StockMovement.movement_date, StockMovement.movement_type):
+        per_day[d][t] += q
+    running, rows = Decimal(opening), []
+    d = start
+    while d <= end:
+        day = per_day.get(d, {})
+        running += sum(day.values(), Decimal(0))
+        rows.append({"date": d.isoformat(), **{t: float(day.get(t, 0)) for t in ("stock_in", "stock_out", "wastage", "adjustment")},
+                     "closing": float(running)})
+        d += timedelta(days=1)
+    return {"ingredient_id": ing.id, "ingredient": ing.name, "unit": ing.unit, "from": start.isoformat(), "to": end.isoformat(),
+            "opening": float(opening), "closing": float(running), "rows": rows}
+
+
+def movement_report(outlet_id: int, start: date, end: date, ingredient_id: int | None = None, mtype: str | None = None,
+                    limit: int | None = MOVEMENT_LIMIT_ON_SCREEN) -> dict:
+    """Stock movements in a period (A13). limit=None returns every row (used by the CSV export)."""
+    _check_range(start, end, "day")
+    if mtype and mtype not in MOVEMENT_TYPES:
+        raise ValidationError("Please fix the highlighted fields.", {"type": "unknown movement type"})
+    q = (db.session.query(StockMovement, Ingredient).join(Ingredient, Ingredient.id == StockMovement.ingredient_id)
+         .filter(StockMovement.outlet_id == outlet_id, StockMovement.movement_date >= start, StockMovement.movement_date <= end))
+    if ingredient_id:
+        q = q.filter(StockMovement.ingredient_id == ingredient_id)
+    if mtype:
+        q = q.filter(StockMovement.movement_type == mtype)
+    total = q.count()
+    q = q.order_by(StockMovement.movement_date.desc(), StockMovement.id.desc())
+    if limit:
+        q = q.limit(limit)
+    rows = [{"date": m.movement_date.isoformat(), "ingredient": i.name, "unit": i.unit, "type": m.movement_type,
+             "quantity": float(m.quantity), "reason": m.reason, "note": m.note, "reference": (f"{m.reference_type} #{m.reference_id}" if m.reference_type else None)}
+            for m, i in q.all()]
+    return {"from": start.isoformat(), "to": end.isoformat(), "total": total, "shown": len(rows), "rows": rows}

@@ -1,6 +1,6 @@
 const BLANK = { id: null, name: '', unit: 'kg', category: '', shelf_life_days: '', default_supplier_id: '', min_stock: 0, reorder_level: 0, pack_size: 1, reorder_qty: 0 };
 SR.createApp({
-  data() { return { rows: [], suppliers: [], filter: '', status: '', loading: true, error: null, form: null, errors: {}, saving: false, ui }; },
+  data() { return { rows: [], suppliers: [], filter: '', status: '', loading: true, error: null, form: null, errors: {}, saving: false, check: null, checking: false, ui }; },
   computed: {
     // inactive suppliers cannot be newly chosen, but the one already on the ingredient stays visible
     supplierOptions() { return this.suppliers.filter(s => s.is_active || (this.form && s.id === this.form.default_supplier_id)); },
@@ -11,6 +11,10 @@ SR.createApp({
   },
   async mounted() { await this.load(); this.suppliers = (await api.get('/suppliers')).data; },
   methods: {
+    async runCheck() {
+      this.checking = true;
+      try { this.check = (await api.get('/stock/consistency')).data; } catch (e) { ui.toast(ui.errorText(e), 'danger'); } finally { this.checking = false; }
+    },
     async load() {
       this.loading = true; this.error = null;
       try { this.rows = (await api.get('/stock/levels')).data; } catch (e) { this.error = ui.errorText(e); } finally { this.loading = false; }

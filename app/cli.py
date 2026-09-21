@@ -140,3 +140,20 @@ def set_setting_cmd(key, value):
 
 def register_cli(app):
     app.cli.add_command(group)
+
+
+@group.command("check-stock")
+def check_stock_cmd():
+    """Check that stored stock agrees with the movement history (I16). Exit code 1 if it does not."""
+    from app.services import inventory_service as inv
+
+    r = inv.consistency_check(1)
+    click.echo(f"checked {r['ingredients_checked']} ingredients and {r['batches_checked']} batches on {r['checked_on']}")
+    for m in r["mismatches"]:
+        click.echo(f"MISMATCH {m['ingredient']}: movements {m['movements']} vs batches {m['batches']} (difference {m['difference']})")
+    for b in r["batches_over_received"]:
+        click.echo(f"OVER-RECEIVED batch {b['batch_id']} {b['ingredient']}: {b['qty_remaining']} left of {b['qty_received']}")
+    for b in r["expired_with_stock"]:
+        click.echo(f"expired stock: {b['ingredient']} batch {b['batch_no']} {b['qty_remaining']} {b['unit']} (record it as wastage)")
+    click.echo("consistent" if r["consistent"] else "NOT consistent")
+    raise SystemExit(0 if r["consistent"] else 1)

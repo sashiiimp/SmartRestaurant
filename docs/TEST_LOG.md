@@ -116,3 +116,26 @@ field errors were cleared, so a request with several problems showed only some o
 
 Not yet done for Tier 1: the perf tests were not run (they write to the live demo database); the live server still runs the
 previous code until the final deployment step.
+
+## 8. Tier 2 of the proposal-completion work (21 Sep 2026)
+
+Scope: `PLAN.md` section 3A functions 7 to 10, 14 and 15: kitchen stock requests (both roles), inventory data check,
+admin demand-forecast monitoring, admin inventory reports and CSV, shortage reporting, restaurant information.
+Migration `b8b8048fad45` (two tables) was applied to `smartrest_work` only; the live database is still at the previous
+revision.
+
+| Check | Result |
+|---|---|
+| Automated suite without the perf tests (`pytest -q -m "not perf"`, includes MariaDB tests) | 221 passed |
+| New tests: `test_stock_requests`, `test_shortage_reports`, `test_inventory_reports`, `tests/api/test_tier2_api.py`; `test_migrations` now covers the new tables | pass |
+| Hand-calculated cases: issuing 12 kg from usable 17 kg takes B2 4, B1 3, B3 5 and never the expired batch; issuing 20 kg is refused and writes nothing (all-or-nothing across lines); inventory trend closings 0, 10, 12, 10, 11, 11 ending at the on-hand stock; consistency check detects +8 kg added behind the movements | pass |
+| Concurrency on MariaDB: two parallel issues of 10 kg against 12 kg usable, exactly one succeeds | pass |
+| RBAC: kitchen creates and cancels requests only; inventory decides and issues but cannot create; admin is read-only on requests and holds the report and restaurant endpoints; all new pages 403 for other roles | pass |
+| CSV equals the screen (trend closing figure, movement filter, stock levels) | pass |
+| Browser check on the work copy (Chromium, three roles, 39 assertions incl. 360 px width) | pass; only the deliberate 4xx responses appear in the console |
+| `flask smartrest check-stock` on the work copy | consistent, one expired batch listed |
+
+Defects found by the new tests and fixed: the trend report answered 404 instead of 422 when no ingredient was chosen; two of
+my own hand calculations were wrong (the code was right).
+
+Not done: perf tests (they write to the live database); live deployment.

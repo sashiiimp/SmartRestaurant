@@ -2,19 +2,56 @@
 {% block title %}Monitoring - SmartRestaurant{% endblock %}
 {% block content %}
 <div id="app" v-cloak>
-  <h1 class="h4 mb-3">Sales, forecast accuracy and waste</h1>
-  <ul class="nav nav-tabs mb-3"><li class="nav-item" v-for="t in [['sales','Sales and revenue'],['forecast','Forecast accuracy'],['waste','Waste']]" :key="t[0]"><button class="nav-link" :class="{ active: tab === t[0] }" @click="setTab(t[0])">[[ t[1] ]]</button></li></ul>
+  <h1 class="h4 mb-3">Sales, forecasts, inventory and waste</h1>
+  <ul class="nav nav-tabs mb-3 flex-wrap"><li class="nav-item" v-for="t in tabs" :key="t[0]"><button class="nav-link" :class="{ active: tab === t[0] }" @click="setTab(t[0])">[[ t[1] ]]</button></li></ul>
   <div class="card mb-3"><div class="card-body py-3">
-  <div class="row g-2 align-items-end">
+    <div class="row g-2 align-items-end" v-if="tab === 'demand'">
+      <div class="col-6 col-md-3"><label class="form-label" for="d-start">First day of the 7-day window</label><input id="d-start" type="date" class="form-control" v-model="demandStart" @change="load"></div>
+      <div class="col-12 col-md-6 small text-muted">Forecast portions per menu item for 7 days, from the latest forecast run that is not later than today.</div>
+    </div>
+    <div class="row g-2 align-items-end" v-else>
       <div class="col-6 col-md-2"><label class="form-label" for="m-from">From</label><input id="m-from" type="date" class="form-control" v-model="from" @change="load"></div>
       <div class="col-6 col-md-2"><label class="form-label" for="m-to">To</label><input id="m-to" type="date" class="form-control" v-model="to" @change="load"></div>
+      <div class="col-6 col-md-2" v-if="tab === 'forecast'"><label class="form-label" for="m-item">Menu item</label><select id="m-item" class="form-select" v-model="itemId" @change="load"><option value="">All items</option><option v-for="i in items" :key="i.id" :value="i.id">[[ i.name ]]</option></select></div>
+      <div class="col-6 col-md-3" v-if="tab === 'inventory' || tab === 'movements'"><label class="form-label" for="m-ing">Ingredient</label><select id="m-ing" class="form-select" v-model="ingId" @change="load"><option v-if="tab === 'movements'" value="">All ingredients</option><option v-for="g in ingredients" :key="g.id" :value="g.id">[[ g.name ]]</option></select></div>
+      <div class="col-6 col-md-2" v-if="tab === 'movements'"><label class="form-label" for="m-type">Type</label><select id="m-type" class="form-select" v-model="mtype" @change="load"><option value="">All types</option><option value="stock_in">Stock in</option><option value="stock_out">Stock out</option><option value="wastage">Wastage</option><option value="adjustment">Adjustment</option></select></div>
       <div class="col-12 col-md-3 ms-md-auto text-md-end"><a class="btn btn-outline-secondary" :href="csvUrl">Download CSV</a></div>
-      <div class="col-6 col-md-2" v-if="tab !== 'forecast'"><label class="form-label" for="m-group">Group by</label><select id="m-group" class="form-select" v-model="groupBy" @change="load"><option value="day">Day</option><option value="week">Week</option><option value="month">Month</option></select></div>
+      <div class="col-6 col-md-2" v-if="tab === 'sales' || tab === 'waste'"><label class="form-label" for="m-group">Group by</label><select id="m-group" class="form-select" v-model="groupBy" @change="load"><option value="day">Day</option><option value="week">Week</option><option value="month">Month</option></select></div>
     </div>
   </div></div>
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
   <sr-loading v-if="loading"></sr-loading>
   <template v-else>
+    <div v-if="tab === 'demand'">
+      <div v-if="demand.meta.active_model" class="text-muted small mb-2">Model: [[ demand.meta.active_model ]]<span v-if="demand.meta.last_run"> &middot; last run [[ ui.date(demand.meta.last_run.as_of) ]] ([[ demand.meta.last_run.status ]])</span></div>
+      <div v-else class="alert alert-warning">No active model yet. Train and activate one on the Models page.</div>
+      <div v-if="demand.meta.missing_dates && demand.meta.missing_dates.length && demand.rows.length" class="alert alert-info py-2 small">No forecast yet for: [[ demand.meta.missing_dates.map(ui.date).join(', ') ]]<span v-if="demand.meta.last_forecast_date"> (last available date: [[ ui.date(demand.meta.last_forecast_date) ]])</span>.</div>
+      <sr-empty v-if="!demand.rows.length" message="No forecast for this period."></sr-empty>
+      <template v-else>
+        <div class="table-responsive mb-2"><table class="table table-sm align-middle">
+          <thead><tr><th>Item</th><th v-for="d in demandDates" :key="d" class="text-end">[[ ui.date(d) ]]</th><th class="text-end">7-day total</th></tr></thead>
+          <tbody><tr v-for="t in demandTable" :key="t.id"><td>[[ t.name ]]</td>
+            <td v-for="(c, i) in t.cells" :key="i" class="text-end"><span v-if="c">[[ ui.num(c.predicted_qty, 0) ]]<span v-if="c.method === 'baseline'" title="Simple estimate (same day last week)"> *</span><span v-if="c.is_poya" class="badge text-bg-light ms-1" title="Poya day">P</span></span><span v-else class="text-muted">-</span></td>
+            <td class="text-end fw-semibold">[[ ui.num(t.total, 0) ]]</td></tr></tbody>
+          <tfoot><tr class="fw-semibold"><td>All items</td><td v-for="(v, i) in demandDayTotals" :key="i" class="text-end">[[ ui.num(v, 0) ]]</td><td class="text-end">[[ ui.num(demandGrand, 0) ]]</td></tr></tfoot></table></div>
+        <div class="small text-muted mb-3">Portions per day. * simple estimate (same day last week). P = Poya day. Weather is estimated from the seasonal average unless it was entered.</div>
+        <div class="card"><div class="card-body"><sr-line-chart :labels="demandDates.map(ui.date)" :datasets="demandChart" y-title="Portions per day" title="Forecast, all items"></sr-line-chart></div></div>
+      </template>
+    </div>
+    <div v-if="tab === 'inventory' && trend">
+      <div class="row g-3 mb-3"><div class="col-6 col-md-3"><sr-stat-tile label="Opening stock" icon="package" :value="ui.qty(trend.opening, trend.unit)"></sr-stat-tile></div><div class="col-6 col-md-3"><sr-stat-tile label="Closing stock" icon="package" tone="info" :value="ui.qty(trend.closing, trend.unit)"></sr-stat-tile></div></div>
+      <div class="card mb-3"><div class="card-body"><sr-line-chart :labels="trend.rows.map(r => ui.date(r.date))" :datasets="trendData" :y-title="'Closing stock (' + trend.unit + ')'" title="Closing stock"></sr-line-chart></div></div>
+      <div class="table-responsive" style="max-height: 24rem; overflow: auto"><table class="table table-sm"><thead><tr><th>Date</th><th class="text-end">Stock in</th><th class="text-end">Stock out</th><th class="text-end">Wastage</th><th class="text-end">Adjustment</th><th class="text-end">Closing</th></tr></thead>
+        <tbody><tr v-for="r in trend.rows" :key="r.date"><td>[[ ui.date(r.date) ]]</td><td class="text-end">[[ ui.num(r.stock_in, 3) ]]</td><td class="text-end">[[ ui.num(r.stock_out, 3) ]]</td><td class="text-end">[[ ui.num(r.wastage, 3) ]]</td><td class="text-end">[[ ui.num(r.adjustment, 3) ]]</td><td class="text-end fw-semibold">[[ ui.num(r.closing, 3) ]]</td></tr></tbody></table></div>
+      <div class="small text-muted mt-2">Rebuilt from the recorded stock movements. Stock in and adjustments up are positive; stock out, wastage and adjustments down are negative. The last closing figure equals the stock on hand.</div>
+    </div>
+    <div v-if="tab === 'movements' && moves">
+      <div class="small text-muted mb-2">[[ moves.meta.total ]] movements in this period<span v-if="moves.meta.total > moves.meta.shown">; the latest [[ moves.meta.shown ]] are shown, the CSV has all of them</span>.</div>
+      <sr-empty v-if="!moves.data.length" message="No stock movements in this period."></sr-empty>
+      <div v-else class="table-responsive" style="max-height: 32rem; overflow: auto"><table class="table table-sm"><thead><tr><th>Date</th><th>Ingredient</th><th>Type</th><th class="text-end">Quantity</th><th>Reason</th><th>Note</th><th>Linked to</th></tr></thead>
+        <tbody><tr v-for="(m, i) in moves.data" :key="i"><td class="text-nowrap">[[ ui.date(m.date) ]]</td><td>[[ m.ingredient ]]</td><td>[[ m.type.replace('_', ' ') ]]</td>
+          <td class="text-end fw-semibold" :class="m.quantity < 0 ? 'text-danger' : 'text-success'">[[ m.quantity > 0 ? '+' : '' ]][[ ui.qty(m.quantity, m.unit) ]]</td><td>[[ (m.reason || '').replace('_', ' ') ]]</td><td>[[ m.note ]]</td><td>[[ m.reference ]]</td></tr></tbody></table></div>
+    </div>
     <div v-if="tab === 'sales' && sales">
       <div class="row g-3 mb-3"><div class="col-6 col-md-3"><sr-stat-tile label="Portions sold" icon="bag" :value="ui.num(sales.totals.quantity, 0)"></sr-stat-tile></div><div class="col-6 col-md-3"><sr-stat-tile label="Revenue" icon="dollar" :value="ui.money(sales.totals.revenue)"></sr-stat-tile></div></div>
       <div class="card mb-3"><div class="card-body"><sr-bar-chart :labels="salesLabels" :datasets="salesData" y-title="Portions" title="Portions sold"></sr-bar-chart></div></div>

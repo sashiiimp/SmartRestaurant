@@ -15,6 +15,7 @@
         <div class="col-6 col-md-3"><sr-stat-tile label="Low" icon="warning" :tone="counts.low ? 'warning' : ''" :value="counts.low"></sr-stat-tile></div>
         <div class="col-6 col-md-3"><sr-stat-tile label="Out of stock" icon="alert" :tone="counts.out ? 'danger' : ''" :value="counts.out"></sr-stat-tile></div>
       </div>
+      <div class="d-flex justify-content-end mb-2"><a class="btn btn-outline-secondary btn-sm" href="/api/v1/reports/stock-levels?format=csv">Download stock levels (CSV)</a></div>
       <div class="table-responsive"><table class="table table-sm align-middle">
         <thead><tr><th>Ingredient</th><th class="text-end">Usable</th><th class="text-end">On hand</th><th class="text-end">Min</th><th class="text-end">Reorder at</th><th>Status</th><th>Last movement</th></tr></thead>
         <tbody><tr v-for="r in levels" :key="r.id" :class="r.is_critical ? 'table-danger' : (r.status === 'low' ? 'table-warning' : '')">

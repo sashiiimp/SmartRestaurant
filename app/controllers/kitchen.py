@@ -35,3 +35,8 @@ def requirements():
 @bp.route("/orders")
 def orders():
     return render_template("kitchen/orders.html")
+
+
+@bp.route("/stock-requests")
+def stock_requests():
+    return render_template("kitchen/stock_requests.html")

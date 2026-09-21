@@ -2,7 +2,9 @@ from flask import request
 from flask_login import current_user
 
 from app.controllers.api import bp
+from app.services import alert_service as alerts
 from app.services import dashboard_service as dash
+from app.services import inventory_service as inv
 from app.services import kitchen_service as kit
 from app.utils.dates import today
 from app.utils.responses import date_arg, int_arg, json_body, ok
@@ -55,3 +57,29 @@ def create_pre_order():
 def update_pre_order(pre_order_id):
     result = kit.update_pre_order(current_outlet_id(), pre_order_id, json_body(), current_user.id)
     return ok(result, {"warnings": result["warnings"]})
+
+
+@bp.route("/kitchen/stock-requests")
+@roles_required("admin", "kitchen")
+def list_kitchen_stock_requests():
+    rows = inv.list_stock_requests(current_outlet_id(), request.args.get("status"), detail=True)
+    return ok(rows, {"total": len(rows)})
+
+
+@bp.route("/kitchen/stock-requests", methods=["POST"])
+@roles_required("kitchen")
+def create_stock_request():
+    return ok(inv.create_stock_request(current_outlet_id(), json_body(), current_user.id), status=201)
+
+
+@bp.route("/kitchen/stock-requests/<int:request_id>/cancel", methods=["POST"])
+@roles_required("kitchen")
+def cancel_stock_request(request_id):
+    return ok(inv.cancel_stock_request(current_outlet_id(), request_id, current_user.id))
+
+
+@bp.route("/kitchen/shortage-reports", methods=["POST"])
+@roles_required("kitchen")
+def report_shortage():
+    result = alerts.report_shortage(current_outlet_id(), json_body(), current_user.id)
+    return ok(result, status=201 if result["created"] else 200)

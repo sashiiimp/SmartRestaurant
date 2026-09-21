@@ -2,14 +2,16 @@
 from datetime import timedelta
 
 from app.extensions import db
-from app.models import Alert, FoodWaste, ForecastRun, MenuItem, PreparationRecord, Setting, StockBatch
+from app.models import Alert, FoodWaste, ForecastRun, MenuItem, PreparationRecord, Setting, StockBatch, StockMovement
 from app.models.base import utcnow
 from app.models.forecast import ALERT_TYPES
+from app.services import audit
 from app.services import forecasting_service as fs
 from app.services import inventory_service as inv
 from app.services import recommendation_service as rec
 from app.services import settings
 from app.services.errors import NotFoundError, ValidationError
+from app.services.validation import Fields
 from app.utils.dates import today
 
 REFRESH_SECONDS = 60
@@ -120,7 +122,13 @@ def evaluate(outlet_id: int) -> dict:
             cur.severity, cur.message, cur.target_date, cur.details = d["severity"], d["message"], d["target_date"], d["details"]
             updated += 1
     for key, cur in open_alerts.items():
-        if key in desired or cur.alert_type == "manual_shortage":
+        if cur.alert_type == "manual_shortage":
+            # a reported shortage clears itself once that ingredient has been restocked or corrected upwards
+            if _restocked_since(outlet_id, cur.entity_id, cur.created_at):
+                cur.status, cur.open_key, cur.closed_at, cur.closed_reason = "closed", None, now, "restocked"
+                closed += 1
+            continue
+        if key in desired:
             continue
         if not settings.get_bool(outlet_id, f"alert.{cur.alert_type}.enabled"):
             continue  # disabled types are left alone (A7)
@@ -128,6 +136,39 @@ def evaluate(outlet_id: int) -> dict:
         closed += 1
     settings.set_value(outlet_id, "alerts_last_run_at", now.isoformat())
     return {"opened": opened, "closed": closed, "updated": updated, "open": len(desired)}
+
+
+def _restocked_since(outlet_id: int, ingredient_id, since) -> bool:
+    return db.session.query(StockMovement.id).filter(
+        StockMovement.outlet_id == outlet_id, StockMovement.ingredient_id == ingredient_id,
+        StockMovement.quantity > 0, StockMovement.created_at > since).first() is not None
+
+
+def report_shortage(outlet_id: int, data: dict, actor_id: int | None = None) -> dict:
+    """K12: the kitchen reports an ingredient shortage (for example, less found than the system says). This opens a
+    critical `manual_shortage` alert for Inventory and Admin. A second report for the same ingredient updates the open one."""
+    f = Fields(data)
+    ing_id = f.integer("ingredient_id", gt=0)
+    note = f.text("note", required=False, max_len=150)
+    f.check()
+    ing = inv.get_ingredient(outlet_id, ing_id)
+    key = f"manual_shortage:ingredient:{ing.id}"
+    message = f"Kitchen reports a shortage of {ing.name}" + (f": {note}" if note else "")
+    details = {"note": note, "reported_by": actor_id}
+    alert = Alert.query.filter_by(outlet_id=outlet_id, open_key=key).first()
+    created = alert is None
+    if created:
+        alert = Alert(outlet_id=outlet_id, alert_type="manual_shortage", severity="critical", entity_type="ingredient",
+                      entity_id=ing.id, target_date=today(), message=message, details=details, status="open",
+                      dedupe_key=key, open_key=key, created_at=utcnow())
+        db.session.add(alert)
+    else:
+        alert.message, alert.details, alert.status = message, details, "open"
+        alert.acknowledged_by = alert.acknowledged_at = None
+    db.session.flush()
+    audit.record(outlet_id, actor_id, "shortage.report", "ingredient", ing.id, {"note": note})
+    db.session.commit()
+    return {**alert_dict(alert), "created": created}
 
 
 def _stale(outlet_id: int) -> bool:

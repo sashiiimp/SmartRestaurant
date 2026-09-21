@@ -13,8 +13,8 @@
 {% set auth = current_user.is_authenticated %}
 {% set role_labels = {'admin': 'Administrator', 'kitchen': 'Food Production', 'inventory': 'Inventory & Procurement'} %}
 {% set nav_icons = {'/admin': 'home', '/admin/monitor': 'activity', '/admin/inventory': 'package', '/admin/models': 'layers', '/admin/data': 'database', '/admin/catalog': 'book', '/admin/users': 'users', '/admin/settings': 'sliders',
-                    '/kitchen': 'home', '/kitchen/prep': 'clipboard', '/kitchen/forecast': 'trending', '/kitchen/orders': 'bag', '/kitchen/requirements': 'package', '/kitchen/record': 'trash',
-                    '/inventory': 'home', '/inventory/stock': 'package', '/inventory/movements': 'swap', '/inventory/forecast': 'bars', '/inventory/reorder': 'refresh', '/inventory/purchase-orders': 'clipboard', '/inventory/suppliers': 'users'} %}
+                    '/kitchen': 'home', '/kitchen/prep': 'clipboard', '/kitchen/forecast': 'trending', '/kitchen/orders': 'bag', '/kitchen/requirements': 'package', '/kitchen/stock-requests': 'inbox', '/kitchen/record': 'trash',
+                    '/inventory': 'home', '/inventory/stock': 'package', '/inventory/movements': 'swap', '/inventory/forecast': 'bars', '/inventory/reorder': 'refresh', '/inventory/purchase-orders': 'clipboard', '/inventory/requests': 'inbox', '/inventory/suppliers': 'users'} %}
 <body data-role="{{ current_user.role if auth else 'guest' }}">
 {% if auth %}
 {% set page = namespace(label='') %}
@@ -24,7 +24,7 @@
     <div class="sidebar-head">
       <a class="brand" href="/">
         <span class="brand-mark"><i class="sr-i" data-icon="utensils" data-size="20"></i></span>
-        <span class="brand-text">SmartRestaurant<small>Forecasting &amp; inventory</small></span>
+        <span class="brand-text">SmartRestaurant<small>{{ restaurant_name or 'Forecasting &amp; inventory' }}</small></span>
       </a>
       <button type="button" class="btn-close btn-close-white d-lg-none" data-bs-dismiss="offcanvas" data-bs-target="#sidebar" aria-label="Close menu"></button>
     </div>
