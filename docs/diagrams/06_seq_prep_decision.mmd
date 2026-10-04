@@ -1,0 +1,41 @@
+%% Sequence diagram 2: the kitchen opens the prep plan and accepts or overrides a recommendation.
+sequenceDiagram
+  autonumber
+  actor K as Food Production Manager
+  participant B as Browser (Vue page)
+  participant C as API controller /api/v1/recommendations
+  participant RS as RecommendationService
+  participant FS as ForecastingService
+  participant D as MySQL / MariaDB
+
+  K->>B: open Prep plan for a date
+  B->>C: GET /recommendations/prep?date=D
+  C->>C: session valid? role in (kitchen, admin)?
+  C->>RS: get_prep_plan(outlet, D)
+  RS->>FS: forecast_map(outlet, D, D)
+  FS->>D: SELECT latest forecasts
+  RS->>D: safety buffer setting, confirmed pre-orders, batch sizes, decisions so far
+  RS-->>C: rows: forecast, buffer, pre-orders, recommended = ceil(max(f x (1+b), pre) / batch) x batch
+  C-->>B: 200 {"data": ...}
+  B-->>K: cards with the numbers behind each recommendation
+  alt accept
+    K->>B: Accept
+    B->>C: POST /recommendations/prep/decisions {item, date, action: accept} + CSRF token
+  else override
+    K->>B: Override with quantity and reason
+    B->>C: POST /recommendations/prep/decisions {item, date, action: override, final_qty, reason} + CSRF token
+  end
+  C->>RS: decide(outlet, data, user)
+  RS->>RS: validate fields, date not in the past, item active
+  RS->>FS: forecast_map(outlet, D, D)
+  alt no forecast for that date
+    RS-->>C: ValidationError (no_forecast)
+    C-->>B: 422 with field errors
+  else forecast exists
+    RS->>RS: recompute recommended, warn if final < confirmed pre-orders
+    RS->>D: UPSERT recommendations (status, final_qty, reason, decided_by)
+    RS->>D: INSERT audit_logs
+    RS-->>C: decision (+ warnings)
+    C-->>B: 200 {"data": ...}
+    B-->>K: card shows Accepted / Overridden
+  end

@@ -1,0 +1,41 @@
+%% Sequence diagram 3: receiving a purchase order, and the stock-out alert clearing on the next read.
+sequenceDiagram
+  autonumber
+  actor I as Inventory & Procurement Manager
+  participant B as Browser (Vue page)
+  participant C as API controller /api/v1
+  participant IS as InventoryService
+  participant AS as AlertService
+  participant RS as RecommendationService
+  participant D as MySQL / MariaDB
+
+  I->>B: Receive stock on order PO-n (quantity, expiry)
+  B->>C: POST /purchase-orders/{id}/receive + CSRF token
+  C->>C: role = inventory?
+  C->>IS: receive_purchase_order(outlet, id, lines, user)
+  IS->>D: SELECT purchase order FOR UPDATE
+  IS->>IS: status receivable? each qty <= outstanding? expiry >= received date?
+  alt invalid
+    IS-->>C: ValidationError / ConflictError
+    C-->>B: 422 / 409, error shown next to the line
+  else valid
+    loop each received line
+      IS->>D: INSERT stock_batches (linked to the order)
+      IS->>D: INSERT stock_movements (stock_in, reference = purchase_order)
+      IS->>D: UPDATE line qty_received
+    end
+    IS->>D: UPDATE order status (partially_received / received), audit log, COMMIT
+    IS-->>C: updated order
+    C-->>B: 200
+  end
+  I->>B: open Dashboard
+  B->>C: GET /alerts?status=open
+  C->>AS: list_alerts(outlet, role)
+  opt last evaluation older than 60 s (or Run alert check)
+  AS->>AS: evaluate(outlet) (idempotent)
+  AS->>RS: requirements and reorder suggestions for today
+  AS->>IS: usable stock, expiring batches
+  AS->>D: close alerts whose condition no longer holds, open new ones
+  end
+  AS-->>C: open alerts for this role
+  C-->>B: 200, the stock-out alert is gone

@@ -1,0 +1,106 @@
+%% Class diagram 2: demand data, forecasting and kitchen decisions (app/models/sales.py, context.py, forecast.py, kitchen.py).
+%% Every class also has id and outlet_id; timestamps omitted for space.
+classDiagram
+  direction TB
+  class MenuItem {
+    name: String
+    batch_size: int
+  }
+  class SalesRecord {
+    sale_date: Date
+    quantity_sold: int
+    unit_price: Decimal
+    source: String
+  }
+  class Holiday {
+    holiday_date: Date
+    name: String
+    holiday_type: public | poya | school | other
+  }
+  class Promotion {
+    name: String
+    start_date: Date
+    end_date: Date
+    discount_pct: Decimal
+    applies_to_all: bool
+  }
+  class WeatherDaily {
+    weather_date: Date
+    rain_mm: Decimal
+    temp_c: Decimal
+  }
+  class ModelVersion {
+    version_label: String
+    algorithm: String
+    status: trained | active | retired
+    metrics: JSON
+    beats_baseline: bool
+    artifact_path: String
+  }
+  class ForecastRun {
+    as_of_date: Date
+    horizon_days: int
+    trigger_type: cli | admin | backfill
+    status: running | ok | partial | skipped | failed
+    items_forecast: int
+  }
+  class Forecast {
+    target_date: Date
+    predicted_qty: Decimal
+    method: model | baseline
+    input_snapshot: JSON
+    is_latest: bool
+  }
+  class Recommendation {
+    target_date: Date
+    forecast_qty: Decimal
+    buffer_pct: Decimal
+    preorder_qty: int
+    recommended_qty: int
+    final_qty: int
+    status: accepted | overridden
+    override_reason: String
+  }
+  class PreOrder {
+    target_date: Date
+    quantity: int
+    status: pending | confirmed | cancelled
+  }
+  class Order {
+    order_date: Date
+    quantity: int
+    status: open | fulfilled | cancelled
+  }
+  class PreparationRecord {
+    prep_date: Date
+    quantity: int
+  }
+  class FoodWaste {
+    waste_date: Date
+    quantity: int
+    reason: String
+  }
+  class Alert {
+    alert_type: String
+    severity: info | warning | critical
+    status: open | acknowledged | closed
+    target_date: Date
+    message: String
+  }
+
+  MenuItem "1" -- "*" SalesRecord : sold
+  Promotion "*" -- "*" MenuItem : PromotionItem
+  ModelVersion "1" -- "*" ForecastRun : used by
+  ForecastRun "1" *-- "*" Forecast : produced
+  Forecast "*" --> "1" MenuItem : for
+  Recommendation "0..1" --> "1" Forecast : based on
+  Recommendation "*" --> "1" MenuItem
+  PreOrder "*" --> "1" MenuItem
+  Order "*" --> "1" MenuItem
+  PreparationRecord "*" --> "1" MenuItem
+  FoodWaste "*" --> "1" MenuItem
+  Holiday ..> Forecast : feature
+  WeatherDaily ..> Forecast : feature
+  Promotion ..> Forecast : feature
+  SalesRecord ..> Forecast : lags
+  PreOrder ..> Recommendation : floor

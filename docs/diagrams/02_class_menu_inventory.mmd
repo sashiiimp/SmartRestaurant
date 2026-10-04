@@ -1,0 +1,91 @@
+%% Class diagram 1: menu, recipes, stock and procurement (app/models/menu.py, inventory.py).
+%% Every class also has id, outlet_id and (most) created_at / updated_at, omitted for space.
+classDiagram
+  direction TB
+  class MenuItem {
+    name: String
+    category: String
+    price: Decimal
+    batch_size: int
+    shelf_life_hours: int
+    is_active: bool
+    is_available: bool
+  }
+  class RecipeLine {
+    quantity_per_portion: Decimal
+  }
+  class Ingredient {
+    name: String
+    unit: String
+    shelf_life_days: int
+    min_stock: Decimal
+    reorder_level: Decimal
+    pack_size: Decimal
+    reorder_qty: Decimal
+    is_active: bool
+  }
+  class Supplier {
+    name: String
+    contact_person: String
+    lead_time_days: int
+    is_active: bool
+  }
+  class StockBatch {
+    batch_no: String
+    received_date: Date
+    expiry_date: Date
+    qty_received: Decimal
+    qty_remaining: Decimal
+    unit_cost: Decimal
+  }
+  class StockMovement {
+    movement_type: stock_in | stock_out | wastage | adjustment
+    quantity: Decimal
+    reason: String
+    movement_date: Date
+    reference_type: String
+    reference_id: int
+  }
+  class PurchaseOrder {
+    po_number: String
+    status: draft | sent | partially_received | received | cancelled
+    order_date: Date
+    expected_date: Date
+  }
+  class PurchaseOrderLine {
+    qty_ordered: Decimal
+    qty_received: Decimal
+    unit_cost: Decimal
+  }
+  class StockRequest {
+    status: pending | approved | rejected | issued | cancelled
+    needed_date: Date
+    reject_reason: String
+  }
+  class StockRequestLine {
+    qty_requested: Decimal
+    qty_issued: Decimal
+  }
+  class IngredientUsage {
+    usage_date: Date
+    quantity: Decimal
+  }
+  class User {
+    username: String
+    role: admin | kitchen | inventory
+    is_active: bool
+  }
+
+  MenuItem "1" *-- "1..*" RecipeLine : recipe
+  RecipeLine "*" --> "1" Ingredient
+  Ingredient "*" --> "0..1" Supplier : default supplier
+  Ingredient "1" *-- "*" StockBatch : held as
+  StockBatch "1" *-- "*" StockMovement : changed only by
+  Supplier "1" -- "*" PurchaseOrder
+  PurchaseOrder "1" *-- "1..*" PurchaseOrderLine
+  PurchaseOrderLine "*" --> "1" Ingredient
+  PurchaseOrder "0..1" <-- "*" StockBatch : received from
+  StockRequest "1" *-- "1..*" StockRequestLine
+  StockRequestLine "*" --> "1" Ingredient
+  User "1" -- "*" StockRequest : requests / decides
+  IngredientUsage "*" --> "1" Ingredient

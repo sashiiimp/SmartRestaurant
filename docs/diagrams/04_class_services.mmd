@@ -1,0 +1,81 @@
+%% Class diagram 3: service layer and ML package (app/services, app/ml). Services are Python modules of functions;
+%% they are drawn as «service» classes with their main operations. Arrows are the imports as built (checked 4 Oct 2026); tests/test_architecture.py enforces the allowed upper bound.
+%% AuthService (login, users) and the settings/audit helpers call no other service and are left out for readability.
+classDiagram
+  direction TB
+  class DashboardService {
+    <<service>>
+    admin_dashboard()
+    kitchen_dashboard()
+    inventory_dashboard()
+    analytics()
+    sales_report() waste_report()
+  }
+  class AlertService {
+    <<service>>
+    evaluate()
+    list_alerts()
+    acknowledge()
+    report_shortage()
+  }
+  class RecommendationService {
+    <<service>>
+    compute_recommended()
+    get_prep_plan()
+    decide()
+    get_requirements()
+    get_reorder_suggestions()
+  }
+  class KitchenService {
+    <<service>>
+    record_prepared() record_served() record_waste()
+    create_pre_order() create_order()
+    record_ingredient_usage()
+  }
+  class InventoryService {
+    <<service>>
+    record_stock_in() record_stock_out()
+    record_wastage() record_adjustment()
+    create_purchase_order() receive_purchase_order()
+    create_stock_request() issue_stock_request()
+    consistency_check()
+  }
+  class ForecastingService {
+    <<service>>
+    train_model()
+    activate_model()
+    run_forecast()
+    backfill()
+    accuracy()
+    run_experiments()
+  }
+  class DataManagementService {
+    <<service>>
+    import_sales_csv()
+    import_holidays_csv()
+    import_weather_csv()
+    set_recipe()
+    load_sales_frame()
+  }
+  class ml {
+    <<package>>
+    features.build_features()
+    train.train_and_compare()
+    predict.predict()
+    experiments.run_experiments()
+    registry.save_artifact()
+  }
+  DashboardService --> AlertService
+  DashboardService --> RecommendationService
+  DashboardService --> InventoryService
+  DashboardService --> ForecastingService
+  DashboardService --> DataManagementService
+  AlertService --> RecommendationService
+  AlertService --> InventoryService
+  AlertService --> ForecastingService
+  RecommendationService --> ForecastingService
+  RecommendationService --> InventoryService
+  RecommendationService --> DataManagementService
+  KitchenService --> DataManagementService
+  ForecastingService --> DataManagementService
+  ForecastingService --> ml : only caller

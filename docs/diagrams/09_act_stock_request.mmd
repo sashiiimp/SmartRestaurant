@@ -1,0 +1,30 @@
+%% Activity diagram 2: kitchen stock request (K11, I15; InventoryService create/approve/reject/issue).
+flowchart TB
+  S((start)) --> K1
+  subgraph KIT["Food Production Manager"]
+    K1["Create stock request<br/>(ingredients, quantities, needed date)"]
+    K2{"Still pending and<br/>no longer needed?"}
+    K3["Cancel request"]
+    K9["See status and any reject reason"]
+  end
+  subgraph INV["Inventory & Procurement Manager"]
+    I1["Review pending request"]
+    I2{"Decision"}
+    I3["Reject with a reason"]
+    I4["Approve"]
+    I5["Enter quantity to issue per line<br/>(may be less than requested)"]
+  end
+  subgraph SYS["System (InventoryService)"]
+    V1{"Every line covered by usable,<br/>non-expired stock?"}
+    V2["Refuse the whole issue,<br/>write nothing, show available quantity"]
+    V3["Stock-out per line, earliest expiry first (FEFO),<br/>with row locks; movements reference the request"]
+    V4["Status = issued"]
+  end
+  K1 --> K2
+  K2 -- yes --> K3 --> E1((end))
+  K2 -- no --> I1 --> I2
+  I2 -- reject --> I3 --> K9
+  I2 -- approve --> I4 --> I5 --> V1
+  V1 -- no --> V2 --> I5
+  V1 -- yes --> V3 --> V4 --> K9
+  K9 --> E2((end))

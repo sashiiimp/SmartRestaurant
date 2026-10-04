@@ -1,0 +1,33 @@
+%% Activity diagram 1: the daily forecast-to-purchase cycle (FR1-FR12). Swimlanes are drawn as subgraphs.
+flowchart TB
+  START((start)) --> F1
+  subgraph SYS["System (ForecastingService, RecommendationService, AlertService)"]
+    F1["Run 7-day forecast with the active model<br/>(baseline for items with little history)"]
+    F2["Compute prep recommendation per item<br/>ceil(max(forecast x (1 + buffer), confirmed pre-orders) / batch) x batch"]
+    F3["Compute ingredient requirements<br/>sum(planned portions x recipe quantity per portion)"]
+    F4{"Usable stock covers<br/>today's requirement?"}
+    F5["Open stock-out / low-stock alert"]
+    F6["Compute reorder suggestion<br/>need over lead time + safety stock - usable - on order,<br/>rounded up to pack size"]
+    F9["Alert closes on the next evaluation"]
+  end
+  subgraph KIT["Food Production Manager"]
+    K1{"Accept the<br/>recommendation?"}
+    K2["Accept"]
+    K3["Override with quantity and reason"]
+    K4["Prepare food; record prepared quantity"]
+    K5["End of day: record served and waste"]
+  end
+  subgraph INV["Inventory & Procurement Manager"]
+    I1["Review alert and reorder suggestion"]
+    I2["Create purchase order from the suggestion"]
+    I3["Mark as sent; receive stock<br/>(batch with expiry, stock-in movement)"]
+  end
+  F1 --> F2 --> K1
+  K1 -- yes --> K2 --> K4
+  K1 -- no --> K3 --> K4
+  F2 --> F3 --> F4
+  F4 -- yes --> K4
+  F4 -- no --> F5 --> F6 --> I1 --> I2 --> I3 --> F9 --> K4
+  K4 --> K5
+  K5 --> D1["Served and waste become history<br/>for monitoring and the next forecast"]
+  D1 --> ENDN((end))

@@ -1,0 +1,36 @@
+%% Sequence diagram 1: generating the 7-day forecast (ForecastingService.run_forecast, app/ml).
+sequenceDiagram
+  autonumber
+  actor U as Operator (CLI) or Administrator
+  participant F as ForecastingService
+  participant D as MySQL / MariaDB
+  participant R as ml.registry
+  participant M as ml.features / ml.predict
+
+  U->>F: run_forecast(outlet, as_of=today, horizon=7)
+  F->>F: as_of after today? -> ValidationError
+  F->>D: INSERT forecast_runs (status = running)
+  F->>D: SELECT active model_version
+  alt no active model
+    F->>D: UPDATE run: status = skipped, reason
+    F-->>U: summary (skipped)
+  else active model found
+    F->>R: load artifact (joblib, cached)
+    F->>D: load sales, holidays, promotions, weather
+    D-->>F: DataFrames
+    F->>M: build_features(history, calendar, context, 7 target days)
+    M-->>F: feature rows (lags from t-7 or earlier, weather = seasonal estimate)
+    loop each active menu item
+      F->>F: route: model if enough history, naive baseline if >= 7 days, else none
+    end
+    F->>M: predict(artifact, rows) per route
+    M-->>F: predicted quantities (clipped at 0)
+    F->>D: UPDATE forecasts SET is_latest = false (same items and dates)
+    F->>D: INSERT forecasts (method, input_snapshot, is_latest = true)
+    F->>D: UPDATE run: status = ok / partial (+ reason)
+    F-->>U: summary (items forecast, items without forecast, duration)
+  end
+  opt any exception
+    F->>D: ROLLBACK, UPDATE run: status = failed, readable reason
+    F-->>U: summary (failed), full trace in the log
+  end

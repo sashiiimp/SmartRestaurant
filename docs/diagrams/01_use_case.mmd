@@ -1,0 +1,55 @@
+%% Use case diagram: SmartRestaurant (three roles plus the scheduled/CLI trigger).
+%% Mermaid has no use-case notation; actors are labelled «actor», use cases as rounded shapes in the system boundary.
+flowchart LR
+  ADM["«actor»<br/>System Administrator"]
+  KIT["«actor»<br/>Food Production Manager"]
+  INV["«actor»<br/>Inventory & Procurement Manager"]
+  CLI["«actor»<br/>Operator / CLI"]
+
+  subgraph SYS["SmartRestaurant system"]
+    direction TB
+    UC0(["Log in / log out"])
+    subgraph A["Administration and oversight"]
+      A1(["Manage users and roles"])
+      A2(["Manage menu, recipes, restaurant info"])
+      A3(["Import sales, holidays, weather; manage promotions"])
+      A4(["Train, compare and activate model"])
+      A5(["Monitor sales, forecast accuracy, waste, inventory"])
+      A6(["View analytics and reports, export CSV"])
+      A7(["Configure settings and alerts"])
+    end
+    subgraph K["Kitchen"]
+      K1(["View demand forecast"])
+      K2(["Accept / override preparation recommendation"])
+      K3(["Record prepared, served, waste, ingredient usage"])
+      K4(["View ingredient requirements and shortages"])
+      K5(["Manage pre-orders and daily orders"])
+      K6(["Toggle food availability"])
+      K7(["Request stock / report shortage"])
+    end
+    subgraph I["Inventory and procurement"]
+      I1(["Manage ingredients and suppliers"])
+      I2(["Record stock in / out / wastage / adjustment"])
+      I3(["View reorder suggestions and ingredient forecast"])
+      I4(["Manage purchase orders and receive stock"])
+      I5(["Decide and issue kitchen stock requests"])
+      I6(["View and acknowledge alerts"])
+      I7(["Run inventory data check"])
+    end
+    S1(["Generate 7-day forecast"])
+    S2(["Evaluate alerts"])
+  end
+
+  ADM --- UC0
+  KIT --- UC0
+  INV --- UC0
+  ADM --- A1 & A2 & A3 & A4 & A5 & A6 & A7
+  KIT --- K1 & K2 & K3 & K4 & K5 & K6 & K7
+  INV --- I1 & I2 & I3 & I4 & I5 & I6 & I7
+  CLI --- S1
+  ADM --- S1
+  K2 -. "«include»" .-> S1
+  K4 -. "«include»" .-> S1
+  I3 -. "«include»" .-> S1
+  I6 -. "«include»" .-> S2
+  K7 -. "«extend»" .-> S2
