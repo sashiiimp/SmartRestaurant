@@ -2,7 +2,7 @@
 
 About 17 minutes, three roles, one story: **the kitchen plans a busy day, finds a chicken shortage, and the inventory manager fixes it while the administrator watches.** It covers all 15 new functions and the proposal function each one delivers. Trim points are marked *(optional)*.
 
-Run it at `http://localhost:39500` on the demo system. Use the three demo accounts (`admin`, `kitchen1`, `inventory1`) with the passwords you set for them; they are not the `SEED_PASSWORD` value in `.env`. Open each role in its own browser profile or private window so you can switch without logging out.
+Run it at `http://localhost:39500` on the demo system. Use the three demo accounts (`admin`, `kitchen1`, `inventory1`) with the `SEED_PASSWORD` value from `.env` (the demo was rebuilt with `flask smartrest demo-reset` on 4 Oct 2026, which resets all three passwords to it). Open each role in its own browser profile or private window so you can switch without logging out.
 
 ## Before you start (5 minutes, once)
 
@@ -11,8 +11,8 @@ Run it at `http://localhost:39500` on the demo system. Use the three demo accoun
    mariadb-dump --no-defaults -uroot -S .mariadb/mysql.sock --single-transaction smartrest > backups/before_demo.sql
    ```
    Restore later with `mariadb --no-defaults -uroot -S .mariadb/mysql.sock smartrest < backups/before_demo.sql`. Do not restore the older `before_deploy` or `before_tier1` dumps: they predate the new tables.
-2. **Check the starting state** (the figures below are from the forecast run of 22 Sep; a different run changes them slightly):
-   - Kitchen `/kitchen/requirements`: **Chicken** needs 39.28 kg, has 30 kg, short by **9.28 kg**.
+2. **Check the starting state** (the figures below are from the `demo-reset` of 4 Oct 2026, model `v20261004-1`; a different run or day changes them slightly):
+   - Kitchen `/kitchen/requirements`: **Chicken** needs 49.36 kg, has 30 kg, short by **19.36 kg**; **Potato** short by 10 kg.
    - Inventory `/inventory/reorder`: **Chicken 80 kg** (Ceylon Poultry & Meats) and **Potato 50 kg** (Colombo Fresh Produce).
    - Inventory `/inventory`: Potato "critically low", Chicken "will run short today", one expired chicken batch (5 kg).
 3. Make sure the demo has a forecast for today: the Kitchen **Forecast** page must show numbers, not "No forecast yet".
@@ -29,11 +29,11 @@ Run it at `http://localhost:39500` on the demo system. Use the three demo accoun
 | 4 | Back to **Orders**, press **Confirm** on the pre-order, then repeat step 3. | Confirmed pre-orders **120**, recommended now **120** (120 is already whole batches of 6). | The prep quantity is `max(forecast x 1.10, pre-orders)` rounded up to whole batches. |
 | 5 | **Orders** > **Daily orders** > add Chicken Burger, quantity **6**, note "Table 4", then **Fulfilled**. | Row moves to *Accepted*; no buttons any more. Try tomorrow's date: no form, the page points to Pre-orders. | *Manage Daily Order*: an internal record only, no prices or payments, no effect on the forecast. |
 | 6 | **Prep plan** (today): on Chicken Burger type **24** in *Quantity* and **+ Add**. Then **Served & waste**, scroll to **Ingredient usage**. | Chicken expected **2.88 kg** (24 x 0.12), Burger bun 24, and so on. Type **3.1** for Chicken, note "extra for the sauce", **Save**. | Difference **+0.22** shows. *Record Ingredient Usage*: expected is prepared x recipe; the kitchen records what was actually used. It never changes stock. |
-| 7 | **Ingredients** (`/kitchen/requirements`). | Chicken row in red: short by **9.28 kg**, with **Request stock** and **Report shortage** buttons. | *Ingredient Requirements* and *Shortage Reporting*. |
+| 7 | **Ingredients** (`/kitchen/requirements`). | Chicken row in red: short by **19.36 kg**, with **Request stock** and **Report shortage** buttons. | *Ingredient Requirements* and *Shortage Reporting*. |
 | 8 | On **Potato** press **Report shortage**, type "crate looks half empty" > OK. | Toast "Shortage reported to Inventory". | The report becomes a critical alert for Inventory and Admin. |
 | 9 | **Stock requests** > **New request**: Cooking oil **10** L, note "Fryer top-up" > **Send request**. Send a second one: Egg **500** pcs, note "Breakfast batch". | Two cards, both *Pending*. | *Request Kitchen Stock*. |
 
-*(Optional, 20 seconds)* On **Ingredients**, press **Request stock** next to Chicken: the form opens with Chicken and 9.28 kg filled in. Press **Cancel**; the real fix for a buying gap comes from procurement in Scene 2.
+*(Optional, 20 seconds)* On **Ingredients**, press **Request stock** next to Chicken: the form opens with Chicken and 19.36 kg filled in. Press **Cancel**; the real fix for a buying gap comes from procurement in Scene 2.
 
 ---
 
