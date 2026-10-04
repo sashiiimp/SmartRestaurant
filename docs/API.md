@@ -70,7 +70,7 @@ Abbreviations: **A** admin, **K** kitchen, **I** inventory. **(R)** means read-o
 | `PATCH /users/{id}` | A | M2 | A2, A3 | `full_name, email, role, is_active`. 422 `last_admin` if it would remove the last active admin. Role change is audited. |
 | `POST /users/{id}/password` | A | S | A2 | reset |
 
-`/login` (form POST, rate-limited by lockout) and `/logout` (POST) are page routes, not API.
+`/login` (form POST, rate-limited by lockout per username and address) and `/logout` (POST, ends the session on the server) are page routes, not API. Uploads larger than 5 MB give 413 `too_large`. In CSV downloads a text cell starting with `=`, `+`, `-`, `@` is prefixed with `'` so a spreadsheet does not run it.
 
 ### 3.2 Catalog, ingredients, stock
 

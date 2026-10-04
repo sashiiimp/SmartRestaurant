@@ -22,7 +22,8 @@ def seed_base(reset: bool = False) -> dict:
     settings.seed_defaults(outlet.id)
 
     created = {}
-    password = os.environ.get("SEED_PASSWORD") or secrets.token_urlsafe(9)
+    # the trailing digit keeps a generated password valid under the "not letters only" rule
+    password = os.environ.get("SEED_PASSWORD") or secrets.token_urlsafe(9) + str(secrets.randbelow(10))
     for username, full_name, role in USERS:
         if not auth_service.username_exists(username):
             auth_service.create_user(outlet.id, full_name, username, role, password)

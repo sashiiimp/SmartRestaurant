@@ -60,7 +60,8 @@ Format: story, priority, traces, acceptance criteria (AC).
 - Given invalid credentials, then I see one generic error and the response does not reveal whether the username exists.
 - Given a deactivated account, then login is refused with the same generic error.
 - Passwords are stored only as salted hashes; they never appear in logs, responses or the DB dump.
-- After 5 failed attempts for one username within 10 minutes, further attempts are refused for 5 minutes.
+- After 5 failed attempts for one username from one address within 10 minutes, further attempts for it from that address are refused for 5 minutes; an address with 20 failures over any usernames is refused as well. Failures from elsewhere never lock a user out of the restaurant's own terminal.
+- Passwords are 8 to 128 characters, must not contain the username, must not be one repeated character and must contain at least one digit or symbol.
 
 ### C2 Role-based access control (P1), FR1, NFR5
 *As the owner of the data, I want other roles blocked from my pages and APIs.*
@@ -70,7 +71,7 @@ Format: story, priority, traces, acceptance criteria (AC).
 - Automated test iterates every route against every role (see `TESTING.md`).
 
 ### C3 Logout and idle timeout (P2), NFR5
-- Logout ends the session; the Back button does not reveal protected pages.
+- Logout ends the session on the server, so a copied session cookie stops working too; a password reset or a deactivation ends all of that user's sessions. The Back button does not reveal protected pages.
 - Sessions expire after 30 minutes idle.
 
 ### C4 Input validation (P1), NFR8

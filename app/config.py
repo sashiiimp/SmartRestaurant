@@ -17,6 +17,10 @@ class Config:
     PERMANENT_SESSION_LIFETIME = timedelta(minutes=30)  # idle timeout (C3): refreshed on every request
     JSON_SORT_KEYS = False
     MODEL_DIR = os.environ.get("MODEL_DIR", "instance/models")
+    MAX_CONTENT_LENGTH = 5 * 1024 * 1024  # uploads are CSV files; a 60,000-row sales file is about 2 MB
+    # Number of reverse proxies in front of the app (0 = none). Set it only behind a proxy such as nginx for HTTPS,
+    # so the login lockout sees the client's address instead of the proxy's.
+    TRUST_PROXY = int(os.environ.get("TRUST_PROXY", "0"))
     DEFAULT_OUTLET_ID = 1
 
 

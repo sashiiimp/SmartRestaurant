@@ -27,6 +27,9 @@ class User(OutletScopedMixin, TimestampMixin, db.Model):
     role = db.Column(db.String(20), nullable=False)
     is_active = db.Column(db.Boolean, nullable=False, default=True)
     last_login_at = db.Column(db.DateTime)
+    # Part of the session id. Raising it ends every session of this user at once (logout, password reset,
+    # deactivation), which a signed cookie alone cannot do (C3).
+    session_version = db.Column(db.Integer, nullable=False, default=0, server_default="0")
 
     # Flask-Login protocol (implemented here so models stay free of framework imports).
     @property
@@ -38,7 +41,7 @@ class User(OutletScopedMixin, TimestampMixin, db.Model):
         return False
 
     def get_id(self) -> str:
-        return str(self.id)
+        return f"{self.id}:{self.session_version}"
 
 
 class LoginAttempt(db.Model):

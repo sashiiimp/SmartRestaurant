@@ -31,7 +31,11 @@ def live():
         g.pop("_login_user", None)
 
     with application.app_context():
-        if ModelVersion.query.filter_by(status="active").first() is None:
+        try:
+            active = ModelVersion.query.filter_by(status="active").first()
+        except Exception:   # no tables at all (a fresh clone without a database)
+            active = None
+        if active is None:
             pytest.skip("database is not seeded with an active model (run flask smartrest demo-reset)")
         yield application
 

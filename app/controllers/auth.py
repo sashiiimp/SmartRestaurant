@@ -32,6 +32,7 @@ def login():
 @bp.route("/logout", methods=["POST"])
 @roles_required("admin", "kitchen", "inventory")
 def logout():
+    auth_service.logout(current_user.id)
     logout_user()
     session.clear()
     return redirect(url_for("auth.login"))

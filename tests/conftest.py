@@ -7,6 +7,17 @@ from app.extensions import db as _db
 from app.models import Outlet
 
 
+def pytest_collection_modifyitems(config, items):
+    """The perf tests run against the seeded dev database and write a forecast run to it, so they run only when asked
+    for by name (`-m perf`), never as part of `-m "not mysql"` or a plain `pytest`."""
+    if "perf" in (config.option.markexpr or ""):
+        return
+    skip = pytest.mark.skip(reason="timing test against the dev database; run with -m perf")
+    for item in items:
+        if item.get_closest_marker("perf"):
+            item.add_marker(skip)
+
+
 @pytest.fixture(autouse=True)
 def fixed_today(monkeypatch):
     monkeypatch.setenv("SMARTREST_TODAY", "2026-09-25")

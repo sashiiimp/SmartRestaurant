@@ -27,7 +27,7 @@ Not chasing coverage numbers for controllers and templates. **Target: at least 8
 | Integration and API tests | MariaDB/MySQL database `smartrest_test` (`TEST_DATABASE_URL` in `.env`). Marker `@pytest.mark.mysql`. Needed for `FOR UPDATE`, constraint behaviour, concurrency. |
 | Clock | `SMARTREST_TODAY` env var overrides `utils.dates.today()` so tests and the demo are deterministic. Tests set it through a fixture. |
 | Data | `tests/factories.py` builders (`make_user(role)`, `make_item(batch_size=...)`, `make_ingredient(...)`, `add_batch(...)`, `add_recipe(...)`, `add_sales(...)`). Formula tests build their own small fixtures; they never depend on the seed data. |
-| Commands | `pytest -q -m "not mysql"` (fast, run constantly), `pytest -q` (everything), `pytest -q -m perf` (timing), `pytest --cov=app/services --cov=app/ml`. |
+| Commands | `pytest -q -m "not mysql"` (fast, run constantly), `pytest -q` (everything), `pytest -q -m perf` (timing), `pytest --cov=app/services --cov=app/ml`. The perf tests are skipped unless `-m perf` is given, because they write a forecast run to the dev database. |
 
 ## 3. Layout
 
@@ -118,7 +118,7 @@ Tier column: which tier the test gates. M1 tests must pass before the demo.
 | SEC-2 | Each role lands on its own home after login | M1 |
 | SEC-3 | Wrong password and unknown user return the identical message and status | M1 |
 | SEC-4 | Deactivated user cannot log in (same message) | M1 |
-| SEC-5 | 5 failures within 10 minutes lock the username for 5 minutes, including for an unknown username | M1 |
+| SEC-5 | 5 failures within 10 minutes lock the username for 5 minutes from that address, including for an unknown username (see SEC-18) | M1 |
 | SEC-6 | Stored hash is not the password; no password in logs or responses | M1 |
 | SEC-7 | POST/PUT/PATCH without CSRF token gives 400 `csrf_failed` | M1 |
 | SEC-8 | `<script>` in item name, note and customer note is stored and rendered escaped | M1 |
@@ -126,6 +126,12 @@ Tier column: which tier the test gates. M1 tests must pass before the demo.
 | SEC-10 | Session expires after idle timeout (clock advanced), the next API call gives 401 | M2 |
 | SEC-11 | Logout, then Back button, shows no protected content | M2 |
 | SEC-12 | Last active admin cannot be deactivated or demoted | M2 |
+| SEC-13 | Logout, password reset and deactivation end the session on the server: a copied cookie gives 401; old-format session ids are refused | audit |
+| SEC-14 | Security headers on pages and API (CSP without inline script, frame-ancestors none, nosniff, referrer); no page has an inline script or event handler | audit |
+| SEC-15 | CSV export: text starting with = + - @ gets a leading apostrophe; numbers, including negative ones, are unchanged | audit |
+| SEC-16 | Upload over 5 MB gives 413 `too_large` | audit |
+| SEC-17 | Password rule: username inside, one repeated character, letters only, under 8 or over 128 characters are refused with the reason, on create and reset | audit |
+| SEC-18 | Lockout per username and address: failures from one address do not lock the user out from another; 20 failures from one address over many usernames lock that address; behind `TRUST_PROXY` the forwarded address counts | audit |
 
 ### 5.2 Validation and import (C4, A14, NFR3, NFR8)
 
@@ -230,7 +236,7 @@ There is no pilot restaurant and no QA team. The builder runs each script on a c
 
 | Requirement | Tests |
 |---|---|
-| C1 | SEC-2, SEC-3, SEC-4, SEC-5, SEC-6 |
+| C1 | SEC-2, SEC-3, SEC-4, SEC-5, SEC-6, SEC-17, SEC-18 |
 | C2 | SEC-1, SEC-7 |
 | C4 | VAL-1 to VAL-6, SEC-8, SEC-9 |
 | A14, A15 | IMP-1 to IMP-5 |

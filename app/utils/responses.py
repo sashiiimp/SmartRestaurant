@@ -130,6 +130,20 @@ def bool_arg(name: str, default=False) -> bool:
     return v.lower() in ("1", "true", "yes")
 
 
+FORMULA_START = ("=", "+", "-", "@", "\t", "\r")
+
+
+def csv_safe(value):
+    """A text cell that starts like a formula gets a leading apostrophe, so a spreadsheet shows it instead of running it
+    (a name such as =HYPERLINK(...) typed into the system). Numbers are left alone, so negative quantities stay numbers."""
+    if isinstance(value, str) and value.startswith(FORMULA_START):
+        try:
+            float(value)
+        except ValueError:
+            return "'" + value
+    return value
+
+
 def csv_response(filename: str, header: list[str], rows: list[list]):
     """Download the same rows the screen shows (A13)."""
     import csv as _csv
@@ -140,6 +154,6 @@ def csv_response(filename: str, header: list[str], rows: list[list]):
     buf = io.StringIO()
     w = _csv.writer(buf)
     w.writerow(header)
-    w.writerows(rows)
+    w.writerows([csv_safe(v) for v in row] for row in rows)
     return Response(buf.getvalue(), mimetype="text/csv",
                     headers={"Content-Disposition": f'attachment; filename="{filename}"'})

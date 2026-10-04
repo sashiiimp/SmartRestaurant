@@ -295,7 +295,10 @@ Rules:
 ### 7.1 Authentication and RBAC (FR1, NFR5)
 
 - Flask-Login session cookie: `HttpOnly`, `SameSite=Lax`, `Secure` in production, 30 minute idle timeout (C3).
-- Passwords hashed with Werkzeug's scrypt/pbkdf2 hash. Login lockout logic lives in `auth_service`.
+- Passwords hashed with Werkzeug's scrypt/pbkdf2 hash. Login lockout (per username and address) and the password rule live in `auth_service`.
+- The session id is `user id:session version` (`User.get_id`); the loader refuses an old version, so logout, a password reset or a deactivation ends every copy of the cookie.
+- Every response carries a Content-Security-Policy (`script-src 'self' 'unsafe-eval'`: Vue compiles the in-page templates, and there is no inline script), `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff` and `Referrer-Policy: same-origin`. Uploads are capped at 5 MB (`MAX_CONTENT_LENGTH`). CSV exports prefix text cells that start like a formula with an apostrophe.
+- Behind a reverse proxy (for HTTPS) set `TRUST_PROXY` to the number of proxies, so the lockout sees the client's address (Werkzeug `ProxyFix`).
 - Each role blueprint sets `before_request` to `roles_required(...)`, so a new route can't be added to a role blueprint without inheriting the check. API controllers use `@roles_required(...)` on each route, and shared read endpoints list their roles explicitly (`API.md`).
 - Post-login redirect map: `admin` to `/admin`, `kitchen` to `/kitchen`, `inventory` to `/inventory`.
 - Error handlers return JSON for `/api/*` and HTML pages otherwise. A `401` on a page redirects to login.

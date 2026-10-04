@@ -56,9 +56,9 @@ Common columns on every table unless stated: `id`, `created_at`, `updated_at` (U
 
 **outlets** (M1). `name`, `address`, `contact`, `opening_days`, `opening_hours`, `timezone` (default `Asia/Colombo`), `is_active`. One row seeded; A6 edits it (S).
 
-**users** (M1). `outlet_id`, `username` UNIQUE (stored lower-case), `full_name`, `email`, `password_hash` (Werkzeug scrypt), `role` CHECK in (`admin`,`kitchen`,`inventory`), `is_active`, `last_login_at`. Rules: never deleted; the last active admin cannot be deactivated or demoted (service).
+**users** (M1). `outlet_id`, `username` UNIQUE (stored lower-case), `full_name`, `email`, `password_hash` (Werkzeug scrypt), `role` CHECK in (`admin`,`kitchen`,`inventory`), `is_active`, `last_login_at`, `session_version` INT NOT NULL DEFAULT 0 (part of the session id; raised on logout, password reset and deactivation so every existing session ends; migration `4c1e5e7a9b2d`). Rules: never deleted; the last active admin cannot be deactivated or demoted (service).
 
-**login_attempts** (M1, append-only, no `updated_at`). `username` (lower-case as typed, whether or not it exists), `attempted_at`, `success` BOOL, `ip_address`. Index (`username`, `attempted_at`). Lockout rule (C1): 5 failures since the last success within 10 minutes refuse logins until 5 minutes after the last failure. Works for unknown usernames too, so the response never reveals whether a username exists.
+**login_attempts** (M1, append-only, no `updated_at`). `username` (lower-case as typed, whether or not it exists), `attempted_at`, `success` BOOL, `ip_address`. Index (`username`, `attempted_at`). Lockout rule (C1): 5 failures for one username from one address since that username's last success within 10 minutes, or 20 failures from one address over any usernames within 10 minutes, refuse logins from that address until 5 minutes after the last failure. Works for unknown usernames too, so the response never reveals whether a username exists.
 
 **audit_logs** (M1, append-only). `outlet_id`, `user_id` NULL, `action` (e.g. `user.create`, `user.role_change`, `model.activate`, `sales.import`), `entity_type`, `entity_id`, `detail` JSON. Index (`outlet_id`, `created_at`). Written through one helper, `AuditLog.record(...)`, called by services.
 

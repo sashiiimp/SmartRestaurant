@@ -1,6 +1,6 @@
 """Browser smoke test (Playwright, headless Chromium) against a running dev server. Not part of `pytest`.
 
-Usage: python tests/ui/smoke.py [kitchen|inventory|admin|all] [--shots DIR] [--base URL]
+Usage: python tests/ui/smoke.py [kitchen|inventory|admin|all] [--shots DIR] [--base URL] [--browser chromium|firefox|webkit]
 Checks that pages render, have no console errors, and that the main interactions work. Also saves screenshots.
 """
 import os
@@ -202,13 +202,16 @@ def responsive(browser):
 
 
 if __name__ == "__main__":
-    which = [a for a in sys.argv[1:] if not a.startswith("--")] or ["all"]
+    option_values = {sys.argv[i + 1] for i, a in enumerate(sys.argv[:-1]) if a.startswith("--")}
+    which = [a for a in sys.argv[1:] if not a.startswith("--") and a not in option_values] or ["all"]
+    engine = sys.argv[sys.argv.index("--browser") + 1] if "--browser" in sys.argv else "chromium"
     if "--shots" in sys.argv:
         SHOTS = sys.argv[sys.argv.index("--shots") + 1]
     if "--base" in sys.argv:
         BASE = sys.argv[sys.argv.index("--base") + 1]
     with sync_playwright() as p:
-        browser = p.chromium.launch()
+        browser = getattr(p, engine).launch()
+        print("browser:", engine, browser.version)
         for name in ("kitchen", "inventory", "admin", "responsive"):
             if "all" in which or name in which:
                 fn = globals().get(name)

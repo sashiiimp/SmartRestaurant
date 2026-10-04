@@ -13,7 +13,8 @@ from app.services import audit
 from app.services.errors import AccountLocked, AuthenticationError, ConflictError, NotFoundError, ValidationError
 from app.services.validation import Fields
 
-MAX_FAILURES = 5
+MAX_FAILURES = 5        # per username from one address
+MAX_IP_FAILURES = 20    # per address over all usernames (guessing many accounts)
 FAILURE_WINDOW = timedelta(minutes=10)
 LOCK_TIME = timedelta(minutes=5)
 MIN_PASSWORD_LEN = 8
@@ -34,23 +35,31 @@ def hash_password(password: str) -> str:
     return generate_password_hash(password)
 
 
-def _is_locked(username: str) -> bool:
+def _locked_by(filters, start, limit, now) -> bool:
+    count, last_failure = db.session.query(db.func.count(LoginAttempt.id), db.func.max(LoginAttempt.attempted_at)).filter(
+        *filters, LoginAttempt.success.is_(False), LoginAttempt.attempted_at > start).one()
+    return bool(count >= limit and last_failure and now < last_failure + LOCK_TIME)
+
+
+def _is_locked(username: str, ip: str | None) -> bool:
+    """C1. Failures count per username *and* address, so someone guessing from elsewhere cannot lock a real user out
+    of the restaurant's own terminal; one address that fails across many usernames is stopped as well."""
     now = utcnow()
     start = now - FAILURE_WINDOW
     last_success = (db.session.query(db.func.max(LoginAttempt.attempted_at))
                     .filter(LoginAttempt.username == username, LoginAttempt.success.is_(True)).scalar())
-    if last_success and last_success > start:
-        start = last_success
-    q = db.session.query(db.func.count(LoginAttempt.id), db.func.max(LoginAttempt.attempted_at)).filter(
-        LoginAttempt.username == username, LoginAttempt.success.is_(False), LoginAttempt.attempted_at > start)
-    count, last_failure = q.one()
-    return bool(count >= MAX_FAILURES and last_failure and now < last_failure + LOCK_TIME)
+    user_start = max(start, last_success) if last_success else start
+    same_user = [LoginAttempt.username == username]
+    if ip is None:   # no address known (not a web request): fall back to the username alone
+        return _locked_by(same_user, user_start, MAX_FAILURES, now)
+    return (_locked_by(same_user + [LoginAttempt.ip_address == ip], user_start, MAX_FAILURES, now)
+            or _locked_by([LoginAttempt.ip_address == ip], start, MAX_IP_FAILURES, now))
 
 
 def login(username: str, password: str, ip: str | None = None) -> User:
     """Return the user or raise. The error never says whether the username exists (C1)."""
     username = (username or "").strip().lower()
-    if _is_locked(username):
+    if _is_locked(username, ip):
         raise AccountLocked("Too many attempts. Try again in a few minutes.")
     user = User.query.filter_by(username=username).first() if username else None
     ok = bool(user and user.is_active and check_password_hash(user.password_hash, password or ""))
@@ -69,10 +78,28 @@ def username_exists(username: str) -> bool:
     return User.query.filter_by(username=username.strip().lower()).first() is not None
 
 
-def get_user(user_id) -> User | None:
-    """Loader for sessions: a deactivated user's session stops working at once."""
+def get_user(session_id) -> User | None:
+    """Loader for sessions. The id is "user id:session version" (User.get_id); a deactivated user, an ended session
+    or an id in the old format (before session versions) gives None, so the request is treated as logged out."""
+    user_id, _, version = str(session_id).partition(":")
+    if not (user_id.isdigit() and version.isdigit()):
+        return None
     user = db.session.get(User, int(user_id))
-    return user if user and user.is_active else None
+    if not user or not user.is_active or user.session_version != int(version):
+        return None
+    return user
+
+
+def _end_sessions(user: User) -> None:
+    user.session_version = (user.session_version or 0) + 1
+
+
+def logout(user_id: int) -> None:
+    """End every session of this user, including copies of the cookie (C3)."""
+    user = db.session.get(User, user_id)
+    if user:
+        _end_sessions(user)
+        db.session.commit()
 
 
 def _validate_user_fields(full_name, username, role, email=None) -> dict:
@@ -93,17 +120,27 @@ def _validate_user_fields(full_name, username, role, email=None) -> dict:
     return v
 
 
-def _check_password(password) -> None:
+def _check_password(password, username: str) -> None:
+    """Length, plus the two weakest patterns that a length rule lets through: the username inside the password, and
+    one character repeated. Letters alone are refused as well (at least one digit or symbol)."""
     if not isinstance(password, str) or not MIN_PASSWORD_LEN <= len(password) <= MAX_PASSWORD_LEN:
-        raise ValidationError("Please fix the highlighted fields.",
-                              {"password": f"must be text of {MIN_PASSWORD_LEN} to {MAX_PASSWORD_LEN} characters"})
+        problem = f"must be text of {MIN_PASSWORD_LEN} to {MAX_PASSWORD_LEN} characters"
+    elif username and username.lower() in password.lower():
+        problem = "must not contain the username"
+    elif len(set(password)) == 1:
+        problem = "must not be one character repeated"
+    elif password.isalpha():
+        problem = "must contain at least one digit or symbol"
+    else:
+        return
+    raise ValidationError("Please fix the highlighted fields.", {"password": problem})
 
 
 def create_user(outlet_id: int, full_name: str, username: str, role: str, password: str,
                 email: str | None = None, actor_id: int | None = None) -> User:
     v = _validate_user_fields(full_name, username, role, email)
-    _check_password(password)
     username = v["username"]
+    _check_password(password, username)
     if User.query.filter_by(username=username).first():
         raise ConflictError("That username is already taken.", code="duplicate_record")
     user = User(outlet_id=outlet_id, full_name=v["full_name"], username=username, email=v["email"],
@@ -143,6 +180,8 @@ def update_user(outlet_id: int, user_id: int, actor_id: int | None = None, **cha
                      {"from": user.role, "to": new_role})
     if new_active != user.is_active:
         audit.record(outlet_id, actor_id, "user.activate" if new_active else "user.deactivate", "user", user.id)
+        if not new_active:
+            _end_sessions(user)
     user.full_name, user.email, user.role, user.is_active = v["full_name"], v["email"], new_role, new_active
     db.session.commit()
     return user
@@ -152,8 +191,9 @@ def reset_password(outlet_id: int, user_id: int, new_password: str, actor_id: in
     user = User.query.filter_by(id=user_id, outlet_id=outlet_id).first()
     if not user:
         raise NotFoundError("User not found.")
-    _check_password(new_password)
+    _check_password(new_password, user.username)
     user.password_hash = hash_password(new_password)
+    _end_sessions(user)  # whoever knew the old password is logged out too
     audit.record(outlet_id, actor_id, "user.password_reset", "user", user.id)
     db.session.commit()
 

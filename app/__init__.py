@@ -9,6 +9,11 @@ from app.config import get_config
 from app.extensions import csrf, db, login_manager, migrate
 
 
+CSP = ("default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; "
+       "font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; "
+       "frame-ancestors 'none'")
+
+
 def create_app(config_name: str | None = None, overrides: dict | None = None) -> Flask:
     app = Flask(__name__, instance_relative_config=True)
     app.config.from_object(get_config(config_name))
@@ -16,6 +21,11 @@ def create_app(config_name: str | None = None, overrides: dict | None = None) ->
     os.makedirs(app.instance_path, exist_ok=True)
     if app.config.get("SECRET_KEY") == "dev-only-change-me" and os.environ.get("APP_ENV") == "prod":
         raise RuntimeError("Set SECRET_KEY in the environment before running with APP_ENV=prod.")
+
+    if app.config.get("TRUST_PROXY"):
+        from werkzeug.middleware.proxy_fix import ProxyFix
+        n = app.config["TRUST_PROXY"]
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=n, x_proto=n, x_host=n)
 
     db.init_app(app)
     migrate.init_app(app, db)
@@ -78,6 +88,16 @@ def create_app(config_name: str | None = None, overrides: dict | None = None) ->
         # Back button must not reveal protected pages after logout (C3).
         if current_user.is_authenticated:
             resp.headers.setdefault("Cache-Control", "no-store")
+        return resp
+
+    @app.after_request
+    def _security_headers(resp):
+        # Everything is served from this origin (vendored libraries, no CDN). 'unsafe-eval' is needed because Vue
+        # compiles the in-page templates at run time; there is no inline script, and pages cannot be framed.
+        resp.headers.setdefault("Content-Security-Policy", CSP)
+        resp.headers.setdefault("X-Frame-Options", "DENY")
+        resp.headers.setdefault("X-Content-Type-Options", "nosniff")
+        resp.headers.setdefault("Referrer-Policy", "same-origin")
         return resp
 
     if not app.testing:

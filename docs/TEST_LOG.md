@@ -226,3 +226,23 @@ decimal places in `services/validation.py` (API.md section 1), a plausibility ch
 | The audit's probes re-run | every input-limit, range and type case now 422; remaining findings (session revocation, security headers, lockout, password policy, CSV formulas) are not part of this change |
 
 The MariaDB tests were not run, and the demo server was not restarted, so the live demo still runs the earlier code.
+
+## 14. Security hardening after the audit (4 Oct 2026)
+
+Fixes 4 to 9 of the audit: sessions end on the server (`users.session_version`, migration `4c1e5e7a9b2d`), security
+headers with a CSP (the login page's inline script moved to `static/js/login.js`), CSV formula neutralising, a 5 MB
+upload cap, a password rule, lockout per username and address (with `TRUST_PROXY` for a reverse proxy), and the perf
+tests no longer run as part of `-m "not mysql"`.
+
+| Check | Result |
+|---|---|
+| Fast suite (`pytest -q -m "not mysql"`, scratch clone) | 305 passed, 2 skipped (the perf tests, now opt-in); 15 new in `tests/api/test_security_hardening.py` (SEC-13 to SEC-18) |
+| MariaDB tests (`pytest -q -m mysql` against `smartrest_test`) | 10 passed |
+| Migration chain on MariaDB 11.8 (`smartrest_test`): upgrade from empty, downgrade and upgrade of `4c1e5e7a9b2d` | pass; `session_version INTEGER NOT NULL DEFAULT 0`; test database emptied afterwards |
+| `demo-reset` on an SQLite copy, then the browser smoke test (Chromium, all roles, 360/768/1280 px) with the CSP active | no problems, no CSP violations; password show/hide still works |
+| Firefox and WebKit | not run: Playwright's browsers are installed but need system libraries (`apt-get`) that are not on the server |
+| Perf tests on that copy (`-m perf`) | forecast run 286 ms, worst request 144 ms |
+| The audit's probes re-run | sessions, headers, CSV, password rule now pass; left: `Secure` cookie (needs HTTPS), the expired-batch warning and `X-Request-ID` (not in this change) |
+
+Deploying this needs `flask db upgrade` on the demo database and a server restart. Every existing session then ends
+once (the session id format changed), so users log in again.
