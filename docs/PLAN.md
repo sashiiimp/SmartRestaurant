@@ -8,6 +8,8 @@ Read after `REQUIREMENTS.md`, `ARCHITECTURE.md`, `DATABASE.md`, `API.md`, `ML_PL
 
 **All 15 functions of section 3A are built, tested and deployed to the live demo database (21 Sep 2026, migrations `b8b8048fad45` and `165b04a3da7c`).** **Scope change approved 21 Sep 2026:** every function in the approved proposal is now in scope, including all former S and X items that the proposal lists. Section 3A is the plan for the remaining work; section 4 is superseded for those items. The work is done in tiers 1 to 3 and each group is tested on a copy of the database (`smartrest_work`) before the live demo database is upgraded.
 
+**4 Oct 2026 (after the build deadline, research strengthening only):** rolling-origin cross-validation, the feature ablation (ML_PLAN stretch) and segment errors added as the read-only command `flask smartrest evaluate`; holiday calendar corrected to the declared dates and the demo rebuilt. Results: `ML_EVALUATION.md`.
+
 ## 1. Situation
 
 | Item | Value |

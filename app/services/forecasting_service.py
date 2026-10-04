@@ -10,8 +10,9 @@ import numpy as np
 import pandas as pd
 
 from app.extensions import db
-from app.ml import registry
+from app.ml import experiments, registry
 from app.ml.evaluate import metrics, oracle_mae
+from app.ml.experiments import FOLD_DAYS, FOLDS
 from app.ml.features import build_features
 from app.ml.predict import BASELINES, predict
 from app.ml.train import HOLDOUT_DAYS, train_and_compare
@@ -98,6 +99,28 @@ def train_model(outlet_id: int, model_dir: str, actor_id: int | None = None, act
                         "days": HOLDOUT_DAYS},
             "comparison": [{"model": name, **m} for name, m in overall.items()],
             "oracle_mae": metrics.get("oracle_mae"), "active": bool(activate)}
+
+
+def run_experiments(outlet_id: int, n_folds: int = FOLDS, fold_days: int = FOLD_DAYS,
+                    oracle_path: str | None = ORACLE_PATH) -> dict:
+    """Cross-validation, feature ablation and segment errors (ML_EVALUATION.md). Read-only: stores nothing."""
+    if n_folds < 2 or fold_days < 7:
+        raise ValidationError("Use at least 2 folds of at least 7 days.", code="invalid_folds")
+    data = _load_data(outlet_id)
+    items = sorted(int(i) for i in data.sales["item_id"].unique()) if len(data.sales) else []
+    if not items:
+        raise ValidationError("There is no sales history to evaluate. Import or generate sales data first.",
+                              code="no_data")
+    expected = pd.read_csv(oracle_path, parse_dates=["date"]) if oracle_path and os.path.exists(oracle_path) else None
+    try:
+        result = experiments.run_experiments(data.sales, data.holidays, data.promos, data.weather, items,
+                                             n_folds=n_folds, fold_days=fold_days, expected=expected)
+    except ValueError as e:
+        raise ValidationError(str(e), code="not_enough_data")
+    names = {m.id: m.name for m in MenuItem.query.filter_by(outlet_id=outlet_id)}
+    result["items"] = [names.get(i, str(i)) for i in items]
+    result["data_end"] = data.sales["date"].max().date().isoformat()
+    return _num(result)
 
 
 def activate_model(outlet_id: int, ref, actor_id: int | None = None) -> ModelVersion:

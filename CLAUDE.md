@@ -14,7 +14,7 @@ If asked to build something outside M1/M2 of `PLAN.md`, say so and ask before do
 
 ## Status
 
-**M1, M2 and all 15 remaining proposal functions (`docs/PLAN.md` section 3A: suppliers, adjustments, purchase orders, availability, pre-orders, stock requests, shortage reports, data check, admin inventory and forecast monitoring, reports, restaurant information, daily orders, ingredient usage, analytics) are implemented, tested and deployed to the demo database (21 Sep 2026)**; see `docs/PLAN.md` and `docs/TEST_LOG.md`. Remaining work is report/demo preparation. Keep the fast tests green (`pytest -q -m "not mysql"`) and re-run `python tests/ui/smoke.py all` after UI changes (against a copy of the database, never the demo data).
+**M1, M2 and all 15 remaining proposal functions (`docs/PLAN.md` section 3A: suppliers, adjustments, purchase orders, availability, pre-orders, stock requests, shortage reports, data check, admin inventory and forecast monitoring, reports, restaurant information, daily orders, ingredient usage, analytics) are implemented, tested and deployed to the demo database (21 Sep 2026)**; see `docs/PLAN.md` and `docs/TEST_LOG.md`. **4 Oct 2026:** cross-validation and feature ablation added (`flask smartrest evaluate`, `docs/ML_EVALUATION.md` sections 4 to 6) and the holiday calendar corrected to the declared dates (section 7). Remaining work is report/demo preparation. Keep the fast tests green (`pytest -q -m "not mysql"`) and re-run `python tests/ui/smoke.py all` after UI changes (against a copy of the database, never the demo data).
 
 ## Commands (available once the slices are built)
 
@@ -25,6 +25,7 @@ flask db upgrade
 flask smartrest seed [--reset]       # outlet, users, settings, catalog, suppliers, opening stock
 flask smartrest generate-data        # synthetic history, loaded through the import services
 flask smartrest train --activate     # trains baselines, RF, XGBoost; prints the comparison
+flask smartrest evaluate [--json F]  # cross-validation + feature ablation (read-only)
 flask smartrest forecast [--as-of D] [--from D --to D]   # --from/--to = backfill
 flask smartrest check-stock          # data check: stock vs movement history (exit 1 if inconsistent)
 flask smartrest create-user | set-setting <key> <value> | demo-reset

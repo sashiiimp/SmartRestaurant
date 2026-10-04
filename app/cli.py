@@ -55,6 +55,45 @@ def train_cmd(activate):
         click.echo(f"oracle MAE (noise floor of the synthetic data): {r['oracle_mae']:.2f}")
 
 
+@group.command("evaluate")
+@click.option("--folds", default=6, show_default=True, help="Number of consecutive test windows.")
+@click.option("--fold-days", default=28, show_default=True, help="Length of each test window in days.")
+@click.option("--json", "json_path", default=None, help="Also write the full result to this JSON file.")
+def evaluate_cmd(folds, fold_days, json_path):
+    """Cross-validation, feature ablation and segment errors. Read-only: no model is stored or activated."""
+    import json
+
+    from app.services import forecasting_service as fs
+
+    r = fs.run_experiments(1, n_folds=folds, fold_days=fold_days)
+    click.echo(f"data to {r['data_end']}; {r['n_folds']} folds of {r['fold_days']} days (synthetic demo data)")
+    click.echo("\nfolds")
+    for f in r["folds"]:
+        floor = f" floor {f['noise_floor_mae']:.2f}" if f.get("noise_floor_mae") is not None else ""
+        maes = "  ".join(f"{a} {m['mae']:.2f}" for a, m in f["metrics"].items())
+        click.echo(f"  {f['test_start']}..{f['test_end']}  {maes}  winner {f['winner']}{floor}")
+    click.echo(f"\n{'cross-validation':16} {'MAE':>7} {'+/-':>6} {'WAPE%':>7} {'+/-':>6} {'beats naive':>12} {'won':>4}")
+    for a, s in r["cv"].items():
+        click.echo(f"{a:16} {s['mae_mean']:7.2f} {s['mae_std']:6.2f} {s['wape_mean']:7.2f} {s['wape_std']:6.2f} "
+                   f"{s['folds_beating_naive']:>7}/{r['n_folds']:<4} {s['folds_won']:>4}")
+    click.echo(f"\nablation ({r['algorithm_for_ablation']})      CV MAE    +/-   hold-out MAE  hold-out WAPE%")
+    for a in r["ablation"]:
+        click.echo(f"  {a['feature_set']:26} {a['cv']['mae_mean']:7.2f} {a['cv']['mae_std']:6.2f} "
+                   f"{a['holdout']['mae']:13.2f} {a['holdout']['wape']:14.2f}")
+    rows = r["segment_rows"]
+    click.echo(f"\nsegment MAE (pooled CV test rows; {rows['total']} rows)")
+    click.echo(f"  {'feature set':26} " + "  ".join(f"{s} ({rows[s]}): with / without" for s in rows if s != "total"))
+    for a in r["ablation"]:
+        seg = a["segments"]
+        click.echo(f"  {a['feature_set']:26} " + "  ".join(
+            f"{seg[s]['with']['mae']:6.2f} / {seg[s]['without']['mae']:6.2f}".rjust(len(f"{s} ({rows[s]}): with / without"))
+            for s in seg))
+    if json_path:
+        with open(json_path, "w") as fh:
+            json.dump(r, fh, indent=1)
+        click.echo(f"\nfull result written to {json_path}")
+
+
 @group.command("activate")
 @click.argument("version_label")
 def activate_cmd(version_label):

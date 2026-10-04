@@ -8,7 +8,11 @@ import pandas as pd
 
 LAGS = (7, 14, 21, 28)
 CALENDAR = ["dow", "is_weekend", "month"]
-CONTEXT = ["is_public_holiday", "is_poya", "is_school_holiday", "promo_discount_pct", "rain_mm", "temp_c"]
+# The context groups are named separately so the ablation (experiments.py) can add them one at a time.
+HOLIDAY = ["is_public_holiday", "is_poya", "is_school_holiday"]
+PROMOTION = ["promo_discount_pct"]
+WEATHER = ["rain_mm", "temp_c"]
+CONTEXT = HOLIDAY + PROMOTION + WEATHER
 HISTORY = ["lag_7", "lag_14", "lag_21", "lag_28", "roll_mean_7", "roll_mean_28"]
 BASE_FEATURES = CALENDAR + CONTEXT + HISTORY
 

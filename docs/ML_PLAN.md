@@ -46,7 +46,7 @@ sold(item, day)     = Poisson( expected * LogNormal(0, 0.10) )
 
 Weather (Colombo pattern, assumed): monthly wet-day probability (Jan 0.20, Feb 0.15, Mar 0.25, Apr 0.45, May 0.65, Jun 0.55, Jul 0.45, Aug 0.45, Sep 0.50, Oct 0.65, Nov 0.60, Dec 0.40), rain on a wet day is Gamma with mean 12 mm, temperature 26 to 31 C with a mild annual cycle. Source `synthetic`.
 
-Holidays come from `data/holidays_lk.csv` (public, Poya, school-term holidays, 2024-09 to 2026-12). **The builder curates this file from the official published Sri Lanka calendar** (I cannot verify dates offline). The generator reads the same file, so the demo stays self-consistent even if a date is wrong; verify it before the report is submitted.
+Holidays come from `data/holidays_lk.csv` (public, Poya, school-term holidays, 2024-09 to 2026-12). **The builder curates this file from the official published Sri Lanka calendar** (I cannot verify dates offline). The generator reads the same file, so the demo stays self-consistent even if a date is wrong; verify it before the report is submitted. *(Done 4 Oct 2026: Poya days and movable holidays replaced by the declared dates; see `ML_EVALUATION.md` section 7. School vacations remain approximate.)*
 
 Also generated (for waste and S6): `prepared = max(round(sold * (1 + e)), sold)` with `e ~ Normal(0.15, 0.10)` clipped to [-0.05, 0.60], and `waste = prepared - sold` when positive (reason 80% overproduction, 10% quality, 10% expired).
 
@@ -92,7 +92,7 @@ Training rows need all lags present, so each item's first 28 recorded days are d
 ## 5. Training and selection (`ml/train.py`)
 
 1. Load the full history with `build_features`.
-2. **Time-based split:** the last **56 days** (8 whole weeks) are the hold-out; everything earlier is training. No shuffling, no cross-validation, no tuning grid in the MVP.
+2. **Time-based split:** the last **56 days** (8 whole weeks) are the hold-out; everything earlier is training. No shuffling, no cross-validation, no tuning grid in the MVP. *(Added 4 Oct 2026, outside the MVP: a rolling-origin cross-validation over six 28-day windows, `flask smartrest evaluate`; results in `ML_EVALUATION.md` section 4.)*
 3. Fit and predict on the hold-out for each candidate:
 
 | Candidate | Setup |
@@ -107,7 +107,7 @@ Training rows need all lags present, so each item's first 28 recorded days are d
 6. **Refit the winning algorithm on all available history** and save the artifact. (The reported metrics belong to the train-only fit; the shipped model differs only by having seen 8 more weeks. State this in the report.)
 7. Save `instance/models/<version_label>/model.joblib` (dict: model, feature column list, item ids, library versions, trained_at) and insert the `model_versions` row (`status = trained`). Activation is a separate explicit step (A16).
 
-Postponed: hyperparameter search, feature ablation, prediction intervals, per-item models. **Stretch (S), about 1 hour:** an ablation table (calendar+lags, then +holiday, then +promo, then +weather) for the winner, which directly answers the proposal's question about contextual factors.
+Postponed: hyperparameter search, feature ablation, prediction intervals, per-item models. **Stretch (S), about 1 hour:** an ablation table (calendar+lags, then +holiday, then +promo, then +weather) for the winner, which directly answers the proposal's question about contextual factors. *(Done 4 Oct 2026 with `flask smartrest evaluate`, together with segment errors on holiday, promotion and wet days; `ML_EVALUATION.md` section 5.)*
 
 ## 6. Evaluation and metrics
 

@@ -50,18 +50,42 @@ class TrainResult:
     params: dict = field(default_factory=dict)
 
 
-def train_and_compare(sales: pd.DataFrame, holidays: pd.DataFrame, promos: pd.DataFrame, weather: pd.DataFrame,
-                      items, holdout_days: int = HOLDOUT_DAYS) -> TrainResult:
-    items = sorted(int(i) for i in items)
+def prepare_dataset(sales: pd.DataFrame, holidays: pd.DataFrame, promos: pd.DataFrame, weather: pd.DataFrame,
+                    items) -> tuple[pd.DataFrame, dict]:
+    """All usable (item, day) rows with features and target, plus the climatology of the full weather history.
+
+    Rows without a target or without the full lag history (each item's first 28 days) are dropped.
+    """
     if sales.empty:
         raise ValueError("No sales history to train on.")
-    last = sales["date"].max()
-    first = sales["date"].min()
-    dates = pd.date_range(first, last)
+    dates = pd.date_range(sales["date"].min(), sales["date"].max())
     full_clim = climatology(weather)
     df = build_features(sales, holidays, promos, weather, items, dates, items, full_clim, with_target=True, impute=False)
     lag_cols = [f"lag_{k}" for k in LAGS]
-    df = df.dropna(subset=["y"] + lag_cols + ["roll_mean_7", "roll_mean_28"]).reset_index(drop=True)
+    return df.dropna(subset=["y"] + lag_cols + ["roll_mean_7", "roll_mean_28"]).reset_index(drop=True), full_clim
+
+
+def with_estimated_weather(test: pd.DataFrame, weather: pd.DataFrame, test_start: pd.Timestamp) -> pd.DataFrame:
+    """Replace the test rows' weather by the seasonal estimate built from the data before `test_start` only.
+
+    Honest evaluation: that estimate is what the model sees when it forecasts tomorrow, not the weather that
+    actually happened.
+    """
+    known = weather[pd.to_datetime(weather["date"]) < test_start] if weather is not None and len(weather) else weather
+    clim = climatology(known)
+    out = test.copy()
+    mon = out["date"].dt.month
+    out["rain_mm"] = mon.map(clim["rain"]).fillna(clim["overall_rain"]).astype(float)
+    out["temp_c"] = mon.map(clim["temp"]).fillna(clim["overall_temp"]).astype(float)
+    return out
+
+
+def train_and_compare(sales: pd.DataFrame, holidays: pd.DataFrame, promos: pd.DataFrame, weather: pd.DataFrame,
+                      items, holdout_days: int = HOLDOUT_DAYS) -> TrainResult:
+    items = sorted(int(i) for i in items)
+    df, full_clim = prepare_dataset(sales, holidays, promos, weather, items)
+    last = sales["date"].max()
+    first = sales["date"].min()
 
     hold_start = last - pd.Timedelta(days=holdout_days - 1)
     if hold_start <= first + pd.Timedelta(days=60):
@@ -70,14 +94,7 @@ def train_and_compare(sales: pd.DataFrame, holidays: pd.DataFrame, promos: pd.Da
     hold = df[df["date"] >= hold_start].reset_index(drop=True)
     if train.empty or hold.empty:
         raise ValueError("Not enough usable rows to train and evaluate.")
-
-    # Honest evaluation: hold-out weather is the seasonal estimate built from the training period only, because
-    # that is what the model sees when it forecasts tomorrow.
-    train_weather = weather[pd.to_datetime(weather["date"]) < hold_start] if weather is not None and len(weather) else weather
-    train_clim = climatology(train_weather)
-    mon = hold["date"].dt.month
-    hold["rain_mm"] = mon.map(train_clim["rain"]).fillna(train_clim["overall_rain"]).astype(float)
-    hold["temp_c"] = mon.map(train_clim["temp"]).fillna(train_clim["overall_temp"]).astype(float)
+    hold = with_estimated_weather(hold, weather, hold_start)
 
     cols = feature_columns(items)
     X_train, y_train = train[cols].to_numpy(dtype=float), train["y"].to_numpy(dtype=float)

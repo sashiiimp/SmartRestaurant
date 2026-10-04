@@ -82,7 +82,7 @@ Screenshots of every page are in `docs/screenshots/`.
 - Tested in Chromium only; Firefox and Edge were not run.
 - No screen-reader accessibility audit, no load testing beyond section 2, no penetration test.
 - The forecast accuracy figures are for synthetic data (see `ML_EVALUATION.md`).
-- Feature ablation (ML_PLAN stretch) not run.
+- Feature ablation (ML_PLAN stretch): done 4 Oct 2026, see section 11 and `ML_EVALUATION.md` section 5.
 
 ## 6. Defects found and fixed during testing
 
@@ -176,3 +176,20 @@ Not done: perf tests (they write to the live database); live deployment.
 
 The perf tests were not run: they write to the demo database and log in with a password that no longer matches the demo users.
 The working copy `smartrest_work` (a clone taken before the changes) is kept for further testing and can be dropped.
+
+## 11. Cross-validation, feature ablation and holiday calendar (4 Oct 2026)
+
+Scope: `flask smartrest evaluate` (`app/ml/experiments.py`, `ForecastingService.run_experiments`), read-only; and the
+corrected holiday calendar (`scripts/make_holidays.py`, `data/holidays_lk.csv`).
+
+| Check | Result |
+|---|---|
+| Fast suite (`pytest -q -m "not mysql and not perf"`) | 238 passed (231 before plus 7 new in `tests/unit/test_ml_experiments.py`) |
+| Hand-calculated cases: two 7-day windows ending 31 Mar 2026 are 18-24 and 25-31 Mar; feature sets listed by hand; segment rows 4 holiday, 3 promotion and 4 wet item-days | pass |
+| No leakage: every window's last training day is before its first test day; windows contiguous; training window grows by exactly one window | pass |
+| The ablation's full feature set reproduces the shipped training's XGBoost hold-out metrics exactly (unit test, and on the demo data: MAE 9.1973 both) | pass |
+| `evaluate` changes nothing in the database (model and forecast-run counts before and after) | pass |
+| Holiday file against the declared 2024-2026 calendars | 19 Poya dates were one day late and 5 holidays missing; corrected, demo rebuilt with `demo-reset` after a backup |
+
+Results are in `ML_EVALUATION.md` sections 4 to 7. The MariaDB and perf tests were not re-run (unchanged code paths;
+the perf tests write to the demo database).

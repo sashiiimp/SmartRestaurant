@@ -47,6 +47,7 @@ Use `SMARTREST_TODAY=YYYY-MM-DD` to pin "today" for a repeatable demo.
 flask smartrest seed [--reset]          outlet, users, settings, catalog, recipes, suppliers, opening stock
 flask smartrest generate-data           synthetic history through the import services
 flask smartrest train [--activate]      compare baselines, Random Forest, XGBoost; print the metrics
+flask smartrest evaluate [--json F]     cross-validation, feature ablation, segment errors (read-only)
 flask smartrest activate <label>        make a trained version active (previous one stays for rollback)
 flask smartrest forecast [--as-of D]    7-day forecast;  --from D --to D  = single-day backfill
 flask smartrest alerts                  (alerts also refresh lazily when read)
