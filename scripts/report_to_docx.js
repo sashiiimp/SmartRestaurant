@@ -1,4 +1,5 @@
-// Build docs/report/SmartRestaurant_Final_Report_DRAFT.docx from docs/report/REPORT.md.
+// Build a Word document from Markdown: the final report (docs/report/REPORT.md, with title page and contents) or
+// a plain document such as docs/usability/KIT.md (one page per top-level heading).
 // Not part of the app and not in requirements: run it from a scratch folder with its own node packages:
 //   mkdir /tmp/r && cd /tmp/r && npm init -y && npm install docx@9 marked@14 image-size@1
 //   NODE_PATH=/tmp/r/node_modules node /path/to/smartrest/scripts/report_to_docx.js \
@@ -131,7 +132,7 @@ function blocks(tokens, ctx) {
         if (ctx.front && level === 2) level = 1;               // Declaration, Abstract ... are top level
         if (level === 1 && /^1\. /.test(text)) ctx.front = false;
         const H = [null, HeadingLevel.HEADING_1, HeadingLevel.HEADING_2, HeadingLevel.HEADING_3, HeadingLevel.HEADING_4][Math.min(level, 4)];
-        out.push(new Paragraph({ heading: H, pageBreakBefore: level === 1, keepNext: true, children: [new TextRun(text)] }));
+        out.push(new Paragraph({ heading: H, pageBreakBefore: level === 1 && (ctx.h1Count++ > 0 || ctx.report), keepNext: true, children: [new TextRun(text)] }));
         break;
       }
       case 'paragraph': {
@@ -172,10 +173,11 @@ let md = fs.readFileSync(SRC, 'utf8').replace(/^---\n[\s\S]*?\n---\n/, '');   //
 const tokens = marked.lexer(md);
 const firstH1 = tokens.findIndex((t) => t.type === 'heading' && t.depth === 1);
 const declIdx = tokens.findIndex((t) => t.type === 'heading' && t.text === 'Declaration');
-const titleTokens = tokens.slice(firstH1 + 1, declIdx);
+const isReport = declIdx >= 0;   // the report has a title page and contents; other documents (KIT.md) do not
+const titleTokens = isReport ? tokens.slice(firstH1 + 1, declIdx) : [];
 const titleText = decode(tokens[firstH1].text);
 
-const title = [
+const title = !isReport ? [] : [
   new Paragraph({ spacing: { before: 1800, after: 240 }, alignment: AlignmentType.CENTER,
     children: [new TextRun({ text: 'SmartRestaurant', bold: true, size: 56, color: '1F3864' })] }),
   new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 480 },
@@ -187,10 +189,11 @@ const title = [
   ...blocks(titleTokens.filter((t) => t.type !== 'paragraph' || !/^\*\*CSE5015/.test(t.raw)), { front: true }),
 ];
 
-const body = blocks(tokens.slice(declIdx), { front: true });
+const body = isReport ? blocks(tokens.slice(declIdx), { front: true, report: true, h1Count: 0 })
+  : blocks(tokens, { front: false, report: false, h1Count: 0 });
 
 const doc = new Document({
-  creator: 'Team ForeSight', title: 'SmartRestaurant final report (draft)',
+  creator: 'Team ForeSight', title: isReport ? 'SmartRestaurant final report (draft)' : decode(tokens[firstH1].text),
   features: { updateFields: true },
   styles: {
     default: { document: { run: { font: FONT, size: 22 }, paragraph: { spacing: { line: 276 } } } },
@@ -216,11 +219,11 @@ const doc = new Document({
     footers: { default: new Footer({ children: [new Paragraph({ alignment: AlignmentType.CENTER,
       children: [new TextRun({ children: ['Page ', PageNumber.CURRENT, ' of ', PageNumber.TOTAL_PAGES], size: 18, color: '808080' })] })] }) },
     children: [
-      ...title,
-      new Paragraph({ children: [new PageBreak()] }),
-      new Paragraph({ heading: HeadingLevel.HEADING_1, children: [new TextRun('Contents')] }),
-      new TableOfContents('Contents', { hyperlink: true, headingStyleRange: '1-2' }),
-      new Paragraph({ children: [new TextRun({ text: 'Right-click the table of contents and choose "Update field" if page numbers are missing.', italics: true, size: 18, color: '808080' })] }),
+      ...(isReport ? [...title,
+        new Paragraph({ children: [new PageBreak()] }),
+        new Paragraph({ heading: HeadingLevel.HEADING_1, children: [new TextRun('Contents')] }),
+        new TableOfContents('Contents', { hyperlink: true, headingStyleRange: '1-2' }),
+        new Paragraph({ children: [new TextRun({ text: 'Right-click the table of contents and choose "Update field" if page numbers are missing.', italics: true, size: 18, color: '808080' })] })] : []),
       ...body,
     ],
   }],

@@ -208,6 +208,8 @@ The Flask test client excludes network time; the demo machine is also checked by
 
 ## 8. Scripted UAT (NFR1, I10 in REQUIREMENTS)
 
+*4 Oct 2026: a usability test with first-time users (task cards, SEQ, SUS, observer sheet, answer key and analysis script) is in `docs/usability/`; it measures NFR1 as defined in REQUIREMENTS.md with volunteers instead of the builder.*
+
 There is no pilot restaurant and no QA team. The builder runs each script on a clean seeded database, ideally with **one volunteer per role** who is not the builder; times are recorded. Pilot-restaurant UAT and SUS scoring are reported as **not done** (Appendix C, open point). Steps 1-6 of the kitchen script are the NFR1 timing task: target 5 minutes or less for a first-time user.
 
 **K-UAT (kitchen1)**

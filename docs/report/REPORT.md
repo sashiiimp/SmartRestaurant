@@ -657,7 +657,7 @@ a generic message, session settings, no secrets in Git) passed in full (`docs/TE
 There was no test with real restaurant staff and no usability score (SUS), so the five-minute target of NFR1 was not
 measured; the browser walkthroughs were run by the developer. Only Chromium was tested (the proposal lists Chrome,
 Firefox and Edge). There was no accessibility audit, load test or penetration test.
-**[TEAM: if a usability session is run before submission, add its results here.]**
+**[TEAM: run the usability test in `docs/usability/` (plan, printable kit, answer key, analysis script) and paste the tables from `docs/usability/RESULTS.md` here; then update the NFR1 row in section 11.4.]**
 
 # 11. Results and evaluation
 

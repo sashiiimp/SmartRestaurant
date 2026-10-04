@@ -193,3 +193,18 @@ corrected holiday calendar (`scripts/make_holidays.py`, `data/holidays_lk.csv`).
 
 Results are in `ML_EVALUATION.md` sections 4 to 7. The MariaDB and perf tests were not re-run (unchanged code paths;
 the perf tests write to the demo database).
+
+## 12. Usability test kit (4 Oct 2026)
+
+`docs/usability/` holds the plan, the printable kit (`.md` and `.docx`), CSV templates, the answer-key script
+(`scripts/usability_answers.py`, read-only) and the analysis script (`scripts/usability_report.py`).
+
+| Check | Result |
+|---|---|
+| `tests/unit/test_usability_report.py` (SUS scoring, time parsing, NFR1 per participant, data checks; hand-calculated) | 11 passed |
+| Answer-key script changes nothing in the database (counts before and after) | pass |
+| Pilot of every data-changing task through the services on the demo data, against the answer key | all pass; demo reset afterwards (backup `backups/smartrest_before_usability_pilot_20261004_140645`) |
+| Kit `.docx` against the OOXML schema | pass |
+
+Pilot findings added to the answer key: after the chicken delivery an alert for a later day can remain (correct); a
+waste alert about Chicken Kottu could be mistaken for the chicken stock alert. No sessions with participants yet.
