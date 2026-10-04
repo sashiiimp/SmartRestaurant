@@ -240,9 +240,19 @@ tests no longer run as part of `-m "not mysql"`.
 | MariaDB tests (`pytest -q -m mysql` against `smartrest_test`) | 10 passed |
 | Migration chain on MariaDB 11.8 (`smartrest_test`): upgrade from empty, downgrade and upgrade of `4c1e5e7a9b2d` | pass; `session_version INTEGER NOT NULL DEFAULT 0`; test database emptied afterwards |
 | `demo-reset` on an SQLite copy, then the browser smoke test (Chromium, all roles, 360/768/1280 px) with the CSP active | no problems, no CSP violations; password show/hide still works |
-| Firefox and WebKit | not run: Playwright's browsers are installed but need system libraries (`apt-get`) that are not on the server |
+| Firefox 155 and WebKit 26.6 (system libraries added with `playwright install-deps`: 219 new packages, nothing upgraded or removed) | browser smoke test, all roles and 360/768/1280 px: no problems in either (each on a freshly reset copy; the test saves an import row, so a second run on the same data finds it unchanged) |
 | Perf tests on that copy (`-m perf`) | forecast run 286 ms, worst request 144 ms |
 | The audit's probes re-run | sessions, headers, CSV, password rule now pass; left: `Secure` cookie (needs HTTPS), the expired-batch warning and `X-Request-ID` (not in this change) |
 
-Deploying this needs `flask db upgrade` on the demo database and a server restart. Every existing session then ends
-once (the session id format changed), so users log in again.
+### Deployment to the demo database (4 Oct 2026)
+
+| Step | Result |
+|---|---|
+| Backup (`backups/smartrest_before_hardening_20261004_173251/`: database dump, `instance/models`, `.env`, SHA256SUMS; git-ignored) | taken; restored into a temporary database with identical row counts in every table, then dropped |
+| `flask db upgrade` | `165b04a3da7c` to `4c1e5e7a9b2d`; `session_version` 0 for the 3 users; no other row changed (7,630 sales, 630 forecasts, 22 batches and movements) |
+| Server reload (gunicorn HUP, port 39500) | new workers booted, no errors; every earlier session ended once (new session id format) |
+| Read-only check over HTTP, all 62 parameter-free GET routes as each role (signed session cookies, no logins) | anonymous refused; admin 47 allowed and 15 forbidden, kitchen 21 and 41, inventory 24 and 38 (as on 21 Sep); no foreign navigation links; security headers present; slowest request 454 ms |
+| Writes that must be refused | a 1,000,000,000-portion pre-order and `horizon_days` "abc" give 422; nothing stored; an old-format session id gives 401 |
+| `flask smartrest check-stock` | consistent; one expired batch listed (as before) |
+
+Rollback: restore the dump (`DEMO_NEW_FEATURES.md` step 1) and check out the code before `0d94944`.
