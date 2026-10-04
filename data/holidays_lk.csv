@@ -31,12 +31,13 @@ date,name,type
 2024-08-29,School vacation (approx.),school
 2024-08-30,School vacation (approx.),school
 2024-08-31,School vacation (approx.),school
-2024-09-18,Binara Poya,poya
+2024-09-16,Milad-un-Nabi,public
+2024-09-17,Binara Poya,poya
 2024-10-17,Vap Poya,poya
 2024-10-31,Deepavali,public
-2024-11-16,Il Poya,poya
+2024-11-15,Il Poya,poya
+2024-12-14,Unduvap Poya,poya
 2024-12-15,School vacation (approx.),school
-2024-12-15,Unduvap Poya,poya
 2024-12-16,School vacation (approx.),school
 2024-12-17,School vacation (approx.),school
 2024-12-18,School vacation (approx.),school
@@ -59,19 +60,19 @@ date,name,type
 2025-01-03,School vacation (approx.),school
 2025-01-04,School vacation (approx.),school
 2025-01-05,School vacation (approx.),school
-2025-01-14,Duruthu Poya,poya
+2025-01-13,Duruthu Poya,poya
 2025-01-14,Tamil Thai Pongal Day,public
 2025-02-04,Independence Day,public
 2025-02-12,Navam Poya,poya
 2025-02-26,Maha Shivaratri,public
-2025-03-14,Medin Poya,poya
+2025-03-13,Medin Poya,poya
 2025-03-31,Eid al-Fitr,public
 2025-04-08,School vacation (approx.),school
 2025-04-09,School vacation (approx.),school
 2025-04-10,School vacation (approx.),school
 2025-04-11,School vacation (approx.),school
+2025-04-12,Bak Poya,poya
 2025-04-12,School vacation (approx.),school
-2025-04-13,Bak Poya,poya
 2025-04-13,Day before Sinhala and Tamil New Year,public
 2025-04-13,School vacation (approx.),school
 2025-04-14,School vacation (approx.),school
@@ -86,15 +87,16 @@ date,name,type
 2025-04-21,School vacation (approx.),school
 2025-05-01,May Day,public
 2025-05-12,Vesak Poya,poya
+2025-05-13,Day after Vesak Poya,public
 2025-06-07,Eid al-Adha,public
-2025-06-11,Poson Poya,poya
-2025-07-11,Esala Poya,poya
+2025-06-10,Poson Poya,poya
+2025-07-10,Esala Poya,poya
 2025-08-04,School vacation (approx.),school
 2025-08-05,School vacation (approx.),school
 2025-08-06,School vacation (approx.),school
 2025-08-07,School vacation (approx.),school
+2025-08-08,Nikini Poya,poya
 2025-08-08,School vacation (approx.),school
-2025-08-09,Nikini Poya,poya
 2025-08-09,School vacation (approx.),school
 2025-08-10,School vacation (approx.),school
 2025-08-11,School vacation (approx.),school
@@ -120,10 +122,10 @@ date,name,type
 2025-08-31,School vacation (approx.),school
 2025-09-05,Milad-un-Nabi,public
 2025-09-07,Binara Poya,poya
-2025-10-07,Vap Poya,poya
+2025-10-06,Vap Poya,poya
 2025-10-20,Deepavali,public
 2025-11-05,Il Poya,poya
-2025-12-05,Unduvap Poya,poya
+2025-12-04,Unduvap Poya,poya
 2025-12-14,School vacation (approx.),school
 2025-12-15,School vacation (approx.),school
 2025-12-16,School vacation (approx.),school
@@ -148,13 +150,13 @@ date,name,type
 2026-01-03,Duruthu Poya,poya
 2026-01-03,School vacation (approx.),school
 2026-01-04,School vacation (approx.),school
-2026-01-14,Tamil Thai Pongal Day,public
-2026-02-02,Navam Poya,poya
+2026-01-15,Tamil Thai Pongal Day,public
+2026-02-01,Navam Poya,poya
 2026-02-04,Independence Day,public
 2026-02-15,Maha Shivaratri,public
-2026-03-03,Medin Poya,poya
+2026-03-02,Medin Poya,poya
 2026-03-21,Eid al-Fitr,public
-2026-04-02,Bak Poya,poya
+2026-04-01,Bak Poya,poya
 2026-04-03,Good Friday,public
 2026-04-03,School vacation (approx.),school
 2026-04-04,School vacation (approx.),school
@@ -177,9 +179,11 @@ date,name,type
 2026-04-19,School vacation (approx.),school
 2026-05-01,May Day,public
 2026-05-01,Vesak Poya,poya
+2026-05-02,Day after Vesak Poya,public
 2026-05-28,Eid al-Adha,public
-2026-05-31,Vesak Poya,poya
-2026-06-30,Poson Poya,poya
+2026-05-30,Adhi Poson Poya,poya
+2026-05-31,State Vesak holiday (amendment),public
+2026-06-29,Poson Poya,poya
 2026-07-29,Esala Poya,poya
 2026-08-03,School vacation (approx.),school
 2026-08-04,School vacation (approx.),school
@@ -206,13 +210,13 @@ date,name,type
 2026-08-25,School vacation (approx.),school
 2026-08-26,Milad-un-Nabi,public
 2026-08-26,School vacation (approx.),school
+2026-08-27,Nikini Poya,poya
 2026-08-27,School vacation (approx.),school
-2026-08-28,Nikini Poya,poya
 2026-08-28,School vacation (approx.),school
 2026-08-29,School vacation (approx.),school
 2026-08-30,School vacation (approx.),school
 2026-09-26,Binara Poya,poya
-2026-10-26,Vap Poya,poya
+2026-10-25,Vap Poya,poya
 2026-11-08,Deepavali,public
 2026-11-24,Il Poya,poya
 2026-12-13,School vacation (approx.),school
@@ -226,8 +230,8 @@ date,name,type
 2026-12-21,School vacation (approx.),school
 2026-12-22,School vacation (approx.),school
 2026-12-23,School vacation (approx.),school
+2026-12-23,Unduvap Poya,poya
 2026-12-24,School vacation (approx.),school
-2026-12-24,Unduvap Poya,poya
 2026-12-25,Christmas Day,public
 2026-12-25,School vacation (approx.),school
 2026-12-26,School vacation (approx.),school

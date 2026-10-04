@@ -11,9 +11,9 @@ Run it at `http://localhost:39500` on the demo system. Use the three demo accoun
    mariadb-dump --no-defaults -uroot -S .mariadb/mysql.sock --single-transaction smartrest > backups/before_demo.sql
    ```
    Restore later with `mariadb --no-defaults -uroot -S .mariadb/mysql.sock smartrest < backups/before_demo.sql`. Do not restore the older `before_deploy` or `before_tier1` dumps: they predate the new tables.
-2. **Check the starting state** (the figures below are from the `demo-reset` of 4 Oct 2026, model `v20261004-1`; a different run or day changes them slightly):
-   - Kitchen `/kitchen/requirements`: **Chicken** needs 49.36 kg, has 30 kg, short by **19.36 kg**; **Potato** short by 10 kg.
-   - Inventory `/inventory/reorder`: **Chicken 80 kg** (Ceylon Poultry & Meats) and **Potato 50 kg** (Colombo Fresh Produce).
+2. **Check the starting state** (the figures below are from the `demo-reset` of 4 Oct 2026 with the corrected holiday calendar, model `v20261004-1`; a different run or day changes them slightly):
+   - Kitchen `/kitchen/requirements`: **Chicken** needs 47.48 kg, has 30 kg, short by **17.48 kg**; **Potato** short by 17.5 kg.
+   - Inventory `/inventory/reorder`: **Chicken 80 kg** (Ceylon Poultry & Meats) and **Potato 60 kg** (Colombo Fresh Produce).
    - Inventory `/inventory`: Potato "critically low", Chicken "will run short today", one expired chicken batch (5 kg).
 3. Make sure the demo has a forecast for today: the Kitchen **Forecast** page must show numbers, not "No forecast yet".
 
@@ -29,11 +29,11 @@ Run it at `http://localhost:39500` on the demo system. Use the three demo accoun
 | 4 | Back to **Orders**, press **Confirm** on the pre-order, then repeat step 3. | Confirmed pre-orders **120**, recommended now **120** (120 is already whole batches of 6). | The prep quantity is `max(forecast x 1.10, pre-orders)` rounded up to whole batches. |
 | 5 | **Orders** > **Daily orders** > add Chicken Burger, quantity **6**, note "Table 4", then **Fulfilled**. | Row moves to *Accepted*; no buttons any more. Try tomorrow's date: no form, the page points to Pre-orders. | *Manage Daily Order*: an internal record only, no prices or payments, no effect on the forecast. |
 | 6 | **Prep plan** (today): on Chicken Burger type **24** in *Quantity* and **+ Add**. Then **Served & waste**, scroll to **Ingredient usage**. | Chicken expected **2.88 kg** (24 x 0.12), Burger bun 24, and so on. Type **3.1** for Chicken, note "extra for the sauce", **Save**. | Difference **+0.22** shows. *Record Ingredient Usage*: expected is prepared x recipe; the kitchen records what was actually used. It never changes stock. |
-| 7 | **Ingredients** (`/kitchen/requirements`). | Chicken row in red: short by **19.36 kg**, with **Request stock** and **Report shortage** buttons. | *Ingredient Requirements* and *Shortage Reporting*. |
+| 7 | **Ingredients** (`/kitchen/requirements`). | Chicken row in red: short by **17.48 kg**, with **Request stock** and **Report shortage** buttons. | *Ingredient Requirements* and *Shortage Reporting*. |
 | 8 | On **Potato** press **Report shortage**, type "crate looks half empty" > OK. | Toast "Shortage reported to Inventory". | The report becomes a critical alert for Inventory and Admin. |
 | 9 | **Stock requests** > **New request**: Cooking oil **10** L, note "Fryer top-up" > **Send request**. Send a second one: Egg **500** pcs, note "Breakfast batch". | Two cards, both *Pending*. | *Request Kitchen Stock*. |
 
-*(Optional, 20 seconds)* On **Ingredients**, press **Request stock** next to Chicken: the form opens with Chicken and 19.36 kg filled in. Press **Cancel**; the real fix for a buying gap comes from procurement in Scene 2.
+*(Optional, 20 seconds)* On **Ingredients**, press **Request stock** next to Chicken: the form opens with Chicken and 17.48 kg filled in. Press **Cancel**; the real fix for a buying gap comes from procurement in Scene 2.
 
 ---
 
@@ -46,7 +46,7 @@ Run it at `http://localhost:39500` on the demo system. Use the three demo accoun
 | 3 | Open the **Cooking oil** request > **Approve** > **Issue stock** (quantity is prefilled with 10) > **Issue**. | Status *Issued*. Then **Record stock**: the history has a stock-out with note "Kitchen request #..". | Issuing checks that every line can be covered by usable stock, takes the earliest-expiry batch first, and never issues expired stock. Partial issue is allowed. |
 | 4 | **Reorder**. Tick **Chicken** and **Potato**. The button now reads *Create purchase orders (2 suppliers)*. Press it. | You land on **Purchase orders** with two drafts (one per supplier). Open **Reorder** again: it now says *Nothing needs reordering right now*, because a draft already counts as "on order". | *Manage Purchase Orders*, created straight from the recommendation. Nothing is sent to a supplier: "sent" is marked by hand. |
 | 5 | Open the **Chicken** order > **Mark as sent** > **Receive stock**: change the quantity to **40**, set an expiry date about a week ahead > **Record receipt**. | *Partially received*, outstanding **40 kg**. | Receiving creates the stock batch and the stock-in record linked to the order. A line can never receive more than is outstanding (try 100 first: the page refuses it next to the line). |
-| 6 | Receive the remaining **40 kg**, then open the **Potato** order and receive **50**. | Both orders *Received*. | The reorder formula already counted "on order" and stock, so it needed no change: the recommendation, the order and the stock all agree. |
+| 6 | Receive the remaining **40 kg**, then open the **Potato** order and receive **60**. | Both orders *Received*. | The reorder formula already counted "on order" and stock, so it needed no change: the recommendation, the order and the stock all agree. |
 | 7 | **Record stock** > **Wastage**: Chicken, **5**, reason *Expired*. | The expired batch is written off. | *Inventory Wastage Recording* (already existed). We do it now so the next step is clean. |
 | 8 | **Adjustment** tab: pick Chicken. The page shows *System on hand: N kg*. Enter **N minus 2**, reason "Stock take: 2 kg spillage" > **Save**. | The live line shows *difference -2*; history shows an *adjustment* of -2. | *Stock Adjustment*: you enter the counted quantity, the system posts the difference, and a reason is mandatory. Enter the same number again and it says there is nothing to adjust. |
 | 9 | **Stock** > **Data check** > **Run data check**. | Green "No problems found", checked 20 ingredients, no expired stock listed. | *Validate Inventory Data*: the recorded movements add up exactly to the stock in the batches. (Also available as `flask smartrest check-stock`.) |
