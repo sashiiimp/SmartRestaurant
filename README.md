@@ -21,6 +21,8 @@ reports with CSV export.
 | `docs/ML_EVALUATION.md` | Actual model results (not planned numbers) |
 | `docs/TEST_LOG.md` | Test evidence and UAT results |
 | `docs/screenshots/` | Screens captured by `tests/ui/smoke.py` |
+| `docs/diagrams/` | UML diagrams (use case, class, sequence, activity), Mermaid sources and images |
+| `docs/report/` | Final report draft (`REPORT.md`, `SmartRestaurant_Final_Report_DRAFT.docx`) and its figures |
 
 ## Setup
 
