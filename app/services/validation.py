@@ -5,6 +5,15 @@ from decimal import Decimal, InvalidOperation
 from app.services.errors import ValidationError
 from app.utils.dates import today
 
+# Upper limits (NFR8). Each is far above any real figure for one outlet and below its column's range, so a typo or a
+# pasted number is refused with a message instead of distorting the forecast and the recommendations built on it, or
+# overflowing a column (a 500 on MariaDB in strict mode).
+MAX_INT = 2_147_483_647           # INT columns (ids, counts)
+MAX_PORTIONS = 10_000             # portions of one item in one entry (prepared, served, waste, pre-orders, orders)
+MAX_STOCK_QTY = 1_000_000         # base units (kg, l, pcs) in one entry; stock columns are DECIMAL(12,3)
+MAX_MONEY = 10_000_000            # LKR; price and cost columns are DECIMAL(12,2)
+STOCK_PLACES, MONEY_PLACES = 3, 2  # more decimals would be rounded away silently by the column
+
 
 class Fields:
     def __init__(self, data: dict | None):
@@ -31,6 +40,9 @@ class Fields:
                 return default
             self.values[name] = None
             return self._missing(name, required)
+        if isinstance(v, (bool, dict, list)):
+            self.errors[name] = "must be text"
+            return None
         v = str(v)
         if len(v) > max_len:
             self.errors[name] = f"must be at most {max_len} characters"
@@ -38,7 +50,7 @@ class Fields:
         self.values[name] = v
         return v
 
-    def decimal(self, name, required=True, min=None, gt=None, max=None, default=None):
+    def decimal(self, name, required=True, min=None, gt=None, max=None, default=None, places=None):
         v = self._raw(name)
         if v is None:
             if default is not None:
@@ -63,12 +75,15 @@ class Fields:
             self.errors[name] = f"must be at least {min}"
             return None
         if max is not None and d > Decimal(str(max)):
-            self.errors[name] = f"must be at most {max}"
+            self.errors[name] = f"must be at most {max:,}"
+            return None
+        if places is not None and d.as_tuple().exponent < -places:
+            self.errors[name] = f"must have at most {places} decimal places"
             return None
         self.values[name] = d
         return d
 
-    def integer(self, name, required=True, min=None, gt=None, max=None, default=None):
+    def integer(self, name, required=True, min=None, gt=None, max=MAX_INT, default=None):
         r = self.decimal(name, required=required, min=min, gt=gt, max=max, default=default)
         if r is None:
             return None
@@ -78,6 +93,19 @@ class Fields:
             return None
         self.values[name] = int(r)
         return int(r)
+
+    def portions(self, name, required=True, min=None, gt=None, default=None):
+        """A count of portions of one item in one entry."""
+        return self.integer(name, required=required, min=min, gt=gt, max=MAX_PORTIONS, default=default)
+
+    def stock_qty(self, name, required=True, min=None, gt=None, default=None):
+        """An ingredient quantity in its base unit."""
+        return self.decimal(name, required=required, min=min, gt=gt, max=MAX_STOCK_QTY, default=default,
+                            places=STOCK_PLACES)
+
+    def money(self, name, required=True, default=None):
+        """A price or unit cost in LKR."""
+        return self.decimal(name, required=required, min=0, max=MAX_MONEY, default=default, places=MONEY_PLACES)
 
     def date(self, name, required=True, not_future=False, default=None):
         v = self._raw(name)

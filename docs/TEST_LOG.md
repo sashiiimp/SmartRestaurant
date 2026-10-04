@@ -208,3 +208,21 @@ the perf tests write to the demo database).
 
 Pilot findings added to the answer key: after the chicken delivery an alert for a later day can remain (correct); a
 waste alert about Chicken Kottu could be mistaken for the chicken stock alert. No sessions with participants yet.
+
+## 13. Input limits after the security and QA audit (4 Oct 2026)
+
+The audit found that unbounded numbers distorted the plan (one 1,000,000,000-portion pre-order became a reorder of
+999,999,999,100 burger buns), that `days` and `horizon_days` had no upper bound (a 100,000-day request held a worker
+for minutes and wrote forecasts up to the year 2300), and that wrongly typed fields gave 500s. Fixes: limits and
+decimal places in `services/validation.py` (API.md section 1), a plausibility check on the sales import, bounded
+`days`, `horizon_days` and `limit`, and type checks on users, menu `is_active` and the settings `alerts` object.
+
+| Check | Result |
+|---|---|
+| Fast suite (`pytest -q -m "not mysql" --ignore=tests/perf`, scratch clone) | 290 passed (249 before plus 41 new in `tests/api/test_input_limits.py`, VAL-7 to VAL-9) |
+| `demo-reset` on an SQLite copy: the synthetic history still imports through the new outlier check | 7,630 rows, 0 rejected; same model and forecast as before |
+| Browser smoke test, all roles and 360/768/1280 px, on that copy | no problems |
+| Perf tests on that copy | forecast run 221 ms, worst request 117 ms |
+| The audit's probes re-run | every input-limit, range and type case now 422; remaining findings (session revocation, security headers, lockout, password policy, CSV formulas) are not part of this change |
+
+The MariaDB tests were not run, and the demo server was not restarted, so the live demo still runs the earlier code.

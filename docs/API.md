@@ -37,6 +37,19 @@ Read `ARCHITECTURE.md` (envelope, RBAC, MVC rules) and `DATABASE.md` (fields) fi
            "fields": {"quantity": "must be greater than 0"}}}
 ```
 
+**Input limits (NFR8, `services/validation.py`).** Values outside these give 422, never a 500 or a stored value:
+
+| Kind | Rule |
+|---|---|
+| Portions (prepared, served, waste, pre-orders, daily orders, override `final_qty`, imported sales) | whole number, at most 10,000 per entry |
+| Ingredient quantities (stock in/out, wastage, adjustment, PO and request lines, usage, min stock, reorder level, pack size, reorder quantity) | at most 1,000,000 base units, at most 3 decimal places |
+| Prices and unit costs | 0 to 10,000,000 LKR, at most 2 decimal places |
+| Recipe quantity per portion | greater than 0, at most 100, at most 4 decimal places |
+| Ids and other whole numbers; integer query parameters | at most 2,147,483,647 (query parameter beyond that: `is out of range`) |
+| Text fields | must be text (an object, list or true/false is refused) |
+| Sales import | a row more than 10 times the item's highest stored day is rejected; an item with no stored history is compared with the median of its own rows in the file (7 rows or more) |
+| Users | username letters, digits, `.`, `-`, `_`; email must look like an address; password text of 8 to 128 characters; `is_active` true or false |
+
 ## 2. Roles and access
 
 Abbreviations: **A** admin, **K** kitchen, **I** inventory. **(R)** means read-only (GET only).
@@ -106,8 +119,8 @@ Abbreviations: **A** admin, **K** kitchen, **I** inventory. **(R)** means read-o
 | `GET /weather?from=&to=`, `POST /weather/import` | A | M2 | A15 | CSV, same dry-run contract |
 | `GET /forecasts?from=&to=&item_id=` | A K I | M1 | K2, S1 | latest version per item and date. `meta` has `active_model`, `last_run`, and `missing_dates` when a date has no forecast. |
 | `GET /forecasts/accuracy?from=&to=&item_id=&format=csv` | A | M2 | A9 | per item and overall MAE, WAPE, MAPE, bias, plus a daily forecast-vs-actual series (rule in DATABASE 2.6) |
-| `GET /forecast-runs?limit=` | A | M1 | A9, S1 | includes failed/skipped with `reason` |
-| `POST /forecast-runs` | A | M1 | S1 | `{as_of?, horizon_days?}` (defaults: today, 7). Synchronous, target under 5 s. |
+| `GET /forecast-runs?limit=` | A | M1 | A9, S1 | includes failed/skipped with `reason`; `limit` 1 to 200 |
+| `POST /forecast-runs` | A | M1 | S1 | `{as_of?, horizon_days?}` (defaults: today, 7; `horizon_days` 1 to 14, checked before a run is recorded). Synchronous, target under 5 s. |
 | `GET /model-versions` | A | M1 | A16 | with metrics summary and active flag |
 | `POST /model-versions` | A | M1 | A16 | trains synchronously (seconds to about a minute) and returns the comparison table. Not activated. |
 | `POST /model-versions/{id}/activate` | A | M1 | A16 | audited; previous version stays available |
@@ -119,7 +132,7 @@ Abbreviations: **A** admin, **K** kitchen, **I** inventory. **(R)** means read-o
 | `GET /recommendations/prep?date=` | A(R) K | M1 | K3, S2 | one row per active item, computed live |
 | `POST /recommendations/prep/decisions` | K | M1 | K3 | `{menu_item_id, date, action: "accept"\|"override", final_qty?, reason?}`; `override` needs `final_qty` and `reason` |
 | `GET /recommendations/requirements?date=` | A(R) K I | M1 | K9, S3 | requirements and shortage flags for that day's plan |
-| `GET /recommendations/ingredient-forecast?from=&days=7` | A(R) I | M1 | I7 | per ingredient per day |
+| `GET /recommendations/ingredient-forecast?from=&days=7` | A(R) I | M1 | I7 | per ingredient per day; `days` 1 to 31 |
 | `GET /recommendations/reorder` | A(R) I | M1 | I9 | rows with the numbers behind each suggestion |
 | `POST /kitchen/prepared` | K | M1 | K5 | `{menu_item_id, date, quantity}`; returns the new running total |
 | `POST /kitchen/waste` | K | M1 | K7 | `{menu_item_id, date, quantity, reason, note?}`; 200 with `warnings` when waste exceeds prepared |

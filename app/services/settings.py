@@ -84,6 +84,8 @@ def update_editable(outlet_id: int, data: dict, user_id: int | None = None) -> d
         if key in data:
             f.decimal(key, min=lo, max=hi)
     f.text("data_source_label", required=False, max_len=60)
+    if not isinstance(data.get("alerts") or {}, dict):
+        f.error("alerts", "must be an object of alert switches")
     f.check()
     for key in EDITABLE:
         if key in f.values and f.values[key] is not None:

@@ -21,11 +21,14 @@ from app.models.base import utcnow
 from app.services import audit, settings
 from app.services import data_management_service as dm
 from app.services.errors import NotFoundError, ValidationError
+from app.services.validation import Fields
 from app.utils.dates import today
 
 log = logging.getLogger("smartrest")
 
 ORACLE_PATH = "data/synthetic/oracle_expected.csv"
+MAX_HORIZON_DAYS = 14  # a short-term forecast (FR4); lags beyond 7 days ahead are already imputed
+MAX_RUNS_LISTED = 200
 
 
 def _num(x):
@@ -156,7 +159,12 @@ def run_forecast(outlet_id: int, as_of: date | None = None, horizon: int | None 
     as_of = as_of or today()
     if as_of > today():
         raise ValidationError("A forecast run cannot start in the future.", {"as_of": "must not be after today"})
-    horizon = horizon or settings.get_int(outlet_id, "forecast_horizon_days")
+    if horizon is None:
+        horizon = settings.get_int(outlet_id, "forecast_horizon_days")
+    else:  # checked before the run row exists, so a bad value never shows up as a failed run or an alert
+        f = Fields({"horizon_days": horizon})
+        horizon = f.integer("horizon_days", min=1, max=MAX_HORIZON_DAYS)
+        f.check()
     run = ForecastRun(outlet_id=outlet_id, as_of_date=as_of, horizon_days=horizon, trigger_type=trigger,
                       status="running", created_by=actor_id)
     db.session.add(run)
@@ -326,7 +334,7 @@ def forecast_map(outlet_id: int, start: date, end: date) -> dict:
 def list_runs(outlet_id: int, limit: int = 30) -> list[dict]:
     # Same rule as get_forecasts: a run dated after today (leftover from a demo clock override) is never listed.
     rows = (ForecastRun.query.filter(ForecastRun.outlet_id == outlet_id, ForecastRun.as_of_date <= today())
-            .order_by(ForecastRun.id.desc()).limit(limit).all())
+            .order_by(ForecastRun.id.desc()).limit(min(max(limit, 1), MAX_RUNS_LISTED)).all())
     return [{"id": r.id, "as_of": r.as_of_date.isoformat(), "horizon_days": r.horizon_days, "trigger": r.trigger_type,
              "status": r.status, "reason": r.reason, "items_forecast": r.items_forecast,
              "model": r.model_version.version_label if r.model_version else None,

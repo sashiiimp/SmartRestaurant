@@ -9,7 +9,7 @@ from app.models.inventory import MOVEMENT_TYPES, PO_STATUSES, STOCK_REQUEST_STAT
 from app.models.base import utcnow
 from app.services import audit
 from app.services.errors import ConflictError, NotFoundError, ValidationError
-from app.services.validation import Fields
+from app.services.validation import MAX_INT, Fields
 from app.utils.dates import today
 
 
@@ -20,7 +20,7 @@ def _supplier_fields(data: dict) -> dict:
     f.text("contact_person", required=False, max_len=120)
     f.text("phone", required=False, max_len=40)
     f.text("email", required=False, max_len=160)
-    f.integer("lead_time_days", min=0, default=2)
+    f.integer("lead_time_days", min=0, max=365, default=2)
     f.text("notes", required=False)
     return f.check()
 
@@ -97,12 +97,12 @@ def _ingredient_fields(data: dict) -> dict:
     f.text("name", max_len=120)
     f.text("unit", max_len=20)
     f.text("category", required=False, max_len=60)
-    f.integer("shelf_life_days", required=False, min=0)
+    f.integer("shelf_life_days", required=False, min=0, max=3650)
     f.integer("default_supplier_id", required=False, min=1)
-    f.decimal("min_stock", min=0, default=0)
-    f.decimal("reorder_level", min=0, default=0)
-    f.decimal("pack_size", gt=0, default=1)
-    f.decimal("reorder_qty", min=0, default=0)
+    f.stock_qty("min_stock", min=0, default=0)
+    f.stock_qty("reorder_level", min=0, default=0)
+    f.stock_qty("pack_size", gt=0, default=1)
+    f.stock_qty("reorder_qty", min=0, default=0)
     v = f.check()
     if v["reorder_level"] < v["min_stock"]:
         raise ValidationError("Please fix the highlighted fields.",
@@ -288,11 +288,11 @@ def _add_stock_batch(outlet_id, ing, qty, received, expiry, batch_no, cost, supp
 def record_stock_in(outlet_id: int, data: dict, actor_id: int | None = None) -> dict:
     f = Fields(data)
     ing_id = f.integer("ingredient_id", gt=0)
-    qty = f.decimal("quantity", gt=0)
+    qty = f.stock_qty("quantity", gt=0)
     received = f.date("received_date", not_future=True, default=today())
     expiry = f.date("expiry_date", required=False)
     batch_no = f.text("batch_no", required=False, max_len=60)
-    cost = f.decimal("unit_cost", required=False, min=0)
+    cost = f.money("unit_cost", required=False)
     supplier_id = f.integer("supplier_id", required=False, gt=0)
     f.check()
     if expiry and received and expiry < received:
@@ -327,7 +327,7 @@ def record_stock_out(outlet_id: int, data: dict, actor_id: int | None = None) ->
     """FEFO over usable (non-expired) batches. Rejected as a whole if usable stock is insufficient (I6)."""
     f = Fields(data)
     ing_id = f.integer("ingredient_id", gt=0)
-    qty = f.decimal("quantity", gt=0)
+    qty = f.stock_qty("quantity", gt=0)
     day = f.date("movement_date", not_future=True, default=today())
     reason = f.choice("reason", STOCK_OUT_REASONS, default="issued_to_kitchen")
     note = f.text("note", required=False)
@@ -351,7 +351,7 @@ def record_wastage(outlet_id: int, data: dict, actor_id: int | None = None) -> d
     """Wastage may draw from any batch, expired ones first (that is its purpose) (I13)."""
     f = Fields(data)
     ing_id = f.integer("ingredient_id", gt=0)
-    qty = f.decimal("quantity", gt=0)
+    qty = f.stock_qty("quantity", gt=0)
     day = f.date("movement_date", not_future=True, default=today())
     reason = f.choice("reason", WASTAGE_REASONS)
     batch_id = f.integer("batch_id", required=False, gt=0)
@@ -384,7 +384,7 @@ def record_adjustment(outlet_id: int, data: dict, actor_id: int | None = None) -
     immutable like every other, and a note is mandatory."""
     f = Fields(data)
     ing_id = f.integer("ingredient_id", gt=0)
-    counted = f.decimal("counted_quantity", min=0)
+    counted = f.stock_qty("counted_quantity", min=0)
     day = f.date("movement_date", not_future=True, default=today())
     note = f.text("note", max_len=255)
     f.check()
@@ -478,8 +478,8 @@ def create_purchase_order(outlet_id: int, data: dict, actor_id: int | None = Non
     for i, raw in enumerate(raw_lines):
         lf = Fields(raw if isinstance(raw, dict) else {})
         ing_id = lf.integer("ingredient_id", gt=0)
-        qty = lf.decimal("qty_ordered", gt=0)
-        cost = lf.decimal("unit_cost", required=False, min=0)
+        qty = lf.stock_qty("qty_ordered", gt=0)
+        cost = lf.money("unit_cost", required=False)
         if lf.errors:
             errors[f"lines[{i}]"] = "; ".join(f"{k} {m}" for k, m in lf.errors.items())
             continue
@@ -547,10 +547,10 @@ def receive_purchase_order(outlet_id: int, po_id: int, data: dict, actor_id: int
     for i, raw in enumerate(raw_lines):
         lf = Fields(raw if isinstance(raw, dict) else {})
         line_id = lf.integer("line_id", gt=0)
-        qty = lf.decimal("quantity", gt=0)
+        qty = lf.stock_qty("quantity", gt=0)
         expiry = lf.date("expiry_date", required=False)
         batch_no = lf.text("batch_no", required=False, max_len=60)
-        cost = lf.decimal("unit_cost", required=False, min=0)
+        cost = lf.money("unit_cost", required=False)
         key = f"lines[{i}]"
         if lf.errors:
             errors[key] = "; ".join(f"{k} {m}" for k, m in lf.errors.items())
@@ -655,7 +655,7 @@ def create_stock_request(outlet_id: int, data: dict, actor_id: int | None = None
     for i, raw in enumerate(raw_lines):
         lf = Fields(raw if isinstance(raw, dict) else {})
         ing_id = lf.integer("ingredient_id", gt=0)
-        qty = lf.decimal("quantity", gt=0)
+        qty = lf.stock_qty("quantity", gt=0)
         if lf.errors:
             errors[f"lines[{i}]"] = "; ".join(f"{k} {m}" for k, m in lf.errors.items())
             continue
@@ -735,7 +735,7 @@ def issue_stock_request(outlet_id: int, request_id: int, data: dict, actor_id: i
     for i, raw in enumerate(raw_lines):
         lf = Fields(raw if isinstance(raw, dict) else {})
         line_id = lf.integer("line_id", gt=0)
-        qty = lf.decimal("quantity", gt=0)
+        qty = lf.stock_qty("quantity", gt=0)
         key = f"lines[{i}]"
         if lf.errors:
             errors[key] = "; ".join(f"{k} {m}" for k, m in lf.errors.items())
@@ -812,7 +812,7 @@ def list_movements(outlet_id: int, ingredient_id=None, mtype=None, start=None, e
     if end:
         q = q.filter(StockMovement.movement_date <= end)
     total = q.count()
-    rows = q.order_by(StockMovement.movement_date.desc(), StockMovement.id.desc()).limit(min(limit, 200)).offset(offset).all()
+    rows = q.order_by(StockMovement.movement_date.desc(), StockMovement.id.desc()).limit(min(max(limit, 1), 200)).offset(min(max(offset, 0), MAX_INT)).all()
     return {"total": total, "rows": [{"id": m.id, "ingredient_id": m.ingredient_id, "ingredient": i.name, "unit": i.unit,
                                       "type": m.movement_type, "quantity": float(m.quantity), "reason": m.reason,
                                       "note": m.note, "date": m.movement_date.isoformat(), "batch_id": m.batch_id}

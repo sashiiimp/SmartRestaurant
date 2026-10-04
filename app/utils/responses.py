@@ -115,9 +115,12 @@ def int_arg(name: str, default=None):
     if v in (None, ""):
         return default
     try:
-        return int(v)
+        n = int(v)
     except ValueError:
         raise ValidationError("Please fix the highlighted fields.", {name: "must be a whole number"})
+    if abs(n) > 2_147_483_647:  # beyond any id or count the database can hold
+        raise ValidationError("Please fix the highlighted fields.", {name: "is out of range"})
+    return n
 
 
 def bool_arg(name: str, default=False) -> bool:

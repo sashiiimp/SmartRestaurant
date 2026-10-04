@@ -43,7 +43,7 @@ def record_prepared(outlet_id: int, data: dict, actor_id: int | None = None) -> 
     f = Fields(data)
     item_id = f.integer("menu_item_id", gt=0)
     day = f.date("date", not_future=True)
-    qty = f.integer("quantity", gt=0)
+    qty = f.portions("quantity", gt=0)
     f.check()
     item = dm.get_menu_item(outlet_id, item_id)
     db.session.add(PreparationRecord(outlet_id=outlet_id, menu_item_id=item.id, prep_date=day, quantity=qty,
@@ -66,7 +66,7 @@ def record_served(outlet_id: int, data: dict, actor_id: int | None = None) -> di
     for i, raw in enumerate(lines):
         lf = Fields(raw if isinstance(raw, dict) else {})
         item_id = lf.integer("menu_item_id", gt=0)
-        qty = lf.integer("quantity", min=0)
+        qty = lf.portions("quantity", min=0)
         if lf.errors:
             errors[f"lines[{i}]"] = "; ".join(f"{k} {m}" for k, m in lf.errors.items())
             continue
@@ -108,7 +108,7 @@ def record_waste(outlet_id: int, data: dict, actor_id: int | None = None) -> dic
     f = Fields(data)
     item_id = f.integer("menu_item_id", gt=0)
     day = f.date("date", not_future=True)
-    qty = f.integer("quantity", gt=0)
+    qty = f.portions("quantity", gt=0)
     reason = f.choice("reason", WASTE_REASONS)
     note = f.text("note", required=False, max_len=255)
     f.check()
@@ -164,7 +164,7 @@ def create_pre_order(outlet_id: int, data: dict, actor_id: int | None = None) ->
     f = Fields(data)
     item_id = f.integer("menu_item_id", gt=0)
     day = f.date("target_date")
-    qty = f.integer("quantity", gt=0)
+    qty = f.portions("quantity", gt=0)
     note = f.text("customer_note", required=False, max_len=255)
     status = f.choice("status", ("pending", "confirmed"), default="pending")
     if day and day < today():
@@ -193,7 +193,7 @@ def update_pre_order(outlet_id: int, pre_order_id: int, data: dict, actor_id: in
     merged = {"quantity": p.quantity, "target_date": p.target_date, "customer_note": p.customer_note, "status": p.status}
     merged.update({k: data[k] for k in merged if k in data})
     f = Fields(merged)
-    qty = f.integer("quantity", gt=0)
+    qty = f.portions("quantity", gt=0)
     day = f.date("target_date")
     note = f.text("customer_note", required=False, max_len=255)
     status = f.choice("status", PREORDER_STATUSES)
@@ -248,7 +248,7 @@ def create_order(outlet_id: int, data: dict, actor_id: int | None = None) -> dic
     f = Fields(data)
     item_id = f.integer("menu_item_id", gt=0)
     day = f.date("order_date", not_future=True, default=today())
-    qty = f.integer("quantity", gt=0)
+    qty = f.portions("quantity", gt=0)
     note = f.text("customer_note", required=False, max_len=255)
     f.check()
     item = dm.get_menu_item(outlet_id, item_id)
@@ -271,7 +271,7 @@ def update_order(outlet_id: int, order_id: int, data: dict, actor_id: int | None
     merged = {"quantity": o.quantity, "order_date": o.order_date, "customer_note": o.customer_note, "status": o.status}
     merged.update({k: data[k] for k in merged if k in data})
     f = Fields(merged)
-    qty = f.integer("quantity", gt=0)
+    qty = f.portions("quantity", gt=0)
     day = f.date("order_date", not_future=True)
     note = f.text("customer_note", required=False, max_len=255)
     status = f.choice("status", ORDER_STATUSES)
@@ -322,7 +322,7 @@ def record_ingredient_usage(outlet_id: int, data: dict, actor_id: int | None = N
     f = Fields(data)
     day = f.date("date", not_future=True, default=today())
     ing_id = f.integer("ingredient_id", gt=0)
-    qty = f.decimal("quantity", min=0)
+    qty = f.stock_qty("quantity", min=0)
     note = f.text("note", required=False, max_len=255)
     f.check()
     ing = Ingredient.query.filter_by(id=ing_id, outlet_id=outlet_id, is_active=True).first()

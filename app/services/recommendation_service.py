@@ -99,7 +99,7 @@ def decide(outlet_id: int, data: dict, actor_id: int | None = None) -> dict:
         final, reason = recommended, None
     else:
         g = Fields(data)
-        final = g.integer("final_qty", min=0)
+        final = g.portions("final_qty", min=0)
         reason = g.text("reason", max_len=255)
         g.check()
         if final < pre_q:
@@ -205,8 +205,13 @@ def first_shortfall(needs: list, usable: Decimal, start: date) -> tuple[date, De
     return None
 
 
+MAX_FORECAST_DAYS = 31  # each day recomputes a full preparation plan, so the window is bounded
+
+
 def get_ingredient_forecast(outlet_id: int, start: date, days: int = 7) -> dict:
     """I7: per ingredient per day requirement, days of cover and the first shortfall."""
+    if not 1 <= days <= MAX_FORECAST_DAYS:
+        raise ValidationError("Please fix the highlighted fields.", {"days": f"must be between 1 and {MAX_FORECAST_DAYS}"})
     per_ing, unknown = _daily_needs(outlet_id, start, days)
     usable = inv.usable_map(outlet_id, today())
     rows = []

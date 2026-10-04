@@ -137,6 +137,9 @@ Tier column: which tier the test gates. M1 tests must pass before the demo.
 | VAL-4 | Duplicate served record for the same item and date gives 409 `duplicate_record`; resend with `confirm_overwrite` updates it | M1 |
 | VAL-5 | Expiry before received date rejected; `reorder_level < min_stock` rejected | M1 |
 | VAL-6 | Ingredient unit change rejected after first movement | M1 |
+| VAL-7 | Upper limits (API.md section 1, input limits): 10,001 portions, a 1,000,000,000 pre-order, 10^15 stock, 0.0001 stock and 650.555 LKR are all 422; 400 = 10 x the stored maximum of 40 is accepted on import, 401 rejected; 4000 against a file median of 40 rejected | audit |
+| VAL-8 | Bounded ranges: `ingredient-forecast` `days` 0, -5, 32, 100000 give 422 and 1, 31 give 200; `horizon_days` "abc", 0, -3, 15, 100000, true give 422 and no forecast run is recorded; an integer query parameter beyond 2^31-1 gives 422 | audit |
+| VAL-9 | Type checks: users (name as object, username as list or with a space, password as a number, bad email, role as list, `is_active` "false"), menu `is_active` "no", settings `alerts` as a list give 422, never 500 | audit |
 | IMP-1 | CSV with 2 bad rows: dry run reports N accepted, 2 rejected, row numbers and reasons; nothing saved | M1 |
 | IMP-2 | Commit saves only valid rows; re-importing the same file creates no duplicates (`skipped_unchanged`) | M1 |
 | IMP-3 | Unknown item name is reported and not created | M1 |

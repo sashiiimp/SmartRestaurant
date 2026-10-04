@@ -10,7 +10,7 @@ from app.models import Holiday, Ingredient, MenuItem, Promotion, PromotionItem, 
 from app.models.context import HOLIDAY_TYPES
 from app.services import audit
 from app.services.errors import NotFoundError, ValidationError
-from app.services.validation import Fields
+from app.services.validation import MAX_PORTIONS, Fields
 from app.utils.dates import today
 
 
@@ -33,10 +33,10 @@ def _menu_fields(data: dict, partial: bool = False) -> dict:
     f = Fields(data)
     f.text("name", required=not partial, max_len=120)
     f.text("category", required=False, max_len=60)
-    f.decimal("price", required=not partial, min=0)
+    f.money("price", required=not partial)
     f.text("portion_unit", required=False, max_len=30, default="portion")
-    f.integer("shelf_life_hours", required=False, min=0)
-    f.integer("batch_size", required=False, min=1, default=1)
+    f.integer("shelf_life_hours", required=False, min=0, max=720)
+    f.integer("batch_size", required=False, min=1, max=1000, default=1)
     return f.check()
 
 
@@ -66,7 +66,10 @@ def update_menu_item(outlet_id: int, item_id: int, data: dict, actor_id: int | N
     for k, val in v.items():
         setattr(item, k, val)
     if "is_active" in data:
-        item.is_active = bool(data["is_active"])
+        flag = Fields(data).boolean("is_active")
+        if flag is None:
+            raise ValidationError("Please fix the highlighted fields.", {"is_active": "must be true or false"})
+        item.is_active = flag
     audit.record(outlet_id, actor_id, "menu.update", "menu_item", item.id)
     db.session.commit()
     return item
@@ -81,6 +84,9 @@ def set_availability(outlet_id: int, item_id: int, is_available: bool, actor_id:
     audit.record(outlet_id, actor_id, "menu.availability", "menu_item", item.id, {"is_available": item.is_available})
     db.session.commit()
     return item
+
+
+MAX_RECIPE_QTY = 100  # base units of one ingredient per portion; the column is DECIMAL(12,4)
 
 
 # ---- recipes (A5) ----------------------------------------------------------------------------
@@ -98,7 +104,7 @@ def set_recipe(outlet_id: int, item_id: int, lines: list[dict], actor_id: int | 
     for i, raw in enumerate(lines):
         f = Fields(raw if isinstance(raw, dict) else {})
         ing_id = f.integer("ingredient_id")
-        qty = f.decimal("quantity_per_portion", gt=0)
+        qty = f.decimal("quantity_per_portion", gt=0, max=MAX_RECIPE_QTY, places=4)
         if f.errors:
             errors[f"lines[{i}]"] = "; ".join(f"{k} {m}" for k, m in f.errors.items())
             continue
@@ -128,6 +134,10 @@ def items_without_recipe(outlet_id: int) -> list[MenuItem]:
 # ---- CSV import (A14, A15) -------------------------------------------------------------------
 MAX_IMPORT_ROWS = 60000
 MAX_ERRORS_SHOWN = 200
+# A day more than this many times an item's usual level is almost certainly a typo or an extra digit (NFR8). One such row
+# would pull the lag and rolling-mean features, and so every forecast for that item, far off for weeks.
+OUTLIER_FACTOR = 10
+OUTLIER_MIN_ROWS = 7  # rows of an item in the file needed before the file itself can serve as the reference
 ALIASES = {
     "date": "date", "day": "date", "sale_date": "date",
     "item": "item", "menu_item": "item", "item_name": "item",
@@ -209,10 +219,10 @@ def import_sales_csv(outlet_id: int, content, dry_run: bool = True, on_conflict:
             f.error("item", "is required")
         elif item is None:
             f.error("item", f"Unknown menu item '{name}'")
-        q = f.decimal("quantity", min=0)
+        q = f.decimal("quantity", min=0, max=MAX_PORTIONS)
         if q is not None and q != q.to_integral_value():
             f.error("quantity", "must be a whole number")
-        price = f.decimal("unit_price", required=False, min=0)
+        price = f.money("unit_price", required=False)
         if f.errors:
             field, msg = next(iter(f.errors.items()))
             report.reject(rownum, field, msg if field != "item" else msg)
@@ -224,6 +234,7 @@ def import_sales_csv(outlet_id: int, content, dry_run: bool = True, on_conflict:
         seen.add(key)
         parsed.append((rownum, item, d, int(q), price if price is not None else item.price))
 
+    parsed = _drop_outliers(outlet_id, parsed, report)
     if parsed:
         dates = [p[2] for p in parsed]
         existing = {(s.menu_item_id, s.sale_date): s for s in SalesRecord.query.filter(
@@ -254,6 +265,31 @@ def import_sales_csv(outlet_id: int, content, dry_run: bool = True, on_conflict:
                      {"inserted": len(inserts), "updated": len(updates), "source": source})
         db.session.commit()
     return report.as_dict()
+
+
+def _drop_outliers(outlet_id: int, parsed: list, report: "_Report") -> list:
+    """Reject sales rows far above the item's usual level. The reference is the item's highest day already stored;
+    an item with no stored history is compared with the median of its own rows in the file."""
+    stored = dict(db.session.query(SalesRecord.menu_item_id, db.func.max(SalesRecord.quantity_sold))
+                  .filter(SalesRecord.outlet_id == outlet_id).group_by(SalesRecord.menu_item_id).all())
+    in_file: dict = {}
+    for _row, item, _d, q, _p in parsed:
+        in_file.setdefault(item.id, []).append(q)
+    kept = []
+    for row in parsed:
+        rownum, item, _d, q, _p = row
+        if stored.get(item.id):
+            ref, basis = int(stored[item.id]), "the highest day on record"
+        elif len(in_file[item.id]) >= OUTLIER_MIN_ROWS:
+            ref, basis = int(pd.Series(in_file[item.id]).median()), "the typical day in this file"
+        else:
+            ref = 0
+        if ref > 0 and q > OUTLIER_FACTOR * ref:
+            report.reject(rownum, "quantity", f"{q} is more than {OUTLIER_FACTOR} times {basis} for {item.name} "
+                                              f"({ref}). Check the figure; it would distort the forecast")
+            continue
+        kept.append(row)
+    return kept
 
 
 def import_holidays_csv(outlet_id: int, content, dry_run: bool = True, source: str = "imported",
@@ -295,7 +331,7 @@ def import_weather_csv(outlet_id: int, content, dry_run: bool = True, source: st
     for rownum, r in rows:
         f = Fields(r)
         d = f.date("date")
-        rain = f.decimal("rain_mm", min=0)
+        rain = f.decimal("rain_mm", min=0, max=1000)
         temp = f.decimal("temp_c", required=False, min=-10, max=60)
         if f.errors:
             field, msg = next(iter(f.errors.items()))

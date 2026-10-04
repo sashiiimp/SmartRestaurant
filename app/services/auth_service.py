@@ -1,5 +1,6 @@
 """Users, roles and login checks (C1, C2, A2, A3)."""
 import os
+import re
 from datetime import timedelta
 
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -10,11 +11,15 @@ from app.models.base import utcnow
 from app.models.user import ROLES
 from app.services import audit
 from app.services.errors import AccountLocked, AuthenticationError, ConflictError, NotFoundError, ValidationError
+from app.services.validation import Fields
 
 MAX_FAILURES = 5
 FAILURE_WINDOW = timedelta(minutes=10)
 LOCK_TIME = timedelta(minutes=5)
 MIN_PASSWORD_LEN = 8
+MAX_PASSWORD_LEN = 128
+USERNAME_RE = re.compile(r"^[a-z0-9._-]+$")
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 HOME_URLS = {"admin": "/admin", "kitchen": "/kitchen", "inventory": "/inventory"}
 
@@ -70,34 +75,38 @@ def get_user(user_id) -> User | None:
     return user if user and user.is_active else None
 
 
-def _validate_user_fields(full_name, username, role, email=None):
-    errors = {}
-    if not (full_name or "").strip():
-        errors["full_name"] = "is required"
-    elif len(full_name) > 120:
-        errors["full_name"] = "is too long"
-    if not (username or "").strip():
-        errors["username"] = "is required"
-    elif len(username) > 80:
-        errors["username"] = "is too long"
-    if role not in ROLES:
-        errors["role"] = "must be one of: " + ", ".join(ROLES)
-    if email and len(email) > 160:
-        errors["email"] = "is too long"
-    if errors:
-        raise ValidationError("Please fix the highlighted fields.", errors)
+def _validate_user_fields(full_name, username, role, email=None) -> dict:
+    """Type and format checks; returns the cleaned values (stripped, username lower-case, empty email as None)."""
+    f = Fields({"full_name": full_name, "username": username, "role": role, "email": email})
+    f.text("full_name", max_len=120)
+    name = f.text("username", max_len=80)
+    if name is not None and not USERNAME_RE.match(name.lower()):
+        f.error("username", "may contain only letters, digits, dots, dashes and underscores")
+    if role not in ROLES:  # checked by hand so a non-string role gets the same message
+        f.error("role", "must be one of: " + ", ".join(ROLES))
+    mail = f.text("email", required=False, max_len=160)
+    if mail is not None and not EMAIL_RE.match(mail):
+        f.error("email", "must be an email address")
+    v = f.check()
+    v["username"] = v["username"].lower()
+    v["role"] = role
+    return v
+
+
+def _check_password(password) -> None:
+    if not isinstance(password, str) or not MIN_PASSWORD_LEN <= len(password) <= MAX_PASSWORD_LEN:
+        raise ValidationError("Please fix the highlighted fields.",
+                              {"password": f"must be text of {MIN_PASSWORD_LEN} to {MAX_PASSWORD_LEN} characters"})
 
 
 def create_user(outlet_id: int, full_name: str, username: str, role: str, password: str,
                 email: str | None = None, actor_id: int | None = None) -> User:
-    _validate_user_fields(full_name, username, role, email)
-    if len(password or "") < MIN_PASSWORD_LEN:
-        raise ValidationError("Please fix the highlighted fields.",
-                              {"password": f"must be at least {MIN_PASSWORD_LEN} characters"})
-    username = username.strip().lower()
+    v = _validate_user_fields(full_name, username, role, email)
+    _check_password(password)
+    username = v["username"]
     if User.query.filter_by(username=username).first():
         raise ConflictError("That username is already taken.", code="duplicate_record")
-    user = User(outlet_id=outlet_id, full_name=full_name.strip(), username=username, email=email,
+    user = User(outlet_id=outlet_id, full_name=v["full_name"], username=username, email=v["email"],
                 role=role, password_hash=hash_password(password))
     db.session.add(user)
     db.session.flush()
@@ -115,9 +124,13 @@ def update_user(outlet_id: int, user_id: int, actor_id: int | None = None, **cha
     if not user:
         raise NotFoundError("User not found.")
     new_role = changes.get("role", user.role)
-    new_active = changes.get("is_active", user.is_active)
-    _validate_user_fields(changes.get("full_name", user.full_name), user.username, new_role,
-                          changes.get("email", user.email))
+    v = _validate_user_fields(changes.get("full_name", user.full_name), user.username, new_role,
+                              changes.get("email", user.email))
+    new_active = user.is_active
+    if "is_active" in changes:
+        new_active = Fields(changes).boolean("is_active")
+        if new_active is None:
+            raise ValidationError("Please fix the highlighted fields.", {"is_active": "must be true or false"})
     removes_admin = user.role == "admin" and user.is_active and (new_role != "admin" or not new_active)
     if removes_admin:
         other_admins = User.query.filter(User.outlet_id == outlet_id, User.role == "admin",
@@ -130,9 +143,7 @@ def update_user(outlet_id: int, user_id: int, actor_id: int | None = None, **cha
                      {"from": user.role, "to": new_role})
     if new_active != user.is_active:
         audit.record(outlet_id, actor_id, "user.activate" if new_active else "user.deactivate", "user", user.id)
-    for field in ("full_name", "email", "role", "is_active"):
-        if field in changes:
-            setattr(user, field, changes[field])
+    user.full_name, user.email, user.role, user.is_active = v["full_name"], v["email"], new_role, new_active
     db.session.commit()
     return user
 
@@ -141,9 +152,7 @@ def reset_password(outlet_id: int, user_id: int, new_password: str, actor_id: in
     user = User.query.filter_by(id=user_id, outlet_id=outlet_id).first()
     if not user:
         raise NotFoundError("User not found.")
-    if len(new_password or "") < MIN_PASSWORD_LEN:
-        raise ValidationError("Please fix the highlighted fields.",
-                              {"password": f"must be at least {MIN_PASSWORD_LEN} characters"})
+    _check_password(new_password)
     user.password_hash = hash_password(new_password)
     audit.record(outlet_id, actor_id, "user.password_reset", "user", user.id)
     db.session.commit()
