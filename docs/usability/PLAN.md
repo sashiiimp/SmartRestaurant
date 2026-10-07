@@ -35,10 +35,10 @@ Results go into report section 10.4 and the NFR1 row of section 11.4.
 ## 4. Set-up (operator, before each session)
 
 1. On the server, reset the demo so every participant starts from the same state:
-   `cd /root/smartrest && FLASK_APP=wsgi.py .venv/bin/flask smartrest demo-reset` (about 20 seconds).
+   `cd /srv/smartrest && runuser -u smartrest -- env FLASK_APP=wsgi.py .venv/bin/flask smartrest demo-reset` (about 20 seconds).
    Never do this during a real demonstration.
 2. Print the answer key for today and give it to the observer:
-   `.venv/bin/python scripts/usability_answers.py`
+   `runuser -u smartrest -- .venv/bin/python scripts/usability_answers.py`
 3. Open the login page on the test device: `http://<server>:39500/login`. Log in for the participant with the
    role's account (`kitchen1`, `inventory1` or `admin`, password = `SEED_PASSWORD` from `.env`): logging in is not a
    task being tested.

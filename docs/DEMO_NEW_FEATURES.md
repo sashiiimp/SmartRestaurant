@@ -6,11 +6,11 @@ Run it at `http://localhost:39500` on the demo system. Use the three demo accoun
 
 ## Before you start (5 minutes, once)
 
-1. **Take a dump so you can put the demo back afterwards.** From `/root/smartrest`:
+1. **Take a dump so you can put the demo back afterwards.** From `/srv/smartrest`, as root (backups stay in the root-only `/root/smartrest/backups`):
    ```
-   mariadb-dump --no-defaults -uroot -S .mariadb/mysql.sock --single-transaction smartrest > backups/before_demo.sql
+   mariadb-dump --no-defaults -uroot -S .mariadb/mysql.sock --single-transaction smartrest > /root/smartrest/backups/before_demo.sql
    ```
-   Restore later with `mariadb --no-defaults -uroot -S .mariadb/mysql.sock smartrest < backups/before_demo.sql`. Do not restore the older `before_deploy` or `before_tier1` dumps: they predate the new tables.
+   Restore later with `mariadb --no-defaults -uroot -S .mariadb/mysql.sock smartrest < /root/smartrest/backups/before_demo.sql`. Do not restore the older `before_deploy` or `before_tier1` dumps: they predate the new tables.
 2. **Check the starting state** (the figures below are from the `demo-reset` of 4 Oct 2026 with the corrected holiday calendar, model `v20261004-1`; a different run or day changes them slightly):
    - Kitchen `/kitchen/requirements`: **Chicken** needs 47.48 kg, has 30 kg, short by **17.48 kg**; **Potato** short by 17.5 kg.
    - Inventory `/inventory/reorder`: **Chicken 80 kg** (Ceylon Poultry & Meats) and **Potato 60 kg** (Colombo Fresh Produce).

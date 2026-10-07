@@ -1,0 +1,25 @@
+[Unit]
+Description=SmartRestaurant web app (gunicorn)
+Requires=smartrest-db.service
+After=smartrest-db.service network.target
+
+[Service]
+Type=simple
+User=smartrest
+Group=smartrest
+WorkingDirectory=/srv/smartrest
+Environment=APP_ENV=dev
+RuntimeDirectory=smartrest
+ExecStart=/srv/smartrest/.venv/bin/python -m gunicorn -w 2 --timeout 120 -b 0.0.0.0:39500 \
+  --control-socket /run/smartrest/gunicorn.ctl \
+  --access-logfile instance/gunicorn-access.log --error-logfile instance/gunicorn-error.log wsgi:app
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+ReadWritePaths=/srv/smartrest/instance /srv/smartrest/data
+
+[Install]
+WantedBy=multi-user.target

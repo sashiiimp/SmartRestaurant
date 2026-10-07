@@ -74,5 +74,5 @@ Service tested, API matches `API.md`, page matches `UI_PLAN.md`, RBAC and archit
 ## Known environment facts
 
 - The project runs on **Python 3.14** (pinned wheels for pandas, scikit-learn, xgboost-cpu install fine; `requirements.txt` has the tested versions).
-- The database is a **private MariaDB 11.8 instance** on port 3307 (`scripts/db.sh start`); the machine also runs an unrelated MariaDB/aaPanel server that this project must not touch. Use portable SQLAlchemy types only. Unit tests use SQLite; concurrency and constraint tests use MariaDB.
+- The database is a **private MariaDB 11.8 instance** on port 3307 (`scripts/db.sh start`). Since 7 Oct 2026 the demo lives in `/srv/smartrest` and the database and gunicorn run as the unprivileged `smartrest` user under systemd (`deploy/systemd/`); run `flask` commands as that user (`runuser -u smartrest -- ...`). Backups stay in the root-only `/root/smartrest/backups`; the machine also runs an unrelated MariaDB/aaPanel server that this project must not touch. Use portable SQLAlchemy types only. Unit tests use SQLite; concurrency and constraint tests use MariaDB.
 - `pkill -f` patterns can kill the shell that issues them; use `scripts/devserver.sh start|stop` for the dev server.
