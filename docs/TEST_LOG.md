@@ -296,3 +296,31 @@ data; the read-only browser pass above was used instead). Firefox and WebKit wer
 
 Rollback: `systemctl stop smartrest-web smartrest-db`, then start the stale copy in `/root/smartrest` with its old
 scripts (see `MOVED_TO_SRV.txt` there); for nginx, remove the new site file, restore the backup and reload after `nginx -t`.
+
+## 16. Demonstration safeguards and supplementary evaluation (7 Oct 2026)
+
+The remaining review items that need no new data or decision. Backup before any change:
+`/root/smartrest/backups/smartrest_before_sectionBC_20261007_174608/` (database dump, `.env`, `instance/models`,
+SHA256SUMS). The comment-only edits left uncommitted on 4 Oct were reverted to the committed files (50 files, code
+unchanged), and the report edits were committed (`9da3145`).
+
+| Item | Change | Check |
+|---|---|---|
+| Forecast-vs-actual stays out-of-sample (`cf83ae7`) | backfill refused before the active model's hold-out (or, without a train-only copy, before the end of its training data); a non-backfill run cannot start on a past date | 3 new tests; live `POST /forecast-runs?as_of=2026-10-01` gives 422 and records no run (57 runs before and after) |
+| Pages follow the server's business date (`5a90285`) | `<meta name="business-today">` in `base.html`; `ui.todayIso()` keeps the offset to the browser's date | 1 new test; offset logic checked in Node for no tag, real date and a fixed demo date; live page shows `2026-10-07` |
+| Dead `v-if` on the prep page (`065f15f`) | removed; the input stays visible for every date, as before | browser pass |
+| Administrator's own seed password (`2c9af85`) | `SEED_PASSWORD_<USERNAME>` overrides `SEED_PASSWORD`; the seed command never prints a password from the environment | 2 new tests; live admin password reset through `auth_service.reset_password` (audit `user.password_reset`, sessions ended) to `SEED_PASSWORD_ADMIN` in `.env`; the old shared password now gives 401 for `admin` |
+| Training time in a web request | none needed | read-only timing on the demo data: 7.7 s (load 0.3 s) against gunicorn's 120 s and nginx's 130 s; hold-out MAE 9.20 reproduced |
+| Items without a forecast (`79fa41d`) | ingredient forecast and reorder responses name the menu items with no forecast on some days; warnings on both inventory pages; quantities unchanged | 1 new test; live reorder meta lists all 10 items for 3 days (forecasts end on 10 Oct) |
+| End of the holiday calendar (`71530c6`) | `GET /forecasts` reports `holiday_calendar_ends` and `beyond_holiday_calendar`; notice on the kitchen forecast page | 1 new test; live: calendar ends 2026-12-31, flag false for this week and true for 28 Dec to 3 Jan |
+| Supplementary evaluation | `scripts/research_supplement.py` (read-only) and `docs/ML_EVALUATION_SUPPLEMENT.md` (not in the report) | live database checksums identical before and after; seed 42 reproduces the published figures; 3 unit tests for the Diebold-Mariano helper, one of which found that the first version divided the autocovariances by n - k instead of n (fixed, every figure regenerated) |
+
+| Suite | Result |
+|---|---|
+| Fast and MariaDB tests (`pytest --cov=app/services --cov=app/ml`, `smartrest_test`, scratch copy without `.env`) | 341 passed (331 fast + 10 MariaDB), 2 skipped (perf); services and ML coverage 95%; live database checksums identical before and after |
+| Scripted HTTP check over HTTPS, each role (admin with its own password) | all pass |
+| Read-only browser pass over HTTPS (Chromium, 1280 and 360 px, 23 pages per width) | no console errors, no failed requests |
+
+Not changed, for the team to decide: the fixed 10% safety buffer (the supplement shows the trade-off), the reorder
+lead time capped at the 7-day horizon, stock that expires within the lead time counted as usable, and the
+school-vacation dates. Not run: the perf tests and `tests/ui/smoke.py` (both write to the database).
