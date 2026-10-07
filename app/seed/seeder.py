@@ -23,9 +23,12 @@ def seed_base(reset: bool = False) -> dict:
 
     created = {}
     # the trailing digit keeps a generated password valid under the "not letters only" rule
-    password = os.environ.get("SEED_PASSWORD") or secrets.token_urlsafe(9) + str(secrets.randbelow(10))
+    shared = os.environ.get("SEED_PASSWORD") or secrets.token_urlsafe(9) + str(secrets.randbelow(10))
     for username, full_name, role in USERS:
         if not auth_service.username_exists(username):
+            # SEED_PASSWORD_ADMIN (etc.) gives one account its own password, so the administrator's is not the one
+            # handed to kitchen and inventory users at a demo or usability session.
+            password = os.environ.get(f"SEED_PASSWORD_{username.upper()}") or shared
             auth_service.create_user(outlet.id, full_name, username, role, password)
             created[username] = password
 

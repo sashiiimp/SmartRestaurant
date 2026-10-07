@@ -37,8 +37,9 @@ flask smartrest demo-reset             # seed + synthetic history + train + acti
 flask run                              # http://127.0.0.1:5000
 ```
 
-Log in as `admin`, `kitchen1` or `inventory1` with the `SEED_PASSWORD` from `.env` (or the generated password
-printed by `flask smartrest seed`). Passwords are never stored in the repository.
+Log in as `admin`, `kitchen1` or `inventory1` with the `SEED_PASSWORD` from `.env`; an account with its own
+`SEED_PASSWORD_<USERNAME>` (e.g. `SEED_PASSWORD_ADMIN`) uses that instead (or the generated password printed by
+`flask smartrest seed`). Passwords are never stored in the repository.
 
 `demo-reset` takes about 20 seconds and rebuilds everything from scratch (it refuses to run with `APP_ENV=prod`).
 Use `SMARTREST_TODAY=YYYY-MM-DD` to pin "today" for a repeatable demo.

@@ -14,9 +14,13 @@ def seed_cmd(reset):
     for username, password in result["passwords"].items():
         click.echo(f"created user {username}")
     if result["passwords"]:
-        click.echo("Password for the new users is the SEED_PASSWORD value from .env"
-                   if __import__("os").environ.get("SEED_PASSWORD") else
-                   f"Generated password (shown once): {next(iter(result['passwords'].values()))}")
+        import os
+        click.echo("Passwords: SEED_PASSWORD_<USERNAME> from .env where set (e.g. SEED_PASSWORD_ADMIN), otherwise SEED_PASSWORD")
+        # only a generated shared password is ever printed, never one taken from the environment
+        generated = None if os.environ.get("SEED_PASSWORD") else next(
+            (p for u, p in result["passwords"].items() if not os.environ.get(f"SEED_PASSWORD_{u.upper()}")), None)
+        if generated:
+            click.echo(f"Generated password for the accounts without their own (shown once): {generated}")
     click.echo("seed complete")
 
 
@@ -152,7 +156,7 @@ def demo_reset_cmd(ctx):
     except ImportError:
         pass
     if result["passwords"]:
-        click.echo("users created (password = SEED_PASSWORD from .env, or the generated one printed by `seed`)")
+        click.echo("users created (password = SEED_PASSWORD_<USERNAME> or SEED_PASSWORD from .env, or the generated one)")
 
 
 @group.command("create-user")

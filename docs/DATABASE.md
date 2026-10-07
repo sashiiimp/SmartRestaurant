@@ -181,7 +181,7 @@ SQLite does not enforce `SELECT ... FOR UPDATE`; concurrency behaviour is theref
 | Seeded | Detail |
 |---|---|
 | Outlet | 1 row, "SmartRestaurant Demo (Colombo)" |
-| Users | `admin`, `kitchen1`, `inventory1`. Passwords come from `SEED_PASSWORD` in `.env`, or are generated and printed once. Nothing is committed to git. |
+| Users | `admin`, `kitchen1`, `inventory1`. Passwords come from `SEED_PASSWORD_<USERNAME>` (e.g. `SEED_PASSWORD_ADMIN`) or `SEED_PASSWORD` in `.env`, or are generated and printed once. Nothing is committed to git. |
 | Settings | defaults from section 2.1 |
 | Menu | 10 items (below) |
 | Ingredients | about 20, each with min stock, reorder level, pack size, default supplier |

@@ -35,7 +35,7 @@ pytest -q                            # all tests (needs the smartrest_test datab
 pytest -q -m perf                    # timing tests (skipped unless -m perf; they write to the dev database)
 ```
 
-Environment: `SECRET_KEY`, `DATABASE_URL`, `TEST_DATABASE_URL`, `APP_ENV` (`dev`/`test`/`prod`), `SEED_PASSWORD`, `SMARTREST_TODAY` (optional fixed date for tests and demos). All read through `app/config.py`.
+Environment: `SECRET_KEY`, `DATABASE_URL`, `TEST_DATABASE_URL`, `APP_ENV` (`dev`/`test`/`prod`), `SEED_PASSWORD` (and optional `SEED_PASSWORD_<USERNAME>`, e.g. `SEED_PASSWORD_ADMIN`), `SMARTREST_TODAY` (optional fixed date for tests and demos). All read through `app/config.py`.
 
 ## Architecture rules (enforced by `tests/test_architecture.py`)
 

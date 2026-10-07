@@ -2,7 +2,7 @@
 
 About 17 minutes, three roles, one story: **the kitchen plans a busy day, finds a chicken shortage, and the inventory manager fixes it while the administrator watches.** It covers all 15 new functions and the proposal function each one delivers. Trim points are marked *(optional)*.
 
-Run it at `https://smartrest.developerstudio.space` (since 7 Oct 2026; gunicorn itself listens only on `127.0.0.1:39500` behind nginx). Use the three demo accounts (`admin`, `kitchen1`, `inventory1`) with the `SEED_PASSWORD` value from `.env` (the demo was rebuilt with `flask smartrest demo-reset` on 4 Oct 2026, which resets all three passwords to it). Open each role in its own browser profile or private window so you can switch without logging out.
+Run it at `https://smartrest.developerstudio.space` (since 7 Oct 2026; gunicorn itself listens only on `127.0.0.1:39500` behind nginx). Use the three demo accounts (`admin`, `kitchen1`, `inventory1`) with the passwords from `.env`: `SEED_PASSWORD` for `kitchen1` and `inventory1`, `SEED_PASSWORD_ADMIN` for `admin` (since 7 Oct 2026; `flask smartrest demo-reset` sets them the same way). Open each role in its own browser profile or private window so you can switch without logging out.
 
 ## Before you start (5 minutes, once)
 
