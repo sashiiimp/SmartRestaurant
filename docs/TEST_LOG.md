@@ -256,3 +256,43 @@ tests no longer run as part of `-m "not mysql"`.
 | `flask smartrest check-stock` | consistent; one expired batch listed (as before) |
 
 Rollback: restore the dump (`DEMO_NEW_FEATURES.md` step 1) and check out the code before `0d94944`.
+
+## 15. Deployment review fixes: bounded forecast range, unprivileged service, HTTPS (7 Oct 2026)
+
+A second review on 7 Oct 2026 also examined the deployment and rated three issues high: the demo ran over plain HTTP
+on public port 39500, gunicorn and the private MariaDB ran as root on a server shared with other websites, and
+`GET /api/v1/forecasts` accepted any date range (year 1 to 9999 built about 3.6 million dates, a 51 MB response and
+about 400 MB of memory for one logged-in request). Fixes: a 62-day limit in `forecasting_service.get_forecasts`
+(commit `4630447`, API.md section 1), the app moved to `/srv/smartrest` and run as the system user `smartrest` under
+systemd (`af6c2f5`, `deploy/systemd/`), and HTTPS through the aaPanel nginx at `smartrest.developerstudio.space`
+(`ab39bf6`, `deploy/nginx/`). A leftover audit server on 127.0.0.1:39600 was stopped and its `smartrest_audit`
+database dropped after a dump.
+
+| Check | Result |
+|---|---|
+| Fast suite (`pytest -q -m "not mysql"`, scratch copy) | 320 passed, 2 skipped (perf); 15 new cases in `tests/api/test_input_limits.py` (7, 62 and 63 days, year 1 to 9999, end before start, for each role) |
+| Full suite without perf, with coverage (`pytest --cov=app/services --cov=app/ml`, `TEST_DATABASE_URL` = `smartrest_test`, scratch copy without `.env`) | 330 passed (320 fast + 10 MariaDB), 2 skipped; services and ML coverage 95%; checksums of every table in the live `smartrest` database identical before and after |
+| Fast suite as the `smartrest` user with the `/srv/smartrest/.venv` | 320 passed |
+| Live forecast range | 7 days: 200; year 1 to 9999: 422 in 5 ms (135 bytes); end before start: 422 |
+| Sandbox of the services (`ProtectHome`, `ProtectSystem=strict`, `PrivateTmp`, `NoNewPrivileges`) | active model loads; `instance/` writable; `app/` read-only; `/root` not readable; no SmartRestaurant process runs as root |
+| HTTPS | Let's Encrypt certificate (certbot 4.0.0, webroot, valid to 5 Jan 2027, renewal dry run passes); TLS 1.3 verifies; HTTP gives 301 to HTTPS with path and query kept; HSTS on this host only |
+| App behind the proxy (`APP_ENV=prod`, `TRUST_PROXY=1` in the unit; `.env` keeps `dev` for `demo-reset`) | session cookie `Secure; HttpOnly; SameSite=Lax`; a form post without or with a foreign `Referer` gives 400; login attempts record the client address, not 127.0.0.1 |
+| Scripted HTTP check over HTTPS, each role (login, home page, role APIs, refused routes, logout, then 401) | all pass |
+| Read-only browser pass over HTTPS (Chromium, 1280 and 360 px): every menu page of each role, 23 per width | no console errors, no failed requests; login and logout work |
+| Other sites on the server (6 host names, HTTP and HTTPS status and certificate) | identical before and after every nginx reload |
+
+### Deployment to the demo server (7 Oct 2026)
+
+| Step | Result |
+|---|---|
+| Backup (`/root/smartrest/backups/smartrest_before_sectionA_20261007_120500/`: dumps of `smartrest` and `smartrest_audit`, `instance/models`, `.env`, git bundle, patch of the uncommitted work, a second dump of `smartrest` and `smartrest_test` at the switch, SHA256SUMS) | taken; HEAD plus the patch reproduced the working tree exactly |
+| Move to `/srv/smartrest` | copy while running; clean MariaDB shutdown; datadir copied (identical); both services started as `smartrest`; downtime 12:15:29 to 12:16:42 |
+| Data | `model_versions.artifact_path` changed from `/root/smartrest/...` to `/srv/smartrest/...` (1 row); 7,630 sales and 630 forecasts unchanged |
+| nginx (backup `/root/smartrest/backups/nginx_before_smartrest_https_20261007_150002/`) | one new site file; `nginx -t` before each of the 3 graceful reloads; `proxy_cache off` and `proxy_next_upstream off` for this site, because `proxy.conf` enables both globally |
+| Port 39500 | gunicorn bound to 127.0.0.1; both ufw rules for 39500 deleted; other ufw rules unchanged |
+
+Not run: the perf tests (they write to the demo database), and the Playwright UAT script `tests/ui/smoke.py` (it writes
+data; the read-only browser pass above was used instead). Firefox and WebKit were not re-run.
+
+Rollback: `systemctl stop smartrest-web smartrest-db`, then start the stale copy in `/root/smartrest` with its old
+scripts (see `MOVED_TO_SRV.txt` there); for nginx, remove the new site file, restore the backup and reload after `nginx -t`.

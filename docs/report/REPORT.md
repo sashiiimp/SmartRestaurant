@@ -55,8 +55,9 @@ baselines in every window but are not meaningfully different from each other. A 
 promotions improved the forecast in every window and holidays in four of six, while weather added nothing, because
 only a seasonal average is known at forecast time.
 
-250 automated tests, scripted browser walkthroughs of all three roles and a security checklist were run. Forecasts
-are produced in 0.27 s and every page responds in under 0.25 s. The main limitation is the synthetic data: the
+332 automated tests, scripted browser walkthroughs of all three roles in Chromium, Firefox and WebKit, a security
+checklist and a security and quality audit were run. Forecasts are produced in 0.27 s and every page responds in
+under 0.25 s. The main limitation is the synthetic data: the
 results show that the forecasting and decision pipeline works and which kinds of context it can use, not how accurate
 it would be in a real restaurant. Validation on real sales data and a usability study with restaurant staff are the
 most important next steps.
@@ -271,7 +272,7 @@ implementation.
 | NFR5 | Security: authentication and RBAC | Server-side role check on every route, CSRF on all writes, hashed passwords, lockout |
 | NFR6 | Maintainability: periodic model updates | Versioned models with activation and rollback; layered code with enforced import rules |
 | NFR7 | Scalability: future multiple outlets | Every table carries `outlet_id` |
-| NFR8 | Data integrity: input validation | Validation in the service layer, database constraints as the backstop |
+| NFR8 | Data integrity: input validation | Validation in the service layer, database constraints as the backstop; upper limits so that no single entry can distort the forecast |
 
 ## 5.4 Scope and exclusions
 
@@ -318,8 +319,8 @@ Git and GitHub were used for version control, with one commit per finished work 
 | Database | MariaDB 11.8 (MySQL compatible) | The proposal specifies MySQL; MariaDB is a drop-in replacement and was available on the server |
 | Data and ML | pandas, NumPy, scikit-learn 1.9 (Random Forest), XGBoost 3.4, joblib | Proposal stack; tree models suit tabular data with interacting features |
 | Front end | Jinja2 pages with Vue 3, Bootstrap 5 and Chart.js, stored locally (no build step, no CDN) | Responsive interface without a separate single-page application; works offline at the demo |
-| Testing | pytest, pytest-cov, Playwright (headless Chromium) | Unit, integration, API, timing and browser tests |
-| Deployment | gunicorn on an Ubuntu server, MariaDB instance for the project | Simple demo deployment; a local copy is the fallback |
+| Testing | pytest, pytest-cov, Playwright (headless Chromium, Firefox and WebKit) | Unit, integration, API, timing and browser tests |
+| Deployment | gunicorn behind nginx (HTTPS, Let's Encrypt certificate) on an Ubuntu server, as an unprivileged systemd service; MariaDB instance for the project | Simple demo deployment; a local copy is the fallback |
 
 ## 6.3 Data strategy
 
@@ -357,7 +358,7 @@ Three levels of evidence are used:
    promotions and weather added one group at a time, with errors broken down on holiday, promotion and wet days.
 
 The decision layer and the rest of the system were evaluated with hand-calculated test cases, automated tests,
-scripted browser walkthroughs and a security checklist (Chapter 10).
+scripted browser walkthroughs, a security checklist and a security and quality audit (Chapter 10).
 
 # 7. System design
 
@@ -456,12 +457,22 @@ and components are specified in `docs/UI_PLAN.md`.
 
 ## 7.7 Security design
 
-Passwords are stored as salted scrypt hashes; logins are locked after repeated failures and give the same message for
-an unknown user, a wrong password and a deactivated account. Every page and API route declares the roles allowed, and
-the server checks them on every request. All writes require a CSRF token; output is escaped (no raw HTML is inserted
-from data); queries are parameterised by SQLAlchemy. Sessions expire after 30 minutes of inactivity, cookies are
-HttpOnly and SameSite, and logged-in pages are not cached. Secrets live in an environment file that is not in the
-repository.
+Passwords are stored as salted scrypt hashes and must be 8 to 128 characters, must not contain the username and
+must not be letters only. Logins give the same message for an unknown user, a wrong password and a deactivated
+account, and are locked after five failures for one username from one address (or twenty from one address over any
+usernames), so that someone guessing from outside cannot lock staff out of the restaurant's own terminal. Every page
+and API route declares the roles allowed, and the server checks them on every request. All writes require a CSRF
+token; output is escaped (no raw HTML is inserted from data); queries are parameterised by SQLAlchemy. Every
+response carries a Content-Security-Policy that allows no inline script and no framing, together with
+`X-Content-Type-Options` and `Referrer-Policy` headers. Sessions expire after 30 minutes of inactivity; logging out,
+a password reset or a deactivation ends the session on the server, so a copied session cookie stops working too.
+Cookies are HttpOnly and SameSite, and logged-in pages are not cached. Every number entered has an upper limit,
+every date range a request can ask for is bounded, uploads are capped at 5 MB, and CSV exports neutralise cells that a
+spreadsheet would run as formulas. The demonstration server is reached only over HTTPS (TLS 1.2 and 1.3, Let's
+Encrypt certificate): plain HTTP is redirected, browsers are told to keep using HTTPS (HSTS), the session cookie is
+marked `Secure`, and form posts over HTTPS must come from the application's own pages. The application and its
+database run as an unprivileged user in a restricted systemd service, and gunicorn accepts connections only from the
+local web server. Secrets live in an environment file that is not in the repository.
 
 # 8. Machine-learning approach
 
@@ -537,14 +548,14 @@ The forecast is converted into decisions by explicit, tested formulas:
 
 | Part | Contents | Lines of code |
 |---|---|---|
-| `app/models` | 30 tables | 513 |
-| `app/services` | 8 services plus settings, audit and validation helpers | 2,819 |
-| `app/controllers` | page and API blueprints (23 pages, 89 API endpoints) | 651 |
+| `app/models` | 30 tables | 514 |
+| `app/services` | 8 services plus settings, audit and validation helpers | 2,930 |
+| `app/controllers` | page and API blueprints (23 pages, 89 API endpoints) | 652 |
 | `app/ml` | features, training, prediction, experiments, model registry | 455 |
 | `app/seed` | catalogue and synthetic data generator | 241 |
-| `app/static/js` | Vue page components and shared code (libraries excluded) | 1,217 |
+| `app/static/js` | Vue page components and shared code (libraries excluded) | 1,228 |
 | `app/templates` | 28 Jinja2 templates | |
-| `tests` | unit, integration, API, timing and browser tests | 2,967 |
+| `tests` | unit, integration, API, timing and browser tests | 3,391 |
 
 Lines of code exclude blank lines and comments. Database changes are versioned with Alembic migrations.
 
@@ -596,12 +607,14 @@ export; Analytics shows weekday patterns, holiday and promotion effects, error a
 
 ## 9.3 Deployment
 
-The demonstration runs on an Ubuntu server under gunicorn, with the project's own MariaDB instance. One command
+The demonstration runs on an Ubuntu server at `https://smartrest.developerstudio.space`: nginx terminates HTTPS and
+forwards requests to gunicorn, which runs with the project's own MariaDB instance as an unprivileged systemd service.
+One command
 (`flask smartrest demo-reset`) rebuilds the demo state in about 20 seconds: seed data, synthetic history, training and
 activation, a 56-day backfill, today's forecast and alerts. There is deliberately no background scheduler; forecasts
 are run from the Models page or the command line, which matches the proposal's periodic (not automatic) model updates.
 A local copy and a database dump are kept as the fallback for the demonstration.
-**[TEAM: state the demo URL or local setup used at the presentation.]**
+**[TEAM: confirm that this URL (or the local copy) is the setup used at the presentation.]**
 
 # 10. Testing
 
@@ -616,7 +629,8 @@ Testing followed the plan in `docs/TESTING.md`; results are recorded in `docs/TE
 | API and security | Every route for every role, login and lockout, CSRF, validation, escaping, response format | pytest with the Flask test client |
 | Database | Constraints, concurrency (two simultaneous stock-outs), migrations match the models | pytest on MariaDB |
 | Performance | Forecast run time and page and API response times on the full demo data | pytest |
-| Browser (scripted UAT) | Each role's daily tasks in headless Chromium at phone and desktop widths; no console errors | Playwright |
+| Browser (scripted UAT) | Each role's daily tasks at phone and desktop widths in headless Chromium, Firefox and WebKit; no console errors | Playwright |
+| Security and quality audit | CSRF, sessions, headers, lockout, malformed and extreme input, uploads, escaping, outlet isolation, every proposal function | Scripted probes against an isolated copy of the demo data |
 | Architecture | Import rules between layers and the service dependency graph | pytest |
 
 **Expected values were calculated by hand** before the code was run (`docs/TESTING.md` section 4) and never copied
@@ -628,17 +642,24 @@ stock-out of 5 kg takes 4 kg from the earliest-expiring batch and 1 kg from the 
 
 | Measure | Result |
 |---|---|
-| Automated tests | **250** in total: 238 fast tests (all passing on 4 October 2026) and 12 MariaDB and timing tests (all passing at their last run, 21 September 2026; their code has not changed since) |
-| Coverage of services and ML | 91% (target 80%) at the last measured run |
+| Automated tests | **332** in total: 320 fast tests and 10 MariaDB tests, all passing on 7 October 2026, and 2 timing tests, passing at their last run on 4 October 2026 (not re-run because they write to the demo database) |
+| Coverage of services and ML | 95% (target 80%), measured over the fast and MariaDB tests on 7 October 2026 |
 | Route-by-role matrix | Every route checked for anonymous, administrator, kitchen and inventory users; a route without a declared rule fails the test |
-| Browser walkthroughs | Kitchen (390 px), inventory (1280 px) and administrator scripts pass; all pages without horizontal scrolling at 360, 768 and 1280 px; no JavaScript errors |
+| Browser walkthroughs | Kitchen (390 px), inventory (1280 px) and administrator scripts pass in Chromium, Firefox and WebKit; all pages without horizontal scrolling at 360, 768 and 1280 px; no JavaScript errors |
 | Concurrency | Two parallel stock-outs of 8 kg against 10 kg: exactly one succeeds and stock never goes negative; the same for purchase-order receipts and stock-request issues |
 | Forecast run, 10 items × 7 days (NFR2) | **0.27 s** (target under 5 s) |
-| Slowest page or API request (NFR2) | **0.23 s** (target under 3 s) |
+| Slowest page or API request (NFR2) | **0.23 s** (target under 3 s; re-measured on the demo server on 4 October 2026) |
 | Model training | about 11 s on a 2-core server |
 
 The security checklist (password hashing, server-side role checks, CSRF, escaping, parameterised queries, lockout with
-a generic message, session settings, no secrets in Git) passed in full (`docs/TEST_LOG.md` section 4).
+a generic message, session settings, no secrets in Git) passed in full (`docs/TEST_LOG.md` section 4). A security and
+quality audit on 4 October 2026 then probed the running system with about 90 scripted checks. It found no critical or
+high-severity issues. Its medium and low findings, listed with the other defects in Section 10.3, were fixed, covered
+by 56 new automated tests and deployed to the demo server after a verified database backup (`docs/TEST_LOG.md`
+sections 13 and 14). A second review on 7 October 2026 also examined the deployment. It rated three issues high: the
+demonstration ran over plain HTTP on a public port, the application and its database ran as the administrator (root)
+account on a server shared with other websites, and one forecast request accepted an unbounded date range. All three
+were fixed the same day (Section 10.3), after a verified backup.
 
 ## 10.3 Defects found by testing
 
@@ -651,12 +672,22 @@ a generic message, session settings, no secrets in Git) passed in full (`docs/TE
 | A shared chart component hid every other bar label; a page overflowed a 360 px screen by 5 px | Both fixed and covered by the browser test |
 | Pre-order validation reported some errors only after others were fixed | All rules checked in one pass |
 | Poya dates in the holiday file were computed and 19 were one day late | Replaced by the declared dates; data and model rebuilt |
+| Audit: an extreme value was accepted and flowed into the decisions (one pre-order of 1,000,000,000 portions produced a reorder suggestion of 999,999,999,100 burger buns); a value beyond a column's range caused a server error on MariaDB | Upper limits on every quantity and price, at most 3 decimal places for stock; the sales import rejects a day more than ten times the item's usual level |
+| Audit: the ingredient forecast and the forecast run had no upper bound on their number of days (100,000 days held a server worker for minutes and wrote forecasts up to the year 2300) | Windows limited to 1-31 and 1-14 days; a bad value is refused before a run is recorded |
+| Audit: wrongly typed input (a number as a name, the text "false" as a yes/no value) caused server errors in the user administration | Every field checked for type and format |
+| Audit: logging out did not end a copied session; anyone could lock a user out by failing logins; no security headers; CSV exports could carry spreadsheet formulas | Sessions ended on the server; lockout per username and address; Content-Security-Policy and related headers; formula cells neutralised |
+| Audit: the documented fast-test command also ran the timing tests, which write to the demo database | Timing tests run only when requested |
+| Review: the demonstration server used plain HTTP on a public port, so passwords and session cookies crossed the network unencrypted | HTTPS through nginx with a Let's Encrypt certificate; HTTP redirected; `Secure` session cookie; the old port closed |
+| Review: the application and its database ran as root on a server shared with other websites | A dedicated unprivileged user and restricted systemd services; gunicorn reachable only through nginx |
+| Review: the forecast list accepted any date range (year 1 to 9999 built about 3.6 million dates and a 51 MB response for one logged-in request) | Range limited to 62 days, longer requests refused; 15 new tests |
 
 ## 10.4 What was not tested
 
 There was no test with real restaurant staff and no usability score (SUS), so the five-minute target of NFR1 was not
-measured; the browser walkthroughs were run by the developer. Only Chromium was tested (the proposal lists Chrome,
-Firefox and Edge). There was no accessibility audit, load test or penetration test.
+measured; the browser walkthroughs were run by the developer. The browsers were tested headless in their three
+engines (Chromium, Firefox and WebKit); Edge uses the Chromium engine and was not tested separately, and no test ran
+on a real phone. There was no accessibility audit, load test or external penetration test (the audit in Section 10.2
+was internal).
 **[TEAM: run the usability test in `docs/usability/` (plan, printable kit, answer key, analysis script) and paste the tables from `docs/usability/RESULTS.md` here; then update the NFR1 row in section 11.4.]**
 
 # 11. Results and evaluation
@@ -739,11 +770,11 @@ would have hidden these results: "which menu item" takes 97% of the importance a
 | NFR1 usability | Partly | Designed for phone use and shows reasons; not measured with real users |
 | NFR2 performance | Met | 0.27 s forecast; 0.23 s slowest request |
 | NFR3 missing data | Met | Imputed lags, baseline fallback, partial and failed runs with reasons |
-| NFR4 browsers and mobile | Partly | 360 to 1280 px verified in Chromium; Firefox and Edge not tested |
-| NFR5 security | Met | Security checklist passed |
-| NFR6 maintainability | Met | Model versions with rollback; enforced layers; 250 tests |
+| NFR4 browsers and mobile | Met | 360 to 1280 px verified in Chromium, Firefox and WebKit (Edge shares the Chromium engine); headless browsers, no real phone |
+| NFR5 security | Met | Security checklist passed; audit and review findings fixed; HTTPS deployment (Section 10.3) |
+| NFR6 maintainability | Met | Model versions with rollback; enforced layers; 332 tests |
 | NFR7 scalability | Met (design) | `outlet_id` on every table; one outlet implemented, as scoped |
-| NFR8 data integrity | Met | Service validation, database constraints, stock data check |
+| NFR8 data integrity | Met | Service validation with upper limits, sales-import outlier check, database constraints, stock data check |
 
 Of the 47 functions in the proposal, 45 are fully implemented and 2 partly: food preparation management is covered by
 the accept or override decision and prepared-quantity recording without a separate status workflow, and expiry
@@ -758,7 +789,7 @@ tracking by batches with expiry dates and expiry alerts without a dedicated page
 | RQ2 | Answered on synthetic data: promotions help most, holidays modestly, weather not without a weather forecast |
 | O3, RQ3 | Achieved: explicit, tested formulas turn the forecast into preparation, ingredient, alert and reorder decisions, shown with their inputs and with a human accept or override step |
 | O4 | Achieved: outcomes recorded and compared with forecasts in monitoring |
-| O5 | Achieved: role-based, responsive interface; security checklist passed |
+| O5 | Achieved: role-based, responsive interface; security checklist and audit passed |
 | O6 | Achieved, except the usability study with real users (Section 10.4) |
 
 # 12. Discussion
@@ -804,14 +835,14 @@ here it is not distinguishable from XGBoost. Unlike both, the project evaluates 
 6. **No hyperparameter search** and one model for all items.
 7. **School vacation dates are approximate**; other holidays follow the declared calendar.
 8. **Single outlet**, no supplier integration and no automatic scheduling of forecasts, as scoped.
-9. **One browser** (Chromium) tested; no accessibility audit or load test.
+9. **Browsers tested headless only** (Chromium, Firefox and WebKit, no real phone); no accessibility audit or load test.
 
 # 14. Conclusions and recommendations
 
 SmartRestaurant shows that a machine-learning forecast can be turned into concrete, explainable decisions for a
 fast-food kitchen and its stock room: how much to prepare, what will run short, what to order and when to act. Every
 function in the approved proposal is implemented, the system is secure and responsive, and its behaviour is covered by
-250 automated tests and scripted walkthroughs. On synthetic data with Sri Lankan calendar effects, learned models cut
+332 automated tests and scripted walkthroughs. On synthetic data with Sri Lankan calendar effects, learned models cut
 the error of a simple weekly rule by about a third in every test period, promotions and holidays were shown to improve
 the forecast while weather did not, and the selected model came within one portion of the best achievable error.
 
