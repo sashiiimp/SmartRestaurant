@@ -1,6 +1,18 @@
 /* Display formatting and small helpers. All formatting lives here, never in services. */
+// The server's business date can be fixed for a demo (SMARTREST_TODAY). Pages follow it by keeping the offset between
+// the server's date at page load and the browser's Colombo date, so a real-time server still rolls over at midnight.
+const SR_DAY_OFFSET = (() => {
+  const m = document.querySelector('meta[name="business-today"]');
+  const local = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Colombo' });
+  return m && m.content ? Math.round((Date.parse(m.content) - Date.parse(local)) / 86400000) : 0;
+})();
+
 window.ui = {
-  todayIso() { return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Colombo' }); },
+  todayIso() {
+    const d = new Date(new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Colombo' }) + 'T00:00:00Z');
+    d.setUTCDate(d.getUTCDate() + SR_DAY_OFFSET);
+    return d.toISOString().slice(0, 10);
+  },
   addDays(iso, n) { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); },
   date(iso) {
     if (!iso) return '';

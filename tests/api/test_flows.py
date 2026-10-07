@@ -208,3 +208,11 @@ def test_prod_refuses_the_default_secret_key(monkeypatch):
     monkeypatch.setattr("app.config.Config.SECRET_KEY", "dev-only-change-me")
     with pytest.raises(RuntimeError):
         create_app("prod")
+
+
+def test_pages_publish_the_business_date_for_the_browser(as_role):
+    """B25 (review 7 Oct 2026): the pages default to the server's business date, which a demo can fix."""
+    from app.utils.dates import today
+    for role, page in (("kitchen", "/kitchen/prep"), ("inventory", "/inventory/movements"), ("admin", "/admin/monitor")):
+        html = as_role(role).get(page).get_data(as_text=True)
+        assert f'<meta name="business-today" content="{today().isoformat()}">' in html
