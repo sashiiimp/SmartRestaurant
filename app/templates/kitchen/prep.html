@@ -59,7 +59,7 @@
           </div>
           <div class="border-top pt-2 mt-2">
             <div class="d-flex justify-content-between small"><span>Prepared so far</span><strong>[[ it.prepared_so_far ]]</strong></div>
-            <div v-if="!isPast || true" class="input-group mt-1">
+            <div class="input-group mt-1">
               <input class="form-control" inputmode="numeric" placeholder="Quantity" :aria-label="'Add prepared quantity for ' + it.name" v-model="st(it.menu_item_id).add" @keyup.enter="addPrepared(it)">
               <button class="btn btn-outline-primary btn-lg-touch" type="button" :disabled="st(it.menu_item_id).busy" @click="addPrepared(it)">+ Add</button>
             </div>
