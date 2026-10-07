@@ -8,9 +8,10 @@ Type=simple
 User=smartrest
 Group=smartrest
 WorkingDirectory=/srv/smartrest
-Environment=APP_ENV=dev
+Environment=APP_ENV=prod
+Environment=TRUST_PROXY=1
 RuntimeDirectory=smartrest
-ExecStart=/srv/smartrest/.venv/bin/python -m gunicorn -w 2 --timeout 120 -b 0.0.0.0:39500 \
+ExecStart=/srv/smartrest/.venv/bin/python -m gunicorn -w 2 --timeout 120 -b 127.0.0.1:39500 \
   --control-socket /run/smartrest/gunicorn.ctl \
   --access-logfile instance/gunicorn-access.log --error-logfile instance/gunicorn-error.log wsgi:app
 ExecReload=/bin/kill -HUP $MAINPID

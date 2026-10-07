@@ -39,7 +39,7 @@ Results go into report section 10.4 and the NFR1 row of section 11.4.
    Never do this during a real demonstration.
 2. Print the answer key for today and give it to the observer:
    `runuser -u smartrest -- .venv/bin/python scripts/usability_answers.py`
-3. Open the login page on the test device: `http://<server>:39500/login`. Log in for the participant with the
+3. Open the login page on the test device: `https://smartrest.developerstudio.space/login`. Log in for the participant with the
    role's account (`kitchen1`, `inventory1` or `admin`, password = `SEED_PASSWORD` from `.env`): logging in is not a
    task being tested.
 4. Have ready: task cards for the role, SEQ and SUS sheets, observer sheet, stopwatch (phone), pen.
