@@ -118,7 +118,7 @@ Abbreviations: **A** admin, **K** kitchen, **I** inventory. **(R)** means read-o
 | `GET /promotions`, `POST /promotions`, `PATCH /promotions/{id}` | A | M2 | A15 | `PATCH` can set `is_active` |
 | `GET /holidays`, `POST /holidays/import` | A | M2 | A15 | CSV, same dry-run contract as sales import |
 | `GET /weather?from=&to=`, `POST /weather/import` | A | M2 | A15 | CSV, same dry-run contract |
-| `GET /forecasts?from=&to=&item_id=` | A K I | M1 | K2, S1 | latest version per item and date. `meta` has `active_model`, `last_run`, and `missing_dates` when a date has no forecast. |
+| `GET /forecasts?from=&to=&item_id=` | A K I | M1 | K2, S1 | latest version per item and date. `meta` has `active_model`, `last_run`, `missing_dates` when a date has no forecast, `holiday_calendar_ends` and `beyond_holiday_calendar` (the range goes past the last imported holiday, so later holidays are unknown to the forecast). |
 | `GET /forecasts/accuracy?from=&to=&item_id=&format=csv` | A | M2 | A9 | per item and overall MAE, WAPE, MAPE, bias, plus a daily forecast-vs-actual series (rule in DATABASE 2.6) |
 | `GET /forecast-runs?limit=` | A | M1 | A9, S1 | includes failed/skipped with `reason`; `limit` 1 to 200 |
 | `POST /forecast-runs` | A | M1 | S1 | `{as_of?, horizon_days?}` (defaults: today, 7; `horizon_days` 1 to 14, checked before a run is recorded; `as_of` cannot be in the past, because the shipped model has seen those days: use the backfill). Synchronous, target under 5 s. |

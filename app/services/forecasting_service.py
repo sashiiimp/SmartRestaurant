@@ -16,7 +16,7 @@ from app.ml.experiments import FOLD_DAYS, FOLDS
 from app.ml.features import build_features
 from app.ml.predict import BASELINES, predict
 from app.ml.train import HOLDOUT_DAYS, train_and_compare
-from app.models import Forecast, ForecastRun, MenuItem, ModelVersion
+from app.models import Forecast, ForecastRun, Holiday, MenuItem, ModelVersion
 from app.models.base import utcnow
 from app.services import audit, settings
 from app.services import data_management_service as dm
@@ -347,6 +347,10 @@ def get_forecasts(outlet_id: int, start: date, end: date, item_id: int | None = 
             "last_run": None if not last else {"status": last.status, "reason": last.reason,
                                                "as_of": last.as_of_date.isoformat()},
             "missing_dates": missing, "last_forecast_date": latest_date.isoformat() if latest_date else None}
+    # The holiday features read the imported calendar; past its last date every day looks like an ordinary day.
+    cal_end = db.session.query(db.func.max(Holiday.holiday_date)).filter(Holiday.outlet_id == outlet_id).scalar()
+    meta["holiday_calendar_ends"] = cal_end.isoformat() if cal_end else None
+    meta["beyond_holiday_calendar"] = cal_end is None or end > cal_end
     return {"rows": rows, "meta": meta}
 
 

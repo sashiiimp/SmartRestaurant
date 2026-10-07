@@ -12,6 +12,9 @@
     <span v-if="meta.last_run"> &middot; last run [[ ui.date(meta.last_run.as_of) ]] ([[ meta.last_run.status ]])</span>
   </div>
   <div v-else-if="!loading" class="alert alert-warning">No forecast yet. Ask the administrator to train a model and run a forecast.</div>
+  <div v-if="meta.beyond_holiday_calendar && rows.length" class="alert alert-warning py-2 small" role="note">
+    The holiday calendar <span v-if="meta.holiday_calendar_ends">ends on [[ ui.date(meta.holiday_calendar_ends) ]]</span><span v-else>is empty</span>: holidays and Poya days after that are not known to the forecast. An administrator can import the next calendar (Data page).
+  </div>
   <div v-if="meta.missing_dates && meta.missing_dates.length && rows.length" class="alert alert-info py-2 small">
     No forecast yet for: [[ meta.missing_dates.map(ui.date).join(', ') ]]<span v-if="meta.last_forecast_date"> (last available date: [[ ui.date(meta.last_forecast_date) ]])</span>.
   </div>

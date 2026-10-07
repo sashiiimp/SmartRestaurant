@@ -213,3 +213,15 @@ def test_a_normal_run_for_a_past_date_is_refused_before_a_run_is_recorded(world)
         assert "as_of" in e.value.fields
     assert ForecastRun.query.count() == 0
     assert fs.run_forecast(1, as_of=TODAY)["status"] == "ok"
+
+
+def test_forecasts_say_when_they_go_past_the_holiday_calendar(world):
+    """R6 / C26 (review 7 Oct 2026): past the calendar's last date, holidays are unknown to the forecast."""
+    train(world)
+    fs.run_forecast(1)
+    meta = fs.get_forecasts(1, TODAY, TODAY + timedelta(days=6))["meta"]
+    assert meta["holiday_calendar_ends"] is None and meta["beyond_holiday_calendar"] is True   # nothing imported
+    dm.import_holidays_csv(1, f"date,name,type\n{(TODAY + timedelta(days=3)).isoformat()},Test Poya,poya\n", dry_run=False)
+    meta = fs.get_forecasts(1, TODAY, TODAY + timedelta(days=6))["meta"]
+    assert meta["holiday_calendar_ends"] == (TODAY + timedelta(days=3)).isoformat() and meta["beyond_holiday_calendar"] is True
+    assert fs.get_forecasts(1, TODAY, TODAY + timedelta(days=2))["meta"]["beyond_holiday_calendar"] is False
