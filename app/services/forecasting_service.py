@@ -29,6 +29,7 @@ log = logging.getLogger("smartrest")
 ORACLE_PATH = "data/synthetic/oracle_expected.csv"
 MAX_HORIZON_DAYS = 14  # a short-term forecast (FR4); lags beyond 7 days ahead are already imputed
 MAX_RUNS_LISTED = 200
+MAX_FORECAST_RANGE_DAYS = 62  # the pages ask for 7 days; the cap stops one request listing millions of missing dates
 
 
 def _num(x):
@@ -286,6 +287,11 @@ def backfill(outlet_id: int, start: date, end: date, actor_id: int | None = None
 
 # ---- reading forecasts (K2, S1) --------------------------------------------------------------
 def get_forecasts(outlet_id: int, start: date, end: date, item_id: int | None = None) -> dict:
+    if end < start:
+        raise ValidationError("Please fix the highlighted fields.", {"to": "must not be before the start date"})
+    if (end - start).days + 1 > MAX_FORECAST_RANGE_DAYS:
+        raise ValidationError("Please fix the highlighted fields.",
+                              {"to": f"range is too long (max {MAX_FORECAST_RANGE_DAYS} days)"})
     # Forecasts from a run dated after today (e.g. left over from a demo clock override) are never shown.
     q = (db.session.query(Forecast, MenuItem.name).join(MenuItem, MenuItem.id == Forecast.menu_item_id)
          .join(ForecastRun, ForecastRun.id == Forecast.run_id)

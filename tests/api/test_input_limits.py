@@ -230,3 +230,19 @@ def test_settings_alert_switches_must_be_an_object(as_role):
     client = as_role("admin")
     r = client.put("/api/v1/settings", json={"alerts": ["alert.low_stock.enabled"]})
     assert r.status_code == 422 and "alerts" in r.get_json()["error"]["fields"]
+
+
+# ---- bounded forecast range (audit 7 Oct 2026, S3) ----------------------------------------------------------
+@pytest.mark.parametrize("role", ["kitchen", "inventory", "admin"])
+@pytest.mark.parametrize("query,status", [
+    ("from=2026-09-27&to=2026-10-03", 200),                    # the 7 days the pages ask for
+    ("from=2026-09-01&to=2026-11-01", 200),                    # 62 days, the limit
+    ("from=2026-09-01&to=2026-11-02", 422),                    # 63 days
+    ("from=0001-01-01&to=9999-12-31", 422),                    # would list millions of missing dates
+    ("from=2026-10-03&to=2026-09-27", 422),                    # end before start
+])
+def test_forecast_range_is_bounded(as_role, role, query, status):
+    r = as_role(role).get(f"/api/v1/forecasts?{query}")
+    assert r.status_code == status, r.get_json()
+    if status == 422:
+        assert "to" in r.get_json()["error"]["fields"]

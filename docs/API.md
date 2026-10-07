@@ -49,6 +49,7 @@ Read `ARCHITECTURE.md` (envelope, RBAC, MVC rules) and `DATABASE.md` (fields) fi
 | Text fields | must be text (an object, list or true/false is refused) |
 | Sales import | a row more than 10 times the item's highest stored day is rejected; an item with no stored history is compared with the median of its own rows in the file (7 rows or more) |
 | Users | username letters, digits, `.`, `-`, `_`; email must look like an address; password text of 8 to 128 characters; `is_active` true or false |
+| Forecast date range (`GET /forecasts`) | `to` not before `from`, at most 62 days inclusive (`to`: `range is too long (max 62 days)`) |
 
 ## 2. Roles and access
 
