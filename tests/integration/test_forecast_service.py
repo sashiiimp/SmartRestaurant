@@ -190,3 +190,26 @@ def test_backfill_uses_the_train_only_model(world):
     finally:
         mod.predict = real
     assert seen[0] is not None and seen[1] is not None and seen[0] is not seen[1]   # eval copy vs shipped model
+
+
+# ---- forecast-vs-actual stays out-of-sample (review 7 Oct 2026, B8) ----------------------------------------------
+def test_backfill_before_the_holdout_is_refused_and_records_nothing(world):
+    train(world)
+    hold_start = fs.get_active_model(1).holdout_start
+    from app.services.errors import ValidationError
+    with pytest.raises(ValidationError) as e:
+        fs.backfill(1, hold_start - timedelta(days=1), hold_start + timedelta(days=1))
+    assert "from" in e.value.fields
+    assert ForecastRun.query.count() == 0
+    assert fs.backfill(1, hold_start, hold_start + timedelta(days=1))["ok"] == 2   # the hold-out itself is allowed
+
+
+def test_a_normal_run_for_a_past_date_is_refused_before_a_run_is_recorded(world):
+    train(world)
+    from app.services.errors import ValidationError
+    for trigger in ("cli", "admin"):
+        with pytest.raises(ValidationError) as e:
+            fs.run_forecast(1, as_of=TODAY - timedelta(days=1), trigger=trigger)
+        assert "as_of" in e.value.fields
+    assert ForecastRun.query.count() == 0
+    assert fs.run_forecast(1, as_of=TODAY)["status"] == "ok"

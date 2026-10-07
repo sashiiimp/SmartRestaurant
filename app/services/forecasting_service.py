@@ -160,6 +160,11 @@ def run_forecast(outlet_id: int, as_of: date | None = None, horizon: int | None 
     as_of = as_of or today()
     if as_of > today():
         raise ValidationError("A forecast run cannot start in the future.", {"as_of": "must not be after today"})
+    if as_of < today() and trigger != "backfill":
+        # The shipped model was refit on all history, so it has seen the sales of every past day: a forecast for one
+        # would be in-sample and flatter the accuracy figures. Past days are covered by the backfill instead.
+        raise ValidationError("A forecast for a past date would come from a model that has already seen that day's sales. "
+                              "Use the backfill for past dates.", {"as_of": "must be today (use the backfill for past dates)"})
     if horizon is None:
         horizon = settings.get_int(outlet_id, "forecast_horizon_days")
     else:  # checked before the run row exists, so a bad value never shows up as a failed run or an alert
@@ -268,12 +273,30 @@ def _do_run(outlet_id, run, mv, as_of, horizon, use_estimated_weather, data, use
     return _summary(run, mv.version_label, 0, len(items), missing)
 
 
+def _check_backfill_out_of_sample(outlet_id: int, start: date) -> None:
+    """Backfill forecasts with the copy of the model fitted before its hold-out. Days before the hold-out were part of
+    that copy's training data, so forecasts for them would be in-sample; they are refused rather than mixed in."""
+    mv = get_active_model(outlet_id)
+    if mv is None or mv.algorithm in BASELINES:
+        return  # nothing trained (the run is skipped) or a baseline, which learns nothing from past sales
+    artifact = registry.load_active(mv.id, mv.artifact_path)
+    if artifact.get("eval_model") is None:
+        first_unseen = mv.holdout_end + timedelta(days=1) if mv.holdout_end else today()
+    else:
+        first_unseen = mv.holdout_start
+    if first_unseen and start < first_unseen:
+        raise ValidationError("Please fix the highlighted fields.",
+                              {"from": f"must not be before {first_unseen.isoformat()}: the active model was trained "
+                                       f"on earlier days, so their forecasts would not be out-of-sample"})
+
+
 def backfill(outlet_id: int, start: date, end: date, actor_id: int | None = None) -> dict:
     """One single-day run per past date, so forecast-vs-actual has out-of-sample history (ML_PLAN section 7)."""
     if end >= today():
         raise ValidationError("Backfill can only cover past dates.", {"to": "must be before today"})
     if end < start:
         raise ValidationError("Please fix the highlighted fields.", {"to": "must not be before the start date"})
+    _check_backfill_out_of_sample(outlet_id, start)
     data = _load_data(outlet_id)
     counts = {"ok": 0, "partial": 0, "skipped": 0, "failed": 0}
     d = start

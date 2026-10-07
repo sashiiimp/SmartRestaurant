@@ -152,7 +152,7 @@ Live monitoring (A9) recomputes MAE, WAPE, MAPE and bias from stored forecasts a
 4. In one transaction: insert `forecasts` (with `input_snapshot`), flip `is_latest` on the previous rows for those (item, date), set the run's status, reason and counts.
 5. Return the run summary. The CLI then calls alert evaluation (ARCH section 6).
 
-**Backfill** (`flask smartrest forecast --from D1 --to D2`): one single-day run per date with `as_of = that date`, `trigger = backfill`, `use_estimated_weather = true`. This fills the past 56 days so the A9 forecast-vs-actual chart is populated on demo day. **Backfill uses `eval_model`, the copy fitted on the training period only** (the shipped model is refit on all history and has seen those days), so forecasts for the hold-out days are genuinely out-of-sample. Run it after `train --activate`.
+**Backfill** (`flask smartrest forecast --from D1 --to D2`): one single-day run per date with `as_of = that date`, `trigger = backfill`, `use_estimated_weather = true`. This fills the past 56 days so the A9 forecast-vs-actual chart is populated on demo day. **Backfill uses `eval_model`, the copy fitted on the training period only** (the shipped model is refit on all history and has seen those days), so forecasts for the hold-out days are genuinely out-of-sample. Run it after `train --activate`. A backfill that starts before the active model's hold-out is refused (those days were in `eval_model`'s training data), and an ordinary run cannot start on a past date, so no in-sample forecast can reach the accuracy views.
 
 Retraining is manual (`flask smartrest train`, or the admin button), recommended weekly once real data flows. Rollback = activate the previous version. There is no scheduler (ARCH D6).
 

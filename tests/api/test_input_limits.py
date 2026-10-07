@@ -246,3 +246,9 @@ def test_forecast_range_is_bounded(as_role, role, query, status):
     assert r.status_code == status, r.get_json()
     if status == 422:
         assert "to" in r.get_json()["error"]["fields"]
+
+
+def test_forecast_run_for_a_past_date_is_refused_by_the_api(as_role):
+    r = as_role("admin").post("/api/v1/forecast-runs?as_of=2020-01-01", json={})
+    assert r.status_code == 422 and "as_of" in r.get_json()["error"]["fields"]
+    assert ForecastRun.query.count() == 0

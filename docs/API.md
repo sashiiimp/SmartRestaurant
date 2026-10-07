@@ -121,7 +121,7 @@ Abbreviations: **A** admin, **K** kitchen, **I** inventory. **(R)** means read-o
 | `GET /forecasts?from=&to=&item_id=` | A K I | M1 | K2, S1 | latest version per item and date. `meta` has `active_model`, `last_run`, and `missing_dates` when a date has no forecast. |
 | `GET /forecasts/accuracy?from=&to=&item_id=&format=csv` | A | M2 | A9 | per item and overall MAE, WAPE, MAPE, bias, plus a daily forecast-vs-actual series (rule in DATABASE 2.6) |
 | `GET /forecast-runs?limit=` | A | M1 | A9, S1 | includes failed/skipped with `reason`; `limit` 1 to 200 |
-| `POST /forecast-runs` | A | M1 | S1 | `{as_of?, horizon_days?}` (defaults: today, 7; `horizon_days` 1 to 14, checked before a run is recorded). Synchronous, target under 5 s. |
+| `POST /forecast-runs` | A | M1 | S1 | `{as_of?, horizon_days?}` (defaults: today, 7; `horizon_days` 1 to 14, checked before a run is recorded; `as_of` cannot be in the past, because the shipped model has seen those days: use the backfill). Synchronous, target under 5 s. |
 | `GET /model-versions` | A | M1 | A16 | with metrics summary and active flag |
 | `POST /model-versions` | A | M1 | A16 | trains synchronously (seconds to about a minute) and returns the comparison table. Not activated. |
 | `POST /model-versions/{id}/activate` | A | M1 | A16 | audited; previous version stays available |
@@ -274,6 +274,6 @@ Each page's data calls are listed in `UI_PLAN.md`. Page routes (HTML) return the
 | `flask smartrest generate-data [--start --end --seed]` | synthetic history, loaded through the import services |
 | `flask smartrest train [--activate]` | train, compare, save (`POST /model-versions`) |
 | `flask smartrest activate <version_label>` | `POST /model-versions/{id}/activate` |
-| `flask smartrest forecast [--as-of D] [--from D --to D]` | run forecast; `--from/--to` is the backfill used for accuracy views |
+| `flask smartrest forecast [--as-of D] [--from D --to D]` | run forecast (`--as-of` today at the latest and not in the past); `--from/--to` is the backfill used for accuracy views, refused before the active model's hold-out start so every backfilled forecast is out-of-sample |
 | `flask smartrest alerts` | evaluate alerts (`POST /alerts/run`) |
 | `flask smartrest create-user` / `set-setting <key> <value>` | admin helpers, used until the S-tier pages exist |
