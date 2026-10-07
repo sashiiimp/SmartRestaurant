@@ -16,6 +16,7 @@
         <td class="text-end">[[ ui.qty(r.total_need, r.unit) ]]</td><td class="text-end">[[ r.days_of_cover === null ? '-' : (r.days_of_cover > 99 ? '>99' : r.days_of_cover) ]]</td>
         <td>[[ r.first_shortfall_date ? ui.date(r.first_shortfall_date) : '' ]]</td></tr></tbody></table></div>
     <div v-if="f.unknown_items.length" class="alert alert-warning">Unknown demand (no recipe): [[ f.unknown_items.map(i => i.name).join(', ') ]]</div>
+    <div v-if="f.items_without_forecast && f.items_without_forecast.length" class="alert alert-warning" role="note">No forecast yet for some days, so their demand is missing above: [[ f.items_without_forecast.map(i => i.name + ' (' + i.days + (i.days === 1 ? ' day)' : ' days)')).join(', ') ]]</div>
   </template>
 </div>
 {% endblock %}

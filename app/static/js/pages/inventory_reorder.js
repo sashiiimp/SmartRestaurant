@@ -1,12 +1,12 @@
 SR.createApp({
-  data() { return { rows: [], loading: true, error: null, message: null, selected: [], busy: false, ui }; },
+  data() { return { rows: [], noForecast: [], loading: true, error: null, message: null, selected: [], busy: false, ui }; },
   computed: {
     orderable() { return this.rows.filter(r => r.supplier_id); },
     allSelected() { return this.orderable.length > 0 && this.selected.length === this.orderable.length; },
     supplierCount() { return new Set(this.rows.filter(r => this.selected.includes(r.ingredient_id)).map(r => r.supplier_id)).size; },
   },
   async mounted() {
-    try { this.rows = (await api.get('/recommendations/reorder')).data; }
+    try { const r = await api.get('/recommendations/reorder'); this.rows = r.data; this.noForecast = (r.meta && r.meta.items_without_forecast) || []; }
     catch (e) { this.error = ui.errorText(e); } finally { this.loading = false; }
   },
   methods: {

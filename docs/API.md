@@ -133,8 +133,8 @@ Abbreviations: **A** admin, **K** kitchen, **I** inventory. **(R)** means read-o
 | `GET /recommendations/prep?date=` | A(R) K | M1 | K3, S2 | one row per active item, computed live |
 | `POST /recommendations/prep/decisions` | K | M1 | K3 | `{menu_item_id, date, action: "accept"\|"override", final_qty?, reason?}`; `override` needs `final_qty` and `reason` |
 | `GET /recommendations/requirements?date=` | A(R) K I | M1 | K9, S3 | requirements and shortage flags for that day's plan |
-| `GET /recommendations/ingredient-forecast?from=&days=7` | A(R) I | M1 | I7 | per ingredient per day; `days` 1 to 31 |
-| `GET /recommendations/reorder` | A(R) I | M1 | I9 | rows with the numbers behind each suggestion |
+| `GET /recommendations/ingredient-forecast?from=&days=7` | A(R) I | M1 | I7 | per ingredient per day; `days` 1 to 31; `items_without_forecast` names menu items with no forecast on some days (their demand is missing) |
+| `GET /recommendations/reorder` | A(R) I | M1 | I9 | rows with the numbers behind each suggestion; `meta.items_without_forecast` names menu items with no forecast on some of the 7 days, whose demand is therefore missing from the quantities |
 | `POST /kitchen/prepared` | K | M1 | K5 | `{menu_item_id, date, quantity}`; returns the new running total |
 | `POST /kitchen/waste` | K | M1 | K7 | `{menu_item_id, date, quantity, reason, note?}`; 200 with `warnings` when waste exceeds prepared |
 | `GET /kitchen/daily-summary?date=` | A(R) K | M1 | K1, K5-K7, S6 | per item: forecast, recommended, final, prepared, served, wasted |

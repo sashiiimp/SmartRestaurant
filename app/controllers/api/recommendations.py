@@ -34,5 +34,5 @@ def ingredient_forecast():
 @bp.route("/recommendations/reorder")
 @roles_required("admin", "inventory")
 def reorder():
-    rows = rec.get_reorder_suggestions(current_outlet_id())
-    return ok(rows, {"total": len(rows)})
+    view = rec.get_reorder_view(current_outlet_id())
+    return ok(view["rows"], {"total": len(view["rows"]), "items_without_forecast": view["items_without_forecast"]})

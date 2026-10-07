@@ -10,6 +10,7 @@
     <span class="small text-muted">Tick the ingredients to order. One draft order is created per supplier, using the suggested quantities. Ingredients without a supplier cannot be ordered here.</span>
   </div>
   <div v-if="message" class="alert alert-danger py-2" role="alert">[[ message ]]</div>
+  <div v-if="noForecast.length" class="alert alert-warning py-2" role="note">Demand is missing for days without a forecast, so these quantities may be too low: [[ noForecast.map(i => i.name + ' (' + i.days + (i.days === 1 ? ' day)' : ' days)')).join(', ') ]]</div>
   <sr-loading v-if="loading"></sr-loading>
   <sr-empty v-else-if="!rows.length" message="Nothing needs reordering right now."></sr-empty>
   <div v-else class="table-responsive"><table class="table table-sm align-middle table-wrap-head">

@@ -179,20 +179,29 @@ def get_requirements(outlet_id: int, day: date) -> dict:
             "basis": {str(k): v for k, v in basis.items()}}
 
 
-def _daily_needs(outlet_id: int, start: date, days: int) -> tuple[dict, dict, list]:
-    """({ingredient_id: [need per day]}, {(day index): cannot list}, unknown item names)."""
+def _daily_needs(outlet_id: int, start: date, days: int) -> tuple[dict, dict, dict]:
+    """({ingredient_id: [need per day]}, {item id: name} without a recipe, {item id: {name, days}} without a forecast).
+
+    An item without a forecast adds no need, so the ingredient figures understate demand on those days; callers report
+    the items instead of hiding them."""
     recipes = _recipes(outlet_id)
     names = {m.id: m.name for m in dm.list_menu_items(outlet_id)}
     per_ing: dict = {}
-    unknown = {}
+    unknown, no_forecast = {}, {}
     for i in range(days):
         required, _basis, cannot = _requirements_for(outlet_id, start + timedelta(days=i), recipes, names)
         for c in cannot:
             if c["reason"] == "no_recipe":
                 unknown[c["menu_item_id"]] = c["name"]
+            elif c["reason"] == "no_forecast":
+                no_forecast.setdefault(c["menu_item_id"], {"name": c["name"], "days": 0})["days"] += 1
         for ing_id, req in required.items():
             per_ing.setdefault(ing_id, [ZERO] * days)[i] = req
-    return per_ing, unknown
+    return per_ing, unknown, no_forecast
+
+
+def _no_forecast_list(no_forecast: dict) -> list[dict]:
+    return [{"menu_item_id": k, "name": v["name"], "days": v["days"]} for k, v in sorted(no_forecast.items())]
 
 
 def first_shortfall(needs: list, usable: Decimal, start: date) -> tuple[date, Decimal] | None:
@@ -212,7 +221,7 @@ def get_ingredient_forecast(outlet_id: int, start: date, days: int = 7) -> dict:
     """I7: per ingredient per day requirement, days of cover and the first shortfall."""
     if not 1 <= days <= MAX_FORECAST_DAYS:
         raise ValidationError("Please fix the highlighted fields.", {"days": f"must be between 1 and {MAX_FORECAST_DAYS}"})
-    per_ing, unknown = _daily_needs(outlet_id, start, days)
+    per_ing, unknown, no_forecast = _daily_needs(outlet_id, start, days)
     usable = inv.usable_map(outlet_id, today())
     rows = []
     for ing in inv.list_ingredients(outlet_id, active_only=True):
@@ -227,14 +236,26 @@ def get_ingredient_forecast(outlet_id: int, start: date, days: int = 7) -> dict:
                      "first_shortfall_date": sf[0].isoformat() if sf else None,
                      "short_by": float(sf[1]) if sf else 0.0})
     return {"from": start.isoformat(), "days": days, "ingredients": rows,
-            "unknown_items": [{"menu_item_id": k, "name": v} for k, v in unknown.items()]}
+            "unknown_items": [{"menu_item_id": k, "name": v} for k, v in unknown.items()],
+            "items_without_forecast": _no_forecast_list(no_forecast)}
 
 
 def get_reorder_suggestions(outlet_id: int, start: date | None = None) -> list[dict]:
     """I9 / B3: need over the lead time + safety stock - usable - on order, rounded up to pack size."""
+    return _reorder(outlet_id, start)[0]
+
+
+def get_reorder_view(outlet_id: int, start: date | None = None) -> dict:
+    """The reorder suggestions plus the menu items that had no forecast on some of the days, whose ingredient demand
+    is therefore missing from the suggested quantities."""
+    rows, no_forecast = _reorder(outlet_id, start)
+    return {"rows": rows, "items_without_forecast": _no_forecast_list(no_forecast)}
+
+
+def _reorder(outlet_id: int, start: date | None = None) -> tuple[list[dict], dict]:
     start = start or today()
     horizon = 7
-    per_ing, _unknown = _daily_needs(outlet_id, start, horizon)
+    per_ing, _unknown, no_forecast = _daily_needs(outlet_id, start, horizon)
     usable, on_order = inv.usable_map(outlet_id, today()), inv.on_order_map(outlet_id)
     default_lead = settings.get_int(outlet_id, "default_lead_time_days")
     out = []
@@ -257,4 +278,4 @@ def get_reorder_suggestions(outlet_id: int, start: date | None = None) -> list[d
                     "pack_size": float(pack), "min_order_qty": float(ing.reorder_qty),
                     "suggested_qty": float(suggested)})
     out.sort(key=lambda r: r["name"])
-    return out
+    return out, no_forecast

@@ -235,3 +235,15 @@ def test_lazy_refresh(stock_world):
     row = Setting.query.filter_by(setting_key="alerts_last_run_at").one()
     row.value = (datetime.utcnow() - timedelta(seconds=120)).isoformat(); db.session.commit()
     assert al.list_alerts(1, "admin")["rows"] == []            # stale: re-evaluated, condition cleared
+
+
+def test_items_without_a_forecast_are_reported_not_hidden(kitchen_world):
+    """C9 (review 7 Oct 2026): an item with a recipe but no forecast adds no ingredient need, so it is named."""
+    w = kitchen_world
+    decide_row(w["burger"], TODAY, 54)   # Chicken Burger planned today only; Fried Chicken never has a forecast
+    fc = rec.get_ingredient_forecast(1, TODAY, 7)
+    missing = {i["name"]: i["days"] for i in fc["items_without_forecast"]}
+    assert missing["Fried Chicken 2 pc"] == 7 and missing["Chicken Burger"] == 6
+    view = rec.get_reorder_view(1, TODAY)
+    assert view["rows"] == rec.get_reorder_suggestions(1, TODAY)          # quantities unchanged
+    assert {i["name"] for i in view["items_without_forecast"]} >= {"Fried Chicken 2 pc", "Chicken Burger"}
