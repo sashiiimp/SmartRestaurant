@@ -4,6 +4,42 @@ About 17 minutes, three roles, one story: **the kitchen plans a busy day, finds 
 
 Run it at `https://smartrest.developerstudio.space` (since 7 Oct 2026; gunicorn itself listens only on `127.0.0.1:39500` behind nginx). Use the three demo accounts (`admin`, `kitchen1`, `inventory1`) with the passwords from `.env`: `SEED_PASSWORD` for `kitchen1` and `inventory1`, `SEED_PASSWORD_ADMIN` for `admin` (since 7 Oct 2026; `flask smartrest demo-reset` sets them the same way). Open each role in its own browser profile or private window so you can switch without logging out.
 
+## Which model is live: read before showing the Models or Monitoring pages
+
+The demo was rebuilt with `flask smartrest demo-reset` on **8 October 2026**. That regenerated the synthetic history up
+to 7 Oct and trained a new model, so **the live model is not the model evaluated in the research report**. The
+report's results, methodology and conclusions belong to the original model and are unchanged; the demo model only
+shows the system working on a fresh run of the same pipeline.
+
+| | Original evaluated model (report) | Current demo model |
+|---|---|---|
+| Version | `v20261004-1` | `v20261008-1` |
+| Trained | 4 Oct 2026 | 8 Oct 2026 (`demo-reset`) |
+| Synthetic history | 1 Sep 2024 to 3 Oct 2026 (763 days), seed 42 | 1 Sep 2024 to 7 Oct 2026 (767 days), same generator and seed |
+| Hold-out (last 56 days) | 9 Aug to 3 Oct 2026 | 13 Aug to 7 Oct 2026 |
+| Training rows | 6,790 | 6,830 |
+| Hold-out MAE: naive / mean of 4 weeks / Random Forest / XGBoost | 13.88 / 10.85 / 9.66 / **9.20** | 13.29 / 10.33 / 9.00 / **9.00** |
+| Hold-out WAPE %: naive / XGBoost | 21.9 / 14.5 | 20.9 / 14.1 |
+| XGBoost against naive (MAE) | 33.7% lower | 32.3% lower |
+| Noise floor (MAE of the generator's expected demand) | 8.26 | 7.75 |
+| Where its figures appear | `docs/ML_EVALUATION.md`, the report (Chapter 11, Appendix C) | Admin > Models; Admin > Monitoring > Forecast accuracy |
+
+- **Quote the original model's figures** when discussing the research. The Models and Monitoring pages show the demo
+  model's figures, which differ slightly.
+- **The demo history is a new sample, not an extension.** Four more days shift the generator's random draws: comparing
+  with the pre-reset backup, only 2.8% of the 7,630 item-days of 1 Sep 2024 to 3 Oct 2026 have the same quantity.
+- **The demo model tells the same story.** XGBoost again cuts the naive error by about a third and is 1.25 portions
+  above the noise floor; Random Forest and XGBoost are practically tied (MAE 9.0014 and 8.9978), in line with the
+  report's statement that the two are not meaningfully different.
+- The forecast-accuracy view shows the demo model's out-of-sample backfill for 13 Aug to 7 Oct, not the report's
+  hold-out of 9 Aug to 3 Oct.
+- If asked: *"The demo data was regenerated on 8 October for a fresh demonstration. The evaluation in the report is on
+  the 4 October model; the regenerated run gives the same picture."*
+- Every further `demo-reset` (needed after 14 Oct, when the current forecasts end) changes these figures again. The
+  database with the original model is kept in `/root/smartrest/backups/smartrest_before_demo_reset_20261008_040726/`
+  and its model file in `instance/models/v20261004-1/`; restoring that dump brings the original model back, but its
+  data ends on 3 Oct and its forecasts on 10 Oct.
+
 ## Before you start (5 minutes, once)
 
 1. **Take a dump so you can put the demo back afterwards.** From `/srv/smartrest`, as root (backups stay in the root-only `/root/smartrest/backups`):
@@ -11,7 +47,7 @@ Run it at `https://smartrest.developerstudio.space` (since 7 Oct 2026; gunicorn 
    mariadb-dump --no-defaults -uroot -S .mariadb/mysql.sock --single-transaction smartrest > /root/smartrest/backups/before_demo.sql
    ```
    Restore later with `mariadb --no-defaults -uroot -S .mariadb/mysql.sock smartrest < /root/smartrest/backups/before_demo.sql`. Do not restore the older `before_deploy` or `before_tier1` dumps: they predate the new tables.
-2. **Check the starting state** (the figures below are from the `demo-reset` of 4 Oct 2026 with the corrected holiday calendar, model `v20261004-1`; a different run or day changes them slightly):
+2. **Check the starting state** (the figures below and in the scenes are from the `demo-reset` of 4 Oct 2026 with the corrected holiday calendar, model `v20261004-1`; after the 8 Oct reset they differ, so take today's figures from `runuser -u smartrest -- .venv/bin/python scripts/usability_answers.py`):
    - Kitchen `/kitchen/requirements`: **Chicken** needs 47.48 kg, has 30 kg, short by **17.48 kg**; **Potato** short by 17.5 kg.
    - Inventory `/inventory/reorder`: **Chicken 80 kg** (Ceylon Poultry & Meats) and **Potato 60 kg** (Colombo Fresh Produce).
    - Inventory `/inventory`: Potato "critically low", Chicken "will run short today", one expired chicken batch (5 kg).
