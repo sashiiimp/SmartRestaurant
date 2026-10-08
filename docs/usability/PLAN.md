@@ -40,7 +40,8 @@ Results go into report section 10.4 and the NFR1 row of section 11.4.
 2. Print the answer key for today and give it to the observer:
    `runuser -u smartrest -- .venv/bin/python scripts/usability_answers.py`
 3. Open the login page on the test device: `https://smartrest.developerstudio.space/login`. Log in for the participant with the
-   role's account (`kitchen1` or `inventory1` with `SEED_PASSWORD`, `admin` with `SEED_PASSWORD_ADMIN`, both in `.env`): logging in is not a
+   role's account (`kitchen`, `inventory` or `admin`; passwords as set on 8 Oct 2026, given to the session operator and not
+   kept in this repository; after a `demo-reset` the seeded `kitchen1` and `inventory1` with the `.env` passwords apply): logging in is not a
    task being tested.
 4. Have ready: task cards for the role, SEQ and SUS sheets, observer sheet, stopwatch (phone), pen.
 

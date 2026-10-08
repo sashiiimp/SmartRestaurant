@@ -6,7 +6,7 @@ or a rehearsal that is not rolled back changes them.
 
 About 17 minutes, three roles, one story: **the kitchen plans a busy day, finds a chicken shortage, and the inventory manager fixes it while the administrator watches.** It covers all 15 new functions and the proposal function each one delivers. Trim points are marked *(optional)*.
 
-Run it at `https://smartrest.developerstudio.space` (since 7 Oct 2026; gunicorn itself listens only on `127.0.0.1:39500` behind nginx). Use the three demo accounts (`admin`, `kitchen1`, `inventory1`) with the passwords from `.env`: `SEED_PASSWORD` for `kitchen1` and `inventory1`, `SEED_PASSWORD_ADMIN` for `admin` (since 7 Oct 2026; `flask smartrest demo-reset` sets them the same way). Open each role in its own browser profile or private window so you can switch without logging out.
+Run it at `https://smartrest.developerstudio.space` (since 7 Oct 2026; gunicorn itself listens only on `127.0.0.1:39500` behind nginx). Use the three demo accounts `admin`, `kitchen` and `inventory` (renamed from `kitchen1` and `inventory1` on 8 Oct 2026). Their passwords were set on 8 Oct 2026 and given to the presenters; they are not kept in this repository. Note: `flask smartrest demo-reset` recreates the seeded accounts (`admin`, `kitchen1`, `inventory1` with the passwords from `.env`), so after a reset use those instead. Open each role in its own browser profile or private window so you can switch without logging out.
 
 ## Which model is live: read before showing the Models or Monitoring pages
 
@@ -65,7 +65,7 @@ shows the system working on a fresh run of the same pipeline.
 
 ---
 
-## Scene 1: Kitchen plans the day (about 6 minutes) — log in as `kitchen1`
+## Scene 1: Kitchen plans the day (about 6 minutes) — log in as `kitchen`
 
 | # | Do | You should see | Say |
 |---|---|---|---|
@@ -83,7 +83,7 @@ shows the system working on a fresh run of the same pipeline.
 
 ---
 
-## Scene 2: Inventory and Procurement fixes it (about 7 minutes) — log in as `inventory1`
+## Scene 2: Inventory and Procurement fixes it (about 7 minutes) — log in as `inventory`
 
 | # | Do | You should see | Say |
 |---|---|---|---|
@@ -112,7 +112,7 @@ shows the system working on a fresh run of the same pipeline.
 | 6 | **Inventory** tab, ingredient **Chicken**. | Closing stock day by day: today's steps up with the two receipts and down with the adjustment. **Download CSV**. | *System Reports*: rebuilt from the recorded movements, and the last figure equals the stock on hand. |
 | 7 | **Stock movements** tab, type **Stock in**. | The receipts appear with **Linked to: purchase_order #..**. Set the type to *Stock out*: the oil issue shows **stock_request #..**. | Everything is traceable to the order or request that caused it. |
 | 8 | **Settings** > **Restaurant information**: change the name to "Lanka Bites", **Save**, reload. | The name appears in the sidebar under the brand. Change it back afterwards. | *Restaurant Information Management*. |
-| 9 | Switch to the `kitchen1` window and open `/inventory/requests`. | **Access denied (403)**. | Role-based access: the kitchen cannot open the inventory manager's pages. |
+| 9 | Switch to the `kitchen` window and open `/inventory/requests`. | **Access denied (403)**. | Role-based access: the kitchen cannot open the inventory manager's pages. |
 
 ---
 
