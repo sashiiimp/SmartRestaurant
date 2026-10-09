@@ -4,7 +4,7 @@ from datetime import date
 import pytest
 
 from app.extensions import db
-from app.models import Alert, AuditLog
+from app.models import Alert, AuditLog, StockMovement
 from app.services import alert_service as al
 from app.services import inventory_service as inv
 from app.services.errors import NotFoundError, ValidationError
@@ -73,3 +73,27 @@ def test_validation(chicken):
     assert "note" in e.value.fields
     with pytest.raises(ValidationError):
         al.report_shortage(1, {})
+
+
+def test_a_restock_in_the_same_second_as_the_report_counts(chicken):
+    """DATETIME has whole seconds on MySQL and MariaDB, so the report and the stock-in can carry the same timestamp."""
+    a = al.report_shortage(1, {"ingredient_id": chicken.id})
+    inv.record_stock_in(1, {"ingredient_id": chicken.id, "quantity": 5, "received_date": "2026-09-25"})
+    alert = Alert.query.get(a["id"])
+    StockMovement.query.filter_by(ingredient_id=chicken.id).filter(StockMovement.quantity > 0).update(
+        {"created_at": alert.created_at})
+    db.session.commit()
+    al.evaluate(1)
+    assert Alert.query.get(a["id"]).closed_reason == "restocked"
+
+
+
+def test_stock_from_before_the_report_never_closes_it_even_in_the_same_second(chicken):
+    """The opposite edge: the fixture's earlier stock-in given the report's timestamp must not count as a restock."""
+    a = al.report_shortage(1, {"ingredient_id": chicken.id})
+    alert = Alert.query.get(a["id"])
+    StockMovement.query.filter_by(ingredient_id=chicken.id).update({"created_at": alert.created_at})
+    db.session.commit()
+    al.evaluate(1)
+    assert Alert.query.get(a["id"]).status == "open"
+    assert a["details"]["last_movement_id"] == StockMovement.query.filter_by(ingredient_id=chicken.id).count()
