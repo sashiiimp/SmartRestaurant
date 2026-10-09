@@ -33,7 +33,13 @@ def _fresh_server_schema():
     each test still starts from an empty database with ids from 1."""
     global _server_schema_ready
     if not _server_schema_ready:
-        _db.drop_all()
+        # Drop every table in the test database, including ones another branch's models created (their foreign keys
+        # would otherwise block dropping ours), then build this branch's schema.
+        with _db.engine.begin() as con:
+            con.exec_driver_sql("SET FOREIGN_KEY_CHECKS = 0")
+            for (name,) in con.exec_driver_sql("SHOW TABLES").fetchall():
+                con.exec_driver_sql(f"DROP TABLE `{name}`")
+            con.exec_driver_sql("SET FOREIGN_KEY_CHECKS = 1")
         _db.create_all()
         _server_schema_ready = True
         return
