@@ -124,7 +124,7 @@ def evaluate(outlet_id: int) -> dict:
     for key, cur in open_alerts.items():
         if cur.alert_type == "manual_shortage":
             # a reported shortage clears itself once that ingredient has been restocked or corrected upwards
-            if _restocked_since(outlet_id, cur.entity_id, cur.created_at):
+            if _restocked_since(outlet_id, cur):
                 cur.status, cur.open_key, cur.closed_at, cur.closed_reason = "closed", None, now, "restocked"
                 closed += 1
             continue
@@ -138,10 +138,20 @@ def evaluate(outlet_id: int) -> dict:
     return {"opened": opened, "closed": closed, "updated": updated, "open": len(desired)}
 
 
-def _restocked_since(outlet_id: int, ingredient_id, since) -> bool:
-    return db.session.query(StockMovement.id).filter(
-        StockMovement.outlet_id == outlet_id, StockMovement.ingredient_id == ingredient_id,
-        StockMovement.quantity > 0, StockMovement.created_at > since).first() is not None
+def _last_movement_id(outlet_id: int, ingredient_id) -> int:
+    return int(db.session.query(db.func.coalesce(db.func.max(StockMovement.id), 0)).filter(
+        StockMovement.outlet_id == outlet_id, StockMovement.ingredient_id == ingredient_id).scalar())
+
+
+def _restocked_since(outlet_id: int, alert: Alert) -> bool:
+    """A positive movement recorded after the report. Compared by movement id (always increasing), not by time:
+    MySQL and MariaDB keep DATETIME in whole seconds, so a report and a stock-in in the same second carry the same
+    timestamp. Alerts reported before 9 Oct 2026 have no stored id and fall back to the time comparison."""
+    q = db.session.query(StockMovement.id).filter(
+        StockMovement.outlet_id == outlet_id, StockMovement.ingredient_id == alert.entity_id, StockMovement.quantity > 0)
+    last_id = (alert.details or {}).get("last_movement_id")
+    q = q.filter(StockMovement.id > last_id) if isinstance(last_id, int) else q.filter(StockMovement.created_at > alert.created_at)
+    return q.first() is not None
 
 
 def report_shortage(outlet_id: int, data: dict, actor_id: int | None = None) -> dict:
@@ -154,9 +164,12 @@ def report_shortage(outlet_id: int, data: dict, actor_id: int | None = None) -> 
     ing = inv.get_ingredient(outlet_id, ing_id)
     key = f"manual_shortage:ingredient:{ing.id}"
     message = f"Kitchen reports a shortage of {ing.name}" + (f": {note}" if note else "")
-    details = {"note": note, "reported_by": actor_id}
     alert = Alert.query.filter_by(outlet_id=outlet_id, open_key=key).first()
     created = alert is None
+    # the restock check starts from the stock movements that existed at the first report (kept on a repeat report)
+    previous = (alert.details or {}).get("last_movement_id") if alert else None
+    details = {"note": note, "reported_by": actor_id,
+               "last_movement_id": previous if isinstance(previous, int) else _last_movement_id(outlet_id, ing.id)}
     if created:
         alert = Alert(outlet_id=outlet_id, alert_type="manual_shortage", severity="critical", entity_type="ingredient",
                       entity_id=ing.id, target_date=today(), message=message, details=details, status="open",
