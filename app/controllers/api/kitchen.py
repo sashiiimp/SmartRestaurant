@@ -123,3 +123,22 @@ def record_ingredient_usage():
 @roles_required("kitchen")
 def clear_ingredient_usage(usage_id):
     return ok(kit.clear_ingredient_usage(current_outlet_id(), usage_id, current_user.id))
+
+
+@bp.route("/kitchen/food-usage")
+@roles_required("admin", "kitchen")
+def get_food_usage():
+    return ok(kit.food_usage_for(current_outlet_id(), date_arg("date", today())))
+
+
+@bp.route("/kitchen/food-usage", methods=["POST"])
+@roles_required("kitchen")
+def record_food_usage():
+    result = kit.record_food_usage(current_outlet_id(), json_body(), current_user.id)
+    return ok(result, {"warnings": result["warnings"]}, status=201 if result["created"] else 200)
+
+
+@bp.route("/kitchen/food-usage/<int:usage_id>", methods=["DELETE"])
+@roles_required("kitchen")
+def clear_food_usage(usage_id):
+    return ok(kit.clear_food_usage(current_outlet_id(), usage_id, current_user.id))

@@ -202,6 +202,10 @@ Format: story, priority, traces, acceptance criteria (AC).
 *Covers: Food Preparation Management.*
 - Manager confirms the day's plan (one line per item), and each line moves planned, then in progress, then done.
 - Confirming a plan triggers ingredient requirement and shortage checks (K9).
+- *Built 9 Oct 2026 (feature branch, not yet deployed):* accepting or overriding a recommendation plans the item; the
+  first prepared quantity (or *Start*) puts it in progress; *Mark done* needs a prepared quantity above 0 and warns when
+  it differs from the plan; *Reopen* goes back to in progress. A finished item's plan cannot change until it is reopened.
+  Statuses are stored on the decision row (`recommendations.prep_status`). Tests PREP-1 to PREP-6.
 
 ### K5 Record prepared quantity (P1), FR8
 *Covers: Preparation Quantity Recording.*
@@ -209,7 +213,8 @@ Format: story, priority, traces, acceptance criteria (AC).
 - Validation per C4; the running total is visible immediately.
 
 ### K6 Record served/sold quantity (P1), FR8, FR2
-*Covers: Sales/Served Quantity Recording, Actual Food Usage Recording.*
+*Covers: Sales/Served Quantity Recording. (Until 9 Oct 2026 it also stood in for Actual Food Usage Recording; that
+function now has its own story, K14.)*
 - Manager records portions served/sold per item per day (single entry or end-of-day).
 - This writes the daily sales record used for training (source = `kitchen`), respecting the one-record-per-item-per-day rule (C4).
 - Served > prepared for the same day is allowed only with a warning (can happen due to leftovers or carry-over), and is flagged for review.
@@ -249,6 +254,15 @@ Format: story, priority, traces, acceptance criteria (AC).
 *Covers: Food Availability Management.*
 - Manager marks a menu item available or unavailable for the day.
 - (P3) The system suggests "unavailable" when ingredient stock cannot cover one batch.
+
+### K14 Actual food usage (added 9 Oct 2026), FR8
+*Covers: Actual Food Usage Recording.*
+- Manager records prepared portions used other than sold or wasted: staff meals, complimentary portions, tasting
+  samples, other. One figure per item, day and type; recording again replaces it; it can be cleared.
+- A daily balance per item shows prepared = served + wasted + other use + unaccounted; unaccounted appears once the
+  served figure is recorded, and a negative value (more used than prepared) is saved with a warning and flagged.
+- Other use never changes sales (the measure of demand that trains the forecast), stock or the forecast.
+- The administrator sees other use by type and item in Monitoring > Waste, with CSV. Tests USE-1 to USE-6.
 
 ---
 
@@ -407,7 +421,7 @@ These describe behaviour of the forecasting, recommendation and alert services. 
 
 **System Administrator (14):** System Dashboard A1 | User Account Management A2 | Role & Access Management A3 | Menu Management A4 | Recipe/BOM Management A5 | Restaurant Information Management A6 | System Settings & Alert Configuration A6, A7 | Sales & Revenue Monitoring A8 | Food Demand Forecast Monitoring A9 | Inventory Demand Forecast Monitoring A10 | Food Waste Monitoring A11 | Inventory Monitoring A10 | System Analytics A12 | System Reports A13
 
-**Food Production Manager (15):** Kitchen Dashboard K1 | Daily Order Management K10 | Pre-Order Management K10 | Food Demand Forecast K2 | Preparation Recommendations K3 | Food Preparation Management K4 | Preparation Quantity Recording K5 | Ingredient Requirements K9 | Ingredient Usage Recording K8 | Actual Food Usage Recording K6 | Sales/Served Quantity Recording K6 | Food Waste Recording K7 | Kitchen Stock Requests K11 | Food Availability Management K13 | Shortage Reporting K12
+**Food Production Manager (15):** Kitchen Dashboard K1 | Daily Order Management K10 | Pre-Order Management K10 | Food Demand Forecast K2 | Preparation Recommendations K3 | Food Preparation Management K4 | Preparation Quantity Recording K5 | Ingredient Requirements K9 | Ingredient Usage Recording K8 | Actual Food Usage Recording K14 | Sales/Served Quantity Recording K6 | Food Waste Recording K7 | Kitchen Stock Requests K11 | Food Availability Management K13 | Shortage Reporting K12
 
 **Inventory & Procurement Manager (18):** Inventory Dashboard I1 | Ingredient Management I2 | Stock Management I3 | Stock-In Recording I5 | Stock-Out Recording I6 | Stock Level Monitoring I3 | Minimum Stock Level Management I4 | Reorder Level Management I4 | Ingredient Demand Forecast I7 | Low-Stock Alerts I8 | Reorder Recommendations I9 | Supplier Management I10 | Purchase Order Management I11 | Expiry Tracking I12 | Inventory Wastage Recording I13 | Stock Adjustment Management I14 | Kitchen Stock Request Management I15 | Inventory Data Validation I16
 

@@ -3,10 +3,10 @@ from datetime import datetime
 from decimal import Decimal
 
 from app.extensions import db
-from app.models import (FoodWaste, Ingredient, IngredientUsage, MenuItem, Order, PreOrder, PreparationRecord,
+from app.models import (FoodUsage, FoodWaste, Ingredient, IngredientUsage, MenuItem, Order, PreOrder, PreparationRecord,
                         RecipeLine, Recommendation, SalesRecord)
 from app.models.base import utcnow
-from app.models.kitchen import WASTE_REASONS
+from app.models.kitchen import FOOD_USAGE_TYPES, WASTE_REASONS
 from app.models.sales import ORDER_STATUSES, PREORDER_STATUSES
 from app.services import audit
 from app.services import data_management_service as dm
@@ -48,6 +48,10 @@ def record_prepared(outlet_id: int, data: dict, actor_id: int | None = None) -> 
     item = dm.get_menu_item(outlet_id, item_id)
     db.session.add(PreparationRecord(outlet_id=outlet_id, menu_item_id=item.id, prep_date=day, quantity=qty,
                                      prepared_at=utcnow(), created_by=actor_id))
+    # K4: the first prepared quantity starts a planned item; a finished item stays done (the extra entry is a correction)
+    plan = Recommendation.query.filter_by(outlet_id=outlet_id, menu_item_id=item.id, target_date=day).first()
+    if plan is not None and plan.prep_status == "planned":
+        plan.prep_status, plan.prep_started_at = "in_progress", utcnow()
     db.session.commit()
     return {"menu_item_id": item.id, "date": day.isoformat(), "added": qty,
             "total_prepared": _prepared_total(outlet_id, item.id, day)}
@@ -350,6 +354,86 @@ def clear_ingredient_usage(outlet_id: int, usage_id: int, actor_id: int | None =
         raise NotFoundError("Usage record not found.")
     audit.record(outlet_id, actor_id, "usage.clear", "ingredient", u.ingredient_id,
                  {"date": u.usage_date.isoformat(), "quantity": float(u.quantity)})
+    db.session.delete(u)
+    db.session.commit()
+    return {"cleared": usage_id}
+
+
+# ---- K14: Actual Food Usage (staff meals, complimentary portions, samples, other) --------------------------
+def _other_use(outlet_id: int, day) -> dict:
+    """{menu_item_id: {usage_type: quantity}} for one day."""
+    out: dict = {}
+    for u in FoodUsage.query.filter_by(outlet_id=outlet_id, usage_date=day):
+        out.setdefault(u.menu_item_id, {})[u.usage_type] = u.quantity
+    return out
+
+
+def _balance_row(item: MenuItem, prepared: int, served: int | None, wasted: int, other: dict) -> dict:
+    """prepared = served + wasted + other use + unaccounted; unaccounted stays unknown until served is recorded."""
+    other_use = {t: int(other.get(t, 0)) for t in FOOD_USAGE_TYPES}
+    other_total = sum(other_use.values())
+    used = (served or 0) + wasted + other_total
+    return {"menu_item_id": item.id, "name": item.name, "prepared": prepared, "served": served, "wasted": wasted,
+            "other_use": other_use, "other_total": other_total,
+            "unaccounted": None if served is None else prepared - used,
+            "flags": ["used_more_than_prepared"] if used > prepared else []}
+
+
+def _balance_for(outlet_id: int, item: MenuItem, day) -> dict:
+    sale = SalesRecord.query.filter_by(outlet_id=outlet_id, menu_item_id=item.id, sale_date=day).first()
+    return _balance_row(item, _prepared_total(outlet_id, item.id, day), sale.quantity_sold if sale else None,
+                        _waste_total(outlet_id, item.id, day), _other_use(outlet_id, day).get(item.id, {}))
+
+
+def food_usage_for(outlet_id: int, day) -> dict:
+    """The day's recorded other use and, per active item, the balance against prepared, served and wasted."""
+    entries = (db.session.query(FoodUsage, MenuItem.name).join(MenuItem, MenuItem.id == FoodUsage.menu_item_id)
+               .filter(FoodUsage.outlet_id == outlet_id, FoodUsage.usage_date == day)
+               .order_by(MenuItem.name, FoodUsage.usage_type))
+    return {"date": day.isoformat(), "usage_types": list(FOOD_USAGE_TYPES),
+            "entries": [{"usage_id": u.id, "menu_item_id": u.menu_item_id, "item": name, "usage_type": u.usage_type,
+                         "quantity": u.quantity, "note": u.note} for u, name in entries],
+            "balance": [_balance_for(outlet_id, item, day) for item in dm.list_menu_items(outlet_id, active_only=True)]}
+
+
+def record_food_usage(outlet_id: int, data: dict, actor_id: int | None = None) -> dict:
+    """One figure per item, day and type; recording again replaces it. Saved with a warning when the day's use adds
+    up to more than was prepared, as served above prepared is (K6)."""
+    f = Fields(data)
+    day = f.date("date", not_future=True, default=today())
+    item_id = f.integer("menu_item_id", gt=0)
+    usage_type = f.choice("usage_type", FOOD_USAGE_TYPES)
+    qty = f.portions("quantity", gt=0)
+    note = f.text("note", required=False, max_len=255)
+    f.check()
+    item = dm.get_menu_item(outlet_id, item_id)
+    u = FoodUsage.query.filter_by(outlet_id=outlet_id, menu_item_id=item.id, usage_date=day, usage_type=usage_type).first()
+    created = u is None
+    if created:
+        u = FoodUsage(outlet_id=outlet_id, menu_item_id=item.id, usage_date=day, usage_type=usage_type)
+        db.session.add(u)
+    u.quantity, u.note, u.created_by = qty, note, actor_id
+    db.session.flush()
+    audit.record(outlet_id, actor_id, "food_usage.record", "menu_item", item.id,
+                 {"date": day.isoformat(), "type": usage_type, "quantity": qty, "replaced": not created})
+    b = _balance_for(outlet_id, item, day)
+    warnings = []
+    if b["flags"]:
+        parts = ([f"served ({b['served']})"] if b["served"] is not None else []) + [f"waste ({b['wasted']})"]
+        used = (b["served"] or 0) + b["wasted"] + b["other_total"]
+        warnings.append(f"{item.name}: {', '.join(parts)} and other use ({b['other_total']}) add up to {used}, "
+                        f"more than the {b['prepared']} prepared.")
+    db.session.commit()
+    return {"usage_id": u.id, "menu_item_id": item.id, "item": item.name, "date": day.isoformat(),
+            "usage_type": usage_type, "quantity": qty, "note": note, "created": created, "warnings": warnings}
+
+
+def clear_food_usage(outlet_id: int, usage_id: int, actor_id: int | None = None) -> dict:
+    u = FoodUsage.query.filter_by(id=usage_id, outlet_id=outlet_id).first()
+    if not u:
+        raise NotFoundError("Food usage record not found.")
+    audit.record(outlet_id, actor_id, "food_usage.clear", "menu_item", u.menu_item_id,
+                 {"date": u.usage_date.isoformat(), "type": u.usage_type, "quantity": u.quantity})
     db.session.delete(u)
     db.session.commit()
     return {"cleared": usage_id}

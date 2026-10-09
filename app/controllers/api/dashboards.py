@@ -54,6 +54,19 @@ def report_waste():
     return ok(out)
 
 
+@bp.route("/reports/food-usage")
+@roles_required("admin")
+def report_food_usage():
+    end = date_arg("to", today() - timedelta(days=1))
+    out = dash.food_usage_report(current_outlet_id(), date_arg("from", end - timedelta(days=29)), end)
+    if request.args.get("format") == "csv":
+        return csv_response(f"food_usage_{out['from']}_{out['to']}.csv",
+                            ["item", "staff_meal", "complimentary", "sample", "other", "total"],
+                            [[r["item"], r["staff_meal"], r["complimentary"], r["sample"], r["other"], r["total"]]
+                             for r in out["by_item"]])
+    return ok(out)
+
+
 @bp.route("/reports/stock-levels")
 @roles_required("admin")
 def report_stock_levels():

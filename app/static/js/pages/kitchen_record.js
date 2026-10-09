@@ -5,6 +5,8 @@ SR.createApp({
       served: {}, savingServed: false, servedErrors: {}, conflicts: null, servedMessages: [],
       waste: { menu_item_id: '', quantity: '', reason: 'overproduction', note: '' }, wasteErrors: {}, savingWaste: false,
       usage: null, use: {}, usageErrors: {}, allIngredients: [], otherIng: '',
+      foodUsage: null, usageTypes: ['staff_meal', 'complimentary', 'sample', 'other'],
+      food: { menu_item_id: '', usage_type: 'staff_meal', quantity: '', note: '' }, foodErrors: {}, savingFood: false,
     };
   },
   async mounted() {
@@ -23,8 +25,30 @@ SR.createApp({
         this.served = {};
         data.items.forEach(i => { this.served[i.menu_item_id] = i.served === null || i.served === undefined ? '' : String(i.served); });
         if (!this.waste.menu_item_id && data.items.length) this.waste.menu_item_id = data.items[0].menu_item_id;
+        if (!this.food.menu_item_id && data.items.length) this.food.menu_item_id = data.items[0].menu_item_id;
       } catch (e) { this.error = ui.errorText(e); } finally { this.loading = false; }
       await this.loadUsage();
+      await this.loadFood();
+    },
+    usageLabel(t) { return { staff_meal: 'Staff meal', complimentary: 'Complimentary', sample: 'Tasting sample', other: 'Other' }[t] || t; },
+    async loadFood() {
+      try { this.foodUsage = (await api.get('/kitchen/food-usage', { date: this.date })).data; }
+      catch (e) { this.foodUsage = null; ui.toast(ui.errorText(e), 'danger'); }
+    },
+    async saveFood() {
+      this.savingFood = true; this.foodErrors = {};
+      try {
+        const res = await api.post('/kitchen/food-usage', { date: this.date, ...this.food, note: this.food.note || undefined });
+        ui.toast(res.data.item + ': ' + this.usageLabel(res.data.usage_type).toLowerCase() + ' ' + res.data.quantity + ' recorded.');
+        if (res.meta && res.meta.warnings && res.meta.warnings.length) ui.toast(res.meta.warnings[0], 'warning');
+        this.food.quantity = ''; this.food.note = '';
+        await this.loadFood();
+      } catch (e) { this.foodErrors = e.fields || {}; if (!Object.keys(this.foodErrors).length) ui.toast(ui.errorText(e), 'danger'); }
+      finally { this.savingFood = false; }
+    },
+    async clearFood(e) {
+      try { await api.delete('/kitchen/food-usage/' + e.usage_id); ui.toast(e.item + ': ' + this.usageLabel(e.usage_type).toLowerCase() + ' cleared.'); await this.loadFood(); }
+      catch (err) { ui.toast(ui.errorText(err), 'danger'); }
     },
     async loadUsage() {
       try {

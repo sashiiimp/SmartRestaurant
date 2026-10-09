@@ -324,3 +324,20 @@ unchanged), and the report edits were committed (`9da3145`).
 Not changed, for the team to decide: the fixed 10% safety buffer (the supplement shows the trade-off), the reorder
 lead time capped at the 7-day horizon, stock that expires within the lead time counted as usable, and the
 school-vacation dates. Not run: the perf tests and `tests/ui/smoke.py` (both write to the database).
+
+## 17. Preparation workflow and Actual Food Usage (9 Oct 2026, feature branch `feature/m2-differences`, not deployed)
+
+Built in an isolated clone (`/root/smartrest-feature`) after the proposal-versus-implementation audit, to close the two
+partly implemented proposal functions: Food Preparation Management (K4) and Actual Food Usage Recording (K14).
+Nothing was deployed; the live demo, its database and models were not changed.
+
+| Check | Result |
+|---|---|
+| Fast suite (`pytest -q -m "not mysql"`, SQLite, no `.env`) | **357 passed** (331 before plus 26 new: `test_prep_workflow.py` 11, `test_food_usage.py` 13 executions, `test_prep_and_food_usage_api.py` 2), 2 skipped (perf); services and ML coverage 95% |
+| MariaDB tests (`-m mysql`, database `smartrest_test`) | **12 passed** (10 before plus 2 new constraint tests) |
+| Migration rehearsal on a copy of the live database (backup of 9 Oct 14:32 restored into a temporary `test_migr_*` database) | upgrade `4c1e5e7a9b2d` -> `7d3e9a1c5b20` -> `9b4f2c7e1d63`: new columns, table and three CHECK constraints present, row counts of all 30 existing tables unchanged; downgrade back to `4c1e5e7a9b2d`: columns and table gone, row counts unchanged; upgrade again: fine |
+| Browser walkthrough on that copy (Playwright: Chromium, Firefox, WebKit) | accept, first prepared entry starts preparation, mark done with the below-plan warning, Done badge and Reopen; other food use recorded and shown in the daily balance; dashboard hint "x of y items done"; admin Monitoring > Waste shows other food use; no page-level sideways scroll at 1280 and 360 px; **no console errors** in any engine |
+
+Defects found and fixed during the walkthrough: the Unaccounted column was cut off at 1280 px (the balance table now
+has the full width) and Accept and Override still showed on a finished item (now hidden until it is reopened).
+

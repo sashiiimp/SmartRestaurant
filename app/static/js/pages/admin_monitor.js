@@ -5,7 +5,7 @@ SR.createApp({
       tab: 'sales', from: ui.addDays(end, -27), to: end, groupBy: 'day', itemId: '', ingId: '', mtype: '', demandStart: ui.todayIso(),
       tabs: [['sales', 'Sales and revenue'], ['demand', 'Demand forecast'], ['forecast', 'Forecast accuracy'], ['analytics', 'Analytics'], ['inventory', 'Inventory'], ['movements', 'Stock movements'], ['waste', 'Waste']],
       shortGroup: { 'Public holiday': 'Public', 'Poya day': 'Poya', 'School holiday': 'School', 'Ordinary day': 'Ordinary', 'Promotion running': 'Promotion', 'No promotion': 'No promo' },
-      items: [], ingredients: [], sales: null, acc: null, waste: null, trend: null, moves: null, an: null, demand: { rows: [], meta: {} },
+      items: [], ingredients: [], sales: null, acc: null, waste: null, usage: null, trend: null, moves: null, an: null, demand: { rows: [], meta: {} },
       loading: false, error: null, ui,
     };
   },
@@ -57,7 +57,10 @@ SR.createApp({
         else if (this.tab === 'analytics') this.an = (await api.get('/reports/analytics', p)).data;
         else if (this.tab === 'inventory') this.trend = this.ingId ? (await api.get('/reports/inventory-trend', { ...p, ingredient_id: this.ingId })).data : null;
         else if (this.tab === 'movements') { const r = await api.get('/reports/movements', { ...p, ingredient_id: this.ingId, type: this.mtype }); this.moves = { data: r.data, meta: r.meta }; }
-        else this.waste = (await api.get('/reports/waste', { ...p, group_by: this.groupBy })).data;
+        else {
+          this.waste = (await api.get('/reports/waste', { ...p, group_by: this.groupBy })).data;
+          this.usage = (await api.get('/reports/food-usage', p)).data;
+        }
       } catch (e) { this.error = ui.errorText(e); } finally { this.loading = false; }
     },
     setTab(t) {

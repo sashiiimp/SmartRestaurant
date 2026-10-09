@@ -22,7 +22,7 @@ Not chasing coverage numbers for controllers and templates. **Target: at least 8
 
 | Item | Choice |
 |---|---|
-| Runner | `pytest`, `pytest-cov`. Flask test client for API and page tests. No browser automation (cut for time). |
+| Runner | `pytest`, `pytest-cov`. Flask test client for API and page tests. Browser walkthroughs with Playwright (`tests/ui/smoke.py`, added after this plan was first written) in Chromium, Firefox and WebKit. |
 | Unit tests | SQLite in-memory (fast). Marker: none. |
 | Integration and API tests | MariaDB/MySQL database `smartrest_test` (`TEST_DATABASE_URL` in `.env`). Marker `@pytest.mark.mysql`. Needed for `FOR UPDATE`, constraint behaviour, concurrency. |
 | Clock | `SMARTREST_TODAY` env var overrides `utils.dates.today()` so tests and the demo are deterministic. Tests set it through a fixture. |
@@ -187,6 +187,30 @@ Tier column: which tier the test gates. M1 tests must pass before the demo.
 | ML-10 | Accuracy view counts only forecasts whose run `as_of_date <= target_date` | M2 |
 | ML-11 | **Report check** (run once, recorded): hold-out MAE of the chosen model vs `naive_lag7`, plus WAPE, bias, `oracle_mae` | M1 |
 
+### 5.4a Preparation workflow and actual food usage (added 9 Oct 2026)
+
+Hand-worked values: Chicken Burger forecast 47.3, buffer 10%, batch 6 -> plan 54 (table 4.1, P1). Balance example:
+prepared 40 + 20 = 60, served 48, waste 5, staff meals 3, complimentary 2 -> other use 5, unaccounted **2**; with served
+58 instead, unaccounted is **-8** and the row is flagged.
+
+| ID | Test | Tier |
+|---|---|---|
+| PREP-1 | An item without a decision has no preparation status; *start* is refused (`no_plan`) | M2 |
+| PREP-2 | Accept plans the item (`planned`, final 54) | M2 |
+| PREP-3 | The first prepared entry starts it (`in_progress`); 24 + 30 = 54 prepared | M2 |
+| PREP-4 | Start then done with 54 of 54: no warning, done time and audit entries written | M2 |
+| PREP-5 | Done with 48 of 54 warns "6 below"; after reopen and an override to 42, "6 above"; done needs a prepared quantity | M2 |
+| PREP-6 | Invalid transitions are 409; a done item's plan cannot change (`prep_done`) until reopened; future dates refused | M2 |
+| USE-1 | Daily balance equals the hand calculation above (unaccounted 2) | M2 |
+| USE-2 | Use above prepared (unaccounted -8) is saved with the warning and the `used_more_than_prepared` flag | M2 |
+| USE-3 | Before served is recorded, unaccounted is unknown; waste plus other use above prepared still warns | M2 |
+| USE-4 | One figure per item, day and type: recording again replaces it (3 then 4 -> one row of 4), both audited | M2 |
+| USE-5 | Quantity 0, -2, 1.5, 10001, an unknown type and a future date are 422 | M2 |
+| USE-6 | Other use never changes the sales record (still 48); the daily summary shows other use and unaccounted | M2 |
+
+MariaDB: `prep_status` outside the three steps and a second figure for the same item, day and type are rejected by
+the database (`tests/integration/test_schema.py`).
+
 ### 5.5 Architecture and data model
 
 | ID | Test | Tier |
@@ -263,4 +287,4 @@ There is no pilot restaurant and no QA team. The builder runs each script on a c
 
 ## 11. Explicitly not done
 
-Browser automation, load testing beyond section 6, penetration testing, accessibility audit with a screen reader, pilot-restaurant UAT, SUS scoring, real-data validation of forecast accuracy. These go in the report's limitations section.
+Load testing beyond section 6, penetration testing, accessibility audit with a screen reader, pilot-restaurant UAT, SUS scoring (the usability kit exists; sessions not yet run), and validation of forecast accuracy on real *Sri Lankan* restaurant data. (Browser automation has since been added, and the forecasting method was validated offline on external real datasets; see `ML_EVALUATION_REAL_DATA.md` on the staging branch.) These go in the report's limitations section.

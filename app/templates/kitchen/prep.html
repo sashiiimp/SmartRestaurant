@@ -39,7 +39,7 @@
               <span v-if="it.status === 'accepted' && it.final_qty !== it.recommended_qty" class="text-warning"> (recommendation is now [[ it.recommended_qty ]])</span>
               <div v-if="it.override_reason">Reason: [[ it.override_reason ]]</div>
             </div>
-            <div v-if="!isPast" class="d-flex gap-2 mb-2">
+            <div v-if="!isPast && it.prep_status !== 'done'" class="d-flex gap-2 mb-2">
               <button class="btn btn-success btn-lg-touch flex-fill" type="button" :disabled="st(it.menu_item_id).busy" @click="decide(it, 'accept')">Accept [[ it.recommended_qty ]]</button>
               <button class="btn btn-outline-secondary btn-lg-touch flex-fill" type="button" @click="st(it.menu_item_id).overriding = !st(it.menu_item_id).overriding">Override</button>
             </div>
@@ -58,7 +58,19 @@
             <button class="btn btn-sm" :class="it.is_available ? 'btn-outline-danger' : 'btn-outline-success'" type="button" :disabled="st(it.menu_item_id).busy" @click="toggleAvailable(it)">[[ it.is_available ? 'Mark unavailable' : 'Mark available' ]]</button>
           </div>
           <div class="border-top pt-2 mt-2">
-            <div class="d-flex justify-content-between small"><span>Prepared so far</span><strong>[[ it.prepared_so_far ]]</strong></div>
+            <div class="d-flex justify-content-between align-items-center small">
+              <span>Prepared so far</span>
+              <span><strong>[[ it.prepared_so_far ]]</strong><span v-if="it.final_qty !== null"> of [[ it.final_qty ]]</span>
+                <sr-status-badge v-if="it.prep_status" class="ms-1" :status="it.prep_status"></sr-status-badge></span>
+            </div>
+            <div v-if="it.prep_status" class="progress mt-1" style="height: 6px" role="progressbar" :aria-label="'Preparation progress for ' + it.name"
+                 :aria-valuenow="it.prepared_so_far" aria-valuemin="0" :aria-valuemax="it.final_qty">
+              <div class="progress-bar" :class="it.prep_status === 'done' ? 'bg-success' : ''" :style="{ width: progress(it) + '%' }"></div></div>
+            <div v-if="it.prep_status && !isFuture" class="d-flex gap-2 mt-2">
+              <button v-if="it.prep_status === 'planned'" class="btn btn-sm btn-outline-primary" type="button" :disabled="st(it.menu_item_id).busy" @click="prepStatus(it, 'start')">Start</button>
+              <button v-if="it.prep_status !== 'done'" class="btn btn-sm btn-outline-success" type="button" :disabled="st(it.menu_item_id).busy" @click="prepStatus(it, 'done')">Mark done</button>
+              <button v-if="it.prep_status === 'done'" class="btn btn-sm btn-outline-secondary" type="button" :disabled="st(it.menu_item_id).busy" @click="prepStatus(it, 'reopen')">Reopen</button>
+            </div>
             <div class="input-group mt-1">
               <input class="form-control" inputmode="numeric" placeholder="Quantity" :aria-label="'Add prepared quantity for ' + it.name" v-model="st(it.menu_item_id).add" @keyup.enter="addPrepared(it)">
               <button class="btn btn-outline-primary btn-lg-touch" type="button" :disabled="st(it.menu_item_id).busy" @click="addPrepared(it)">+ Add</button>

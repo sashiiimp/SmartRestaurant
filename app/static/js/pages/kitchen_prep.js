@@ -5,6 +5,7 @@ SR.createApp({
   computed: {
     items() { return this.plan ? this.plan.items : []; },
     isPast() { return this.date < ui.todayIso(); },
+    isFuture() { return this.date > ui.todayIso(); },
   },
   async mounted() { await this.load(); },
   methods: {
@@ -41,6 +42,20 @@ SR.createApp({
         s.add = '';
         await this.refresh();
         ui.toast(item.name + ': ' + data.total_prepared + ' prepared so far');
+      } catch (e) { s.errors = e.fields || {}; s.message = ui.errorText(e); } finally { s.busy = false; }
+    },
+    progress(item) {
+      if (!item.final_qty) return item.prepared_so_far > 0 ? 100 : 0;
+      return Math.min(100, Math.round(100 * item.prepared_so_far / item.final_qty));
+    },
+    async prepStatus(item, action) {
+      const s = this.st(item.menu_item_id); s.busy = true; s.errors = {}; s.message = null;
+      try {
+        const res = await api.post('/recommendations/prep/status', { menu_item_id: item.menu_item_id, date: this.date, action });
+        await this.refresh();
+        const label = { start: 'started', done: 'marked done', reopen: 'reopened' }[action];
+        ui.toast(item.name + ': ' + label + '.');
+        if (res.meta && res.meta.warnings && res.meta.warnings.length) ui.toast(res.meta.warnings[0], 'warning');
       } catch (e) { s.errors = e.fields || {}; s.message = ui.errorText(e); } finally { s.busy = false; }
     },
     async toggleAvailable(item) {

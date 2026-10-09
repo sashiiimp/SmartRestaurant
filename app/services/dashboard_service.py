@@ -4,7 +4,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 from app.extensions import db
-from app.models import (AuditLog, FoodWaste, Holiday, Ingredient, MenuItem, PreparationRecord, Promotion, SalesRecord,
+from app.models import (AuditLog, FoodUsage, FoodWaste, Holiday, Ingredient, MenuItem, PreparationRecord, Promotion, SalesRecord,
                         StockBatch, StockMovement)
 from app.services import alert_service
 from app.services import data_management_service as dm
@@ -12,26 +12,32 @@ from app.services import forecasting_service as fs
 from app.services import inventory_service as inv
 from app.services import recommendation_service as rec
 from app.models.inventory import MOVEMENT_TYPES
+from app.models.kitchen import FOOD_USAGE_TYPES
 from app.services.errors import ValidationError
 from app.utils.dates import today
 
 
 def kitchen_daily_summary(outlet_id: int, day: date) -> dict:
-    """Per item: forecast, recommended, final, prepared, served, wasted (S6, K1, K5-K7)."""
+    """Per item: forecast, recommended, final, prepared, served, wasted, other use and what is unaccounted
+    (S6, K1, K5-K7, K14)."""
     plan = rec.get_prep_plan(outlet_id, day)
     waste = {i: int(q) for i, q in db.session.query(FoodWaste.menu_item_id, db.func.sum(FoodWaste.quantity)).filter(
         FoodWaste.outlet_id == outlet_id, FoodWaste.waste_date == day).group_by(FoodWaste.menu_item_id)}
+    other = {i: int(q) for i, q in db.session.query(FoodUsage.menu_item_id, db.func.sum(FoodUsage.quantity)).filter(
+        FoodUsage.outlet_id == outlet_id, FoodUsage.usage_date == day).group_by(FoodUsage.menu_item_id)}
     rows = []
     for r in plan["items"]:
         flags = []
         if r["served_so_far"] is not None and r["served_so_far"] > r["prepared_so_far"]:
             flags.append("served_exceeds_prepared")
-        wasted = waste.get(r["menu_item_id"], 0)
+        wasted, used_other = waste.get(r["menu_item_id"], 0), other.get(r["menu_item_id"], 0)
         if wasted > r["prepared_so_far"]:
             flags.append("waste_exceeds_prepared")
+        unaccounted = None if r["served_so_far"] is None else r["prepared_so_far"] - r["served_so_far"] - wasted - used_other
         rows.append({"menu_item_id": r["menu_item_id"], "name": r["name"], "forecast_qty": r["forecast_qty"],
                      "recommended_qty": r["recommended_qty"], "final_qty": r["final_qty"], "status": r["status"],
-                     "prepared": r["prepared_so_far"], "served": r["served_so_far"], "wasted": wasted, "flags": flags,
+                     "prep_status": r["prep_status"], "prepared": r["prepared_so_far"], "served": r["served_so_far"], "wasted": wasted,
+                     "other_use": used_other, "unaccounted": unaccounted, "flags": flags,
                      "is_available": r["is_available"]})
     return {"date": day.isoformat(), "items": rows}
 
@@ -47,6 +53,8 @@ def kitchen_dashboard(outlet_id: int, day: date, role: str = "kitchen") -> dict:
     return {"date": day.isoformat(),
             "tiles": {"items_to_prepare": sum(1 for r in rows if (r["recommended_qty"] or 0) > 0),
                       "planned_total": planned, "prepared_total": sum(r["prepared"] for r in rows),
+                      "items_planned": sum(1 for r in rows if r["prep_status"]),
+                      "items_done": sum(1 for r in rows if r["prep_status"] == "done"),
                       "shortage_count": len(shorts), "open_alerts": len(alerts["rows"])},
             "plan": rows, "shortages": shorts, "cannot_compute": reqs["cannot_compute"], "alerts": alerts["rows"][:8]}
 
@@ -178,6 +186,25 @@ def admin_dashboard(outlet_id: int, range_days: int = 7) -> dict:
             "last_run": last_run[0] if last_run else None,
             "recent_activity": [{"time": a.created_at.isoformat() + "Z", "action": a.action, "entity": a.entity_type,
                                  "entity_id": a.entity_id} for a in recent],
+            "data_source": settings_label(outlet_id)}
+
+
+def food_usage_report(outlet_id: int, start: date, end: date) -> dict:
+    """K14 / A11: other food use (staff meals, complimentary, samples, other) in a period, by type and by item."""
+    _check_range(start, end, "day")
+    q = (db.session.query(FoodUsage.usage_type, MenuItem.name, db.func.sum(FoodUsage.quantity))
+         .join(MenuItem, MenuItem.id == FoodUsage.menu_item_id)
+         .filter(FoodUsage.outlet_id == outlet_id, FoodUsage.usage_date >= start, FoodUsage.usage_date <= end)
+         .group_by(FoodUsage.usage_type, MenuItem.name))
+    by_type = {t: 0 for t in FOOD_USAGE_TYPES}
+    by_item: dict = {}
+    for usage_type, name, qty in q:
+        by_type[usage_type] += int(qty)
+        row = by_item.setdefault(name, {"item": name, **{t: 0 for t in FOOD_USAGE_TYPES}, "total": 0})
+        row[usage_type] += int(qty)
+        row["total"] += int(qty)
+    return {"from": start.isoformat(), "to": end.isoformat(), "by_type": by_type, "total": sum(by_type.values()),
+            "by_item": sorted(by_item.values(), key=lambda r: (-r["total"], r["item"])),
             "data_source": settings_label(outlet_id)}
 
 

@@ -11,6 +11,7 @@ ALERT_TYPES = (
 )
 SEVERITIES = ("info", "warning", "critical")
 ALERT_STATUSES = ("open", "acknowledged", "closed")
+PREP_STATUSES = ("planned", "in_progress", "done")
 
 
 class Setting(OutletScopedMixin, db.Model):
@@ -100,6 +101,7 @@ class Recommendation(OutletScopedMixin, TimestampMixin, db.Model):
         check("status", in_list("status", ("accepted", "overridden"))),
         check("reason", "status <> 'overridden' OR override_reason IS NOT NULL"),
         check("final", "final_qty >= 0"),
+        check("prep_status", in_list("prep_status", PREP_STATUSES)),
     )
     id = db.Column(db.Integer, primary_key=True)
     menu_item_id = db.Column(db.Integer, db.ForeignKey("menu_items.id"), nullable=False)
@@ -115,6 +117,11 @@ class Recommendation(OutletScopedMixin, TimestampMixin, db.Model):
     override_reason = db.Column(db.String(255))
     decided_by = db.Column(db.Integer, db.ForeignKey("users.id"))
     decided_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+    # Food Preparation Management (K4): planned -> in_progress -> done, kept on the decision row (one per item and day)
+    prep_status = db.Column(db.String(20), nullable=False, default="planned", server_default="planned")
+    prep_started_at = db.Column(db.DateTime)
+    prep_done_at = db.Column(db.DateTime)
+    prep_done_by = db.Column(db.Integer, db.ForeignKey("users.id"))
 
 
 class Alert(OutletScopedMixin, db.Model):

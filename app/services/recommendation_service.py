@@ -10,7 +10,7 @@ from app.services import audit, settings
 from app.services import data_management_service as dm
 from app.services import forecasting_service as fs
 from app.services import inventory_service as inv
-from app.services.errors import NotFoundError, ValidationError
+from app.services.errors import ConflictError, NotFoundError, ValidationError
 from app.services.validation import Fields
 from app.utils.dates import today
 
@@ -70,6 +70,7 @@ def get_prep_plan(outlet_id: int, day: date) -> dict:
             "status": status, "final_qty": d.final_qty if d else None,
             "override_reason": d.override_reason if d else None,
             "prepared_so_far": prepared.get(item.id, 0), "served_so_far": served.get(item.id),
+            "prep_status": d.prep_status if d else None,
         })
     return {"date": day.isoformat(), "buffer_pct": float(buffer_pct),
             "model": f"{active.version_label} ({active.algorithm})" if active else None, "items": rows}
@@ -106,6 +107,11 @@ def decide(outlet_id: int, data: dict, actor_id: int | None = None) -> dict:
             warnings.append(f"The quantity is below confirmed pre-orders ({pre_q}).")
     status = "accepted" if action == "accept" else "overridden"
     rec = Recommendation.query.filter_by(outlet_id=outlet_id, menu_item_id=item.id, target_date=day).first()
+    if rec is not None and rec.prep_status == "done":
+        raise ConflictError("Preparation of this item is marked done. Reopen it first to change the plan.",
+                            code="prep_done")
+    if rec is not None and rec.prep_status == "in_progress":
+        warnings.append(f"Preparation has already started ({_prepared(outlet_id, item.id, day)} prepared so far).")
     if rec is None:
         rec = Recommendation(outlet_id=outlet_id, menu_item_id=item.id, target_date=day)
         db.session.add(rec)
@@ -118,6 +124,54 @@ def decide(outlet_id: int, data: dict, actor_id: int | None = None) -> dict:
     db.session.commit()
     return {"menu_item_id": item.id, "date": day.isoformat(), "status": status, "recommended_qty": recommended,
             "final_qty": final, "override_reason": reason, "warnings": warnings}
+
+
+# ---- K4: preparation workflow (planned -> in_progress -> done) -------------------------------------------
+PREP_TRANSITIONS = {"start": ("planned",), "done": ("planned", "in_progress"), "reopen": ("done",)}
+
+
+def _prepared(outlet_id: int, item_id: int, day: date) -> int:
+    return int(db.session.query(db.func.coalesce(db.func.sum(PreparationRecord.quantity), 0)).filter(
+        PreparationRecord.outlet_id == outlet_id, PreparationRecord.menu_item_id == item_id,
+        PreparationRecord.prep_date == day).scalar())
+
+
+def set_prep_status(outlet_id: int, data: dict, actor_id: int | None = None) -> dict:
+    """Start, finish or reopen the preparation of one planned item on one day. Recording a prepared quantity also
+    starts it (kitchen_service.record_prepared), so "start" is only needed to signal work before the first entry."""
+    f = Fields(data)
+    item_id = f.integer("menu_item_id", gt=0)
+    day = f.date("date", not_future=True)
+    action = f.choice("action", tuple(PREP_TRANSITIONS))
+    f.check()
+    item = dm.get_menu_item(outlet_id, item_id)
+    rec = Recommendation.query.filter_by(outlet_id=outlet_id, menu_item_id=item.id, target_date=day).first()
+    if rec is None:
+        raise ValidationError("Accept or override the plan for this item first.",
+                              {"menu_item_id": "has no plan for this date"}, code="no_plan")
+    if rec.prep_status not in PREP_TRANSITIONS[action]:
+        raise ConflictError(f"Cannot {action} preparation that is {rec.prep_status.replace('_', ' ')}.",
+                            code="invalid_transition")
+    prepared, warnings = _prepared(outlet_id, item.id, day), []
+    now = utcnow()
+    if action == "start":
+        rec.prep_status, rec.prep_started_at = "in_progress", now
+    elif action == "done":
+        if prepared <= 0:
+            raise ValidationError("Please fix the highlighted fields.",
+                                  {"quantity": "record the prepared quantity before marking it done"})
+        if prepared != rec.final_qty:
+            side = "below" if prepared < rec.final_qty else "above"
+            warnings.append(f"Prepared ({prepared}) is {abs(rec.final_qty - prepared)} {side} the plan ({rec.final_qty}).")
+        rec.prep_status, rec.prep_done_at, rec.prep_done_by = "done", now, actor_id
+        rec.prep_started_at = rec.prep_started_at or now
+    else:
+        rec.prep_status, rec.prep_done_at, rec.prep_done_by = "in_progress", None, None
+    audit.record(outlet_id, actor_id, f"prep.{action}", "menu_item", item.id,
+                 {"date": day.isoformat(), "prepared": prepared, "final": rec.final_qty})
+    db.session.commit()
+    return {"menu_item_id": item.id, "date": day.isoformat(), "prep_status": rec.prep_status, "prepared": prepared,
+            "final_qty": rec.final_qty, "warnings": warnings}
 
 
 # ---- B2 / B3: ingredient requirements, ingredient forecast, reorder ------------------------------

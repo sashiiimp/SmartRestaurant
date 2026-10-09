@@ -106,7 +106,15 @@
       <h2 class="h6 mt-3">Ingredient wastage (stock)</h2>
       <sr-empty v-if="!waste.ingredient.by_ingredient.length" message="No ingredient wastage recorded in this period."></sr-empty>
       <table v-else class="table table-sm" style="max-width: 40rem"><thead><tr><th>Ingredient</th><th class="text-end">Quantity</th><th class="text-end">Cost</th></tr></thead><tbody><tr v-for="i in waste.ingredient.by_ingredient" :key="i.ingredient"><td>[[ i.ingredient ]]</td><td class="text-end">[[ ui.qty(i.quantity, i.unit) ]]</td><td class="text-end">[[ ui.money(i.value) ]]</td></tr></tbody></table>
-      <div class="small text-muted">Food waste and ingredient wastage are separate records. Data source: [[ waste.data_source ]].</div>
+      <h2 class="h6 mt-3">Other food use (not sold, not wasted)</h2>
+      <sr-empty v-if="!usage || !usage.total" message="No staff meals, complimentary portions or samples recorded in this period."></sr-empty>
+      <template v-else>
+        <div class="small mb-2">Staff meals [[ usage.by_type.staff_meal ]] &middot; complimentary [[ usage.by_type.complimentary ]] &middot; samples [[ usage.by_type.sample ]] &middot; other [[ usage.by_type.other ]] &middot; total [[ usage.total ]] portions
+          <a class="ms-2" :href="'/api/v1/reports/food-usage?format=csv&from=' + from + '&to=' + to">CSV</a></div>
+        <table class="table table-sm" style="max-width: 40rem"><thead><tr><th>Item</th><th class="text-end">Staff meals</th><th class="text-end">Complimentary</th><th class="text-end">Samples</th><th class="text-end">Other</th><th class="text-end">Total</th></tr></thead>
+          <tbody><tr v-for="i in usage.by_item" :key="i.item"><td>[[ i.item ]]</td><td class="text-end">[[ i.staff_meal ]]</td><td class="text-end">[[ i.complimentary ]]</td><td class="text-end">[[ i.sample ]]</td><td class="text-end">[[ i.other ]]</td><td class="text-end">[[ i.total ]]</td></tr></tbody></table>
+      </template>
+      <div class="small text-muted">Food waste, ingredient wastage and other food use are separate records. Data source: [[ waste.data_source ]].</div>
     </div>
   </template>
 </div>

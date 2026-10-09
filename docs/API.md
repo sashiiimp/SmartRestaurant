@@ -131,13 +131,14 @@ Abbreviations: **A** admin, **K** kitchen, **I** inventory. **(R)** means read-o
 | Method and path | Roles | Tier | Story | Notes |
 |---|---|---|---|---|
 | `GET /recommendations/prep?date=` | A(R) K | M1 | K3, S2 | one row per active item, computed live |
-| `POST /recommendations/prep/decisions` | K | M1 | K3 | `{menu_item_id, date, action: "accept"\|"override", final_qty?, reason?}`; `override` needs `final_qty` and `reason` |
+| `POST /recommendations/prep/decisions` | K | M1 | K3 | `{menu_item_id, date, action: "accept"\|"override", final_qty?, reason?}`; `override` needs `final_qty` and `reason`. A decision sets `prep_status` to `planned`; once preparation has started the change is saved with a warning; once it is `done` the plan cannot change (409 `prep_done`) until it is reopened |
+| `POST /recommendations/prep/status` | K | M2 (added 9 Oct 2026) | K4 | `{menu_item_id, date, action: "start"\|"done"\|"reopen"}`. Preparation workflow: `planned` -> `in_progress` -> `done`; `reopen` goes back from `done` to `in_progress`. Needs a decision for that item and date (422 `no_plan`); the date cannot be in the future; `done` needs a prepared quantity above 0 and returns `warnings` when prepared differs from the plan; any other transition is 409 `invalid_transition`. Recording the first prepared quantity starts preparation automatically |
 | `GET /recommendations/requirements?date=` | A(R) K I | M1 | K9, S3 | requirements and shortage flags for that day's plan |
 | `GET /recommendations/ingredient-forecast?from=&days=7` | A(R) I | M1 | I7 | per ingredient per day; `days` 1 to 31; `items_without_forecast` names menu items with no forecast on some days (their demand is missing) |
 | `GET /recommendations/reorder` | A(R) I | M1 | I9 | rows with the numbers behind each suggestion; `meta.items_without_forecast` names menu items with no forecast on some of the 7 days, whose demand is therefore missing from the quantities |
 | `POST /kitchen/prepared` | K | M1 | K5 | `{menu_item_id, date, quantity}`; returns the new running total |
 | `POST /kitchen/waste` | K | M1 | K7 | `{menu_item_id, date, quantity, reason, note?}`; 200 with `warnings` when waste exceeds prepared |
-| `GET /kitchen/daily-summary?date=` | A(R) K | M1 | K1, K5-K7, S6 | per item: forecast, recommended, final, prepared, served, wasted |
+| `GET /kitchen/daily-summary?date=` | A(R) K | M1 | K1, K5-K7, S6 | per item: forecast, recommended, final, `prep_status`, prepared, served, wasted, `other_use` (food usage total), `unaccounted` (prepared minus served, wasted and other use; `null` until served is recorded) |
 | `GET /kitchen/pre-orders?from=&to=&status=&menu_item_id=` | A(R) K | S | K10 | `from` defaults to today; ordered by date |
 | `POST /kitchen/pre-orders` | K | S | K10 | `{menu_item_id, target_date, quantity, customer_note?, status?}`; `status` is `pending` (default) or `confirmed`; date cannot be in the past; `meta.warnings` when a decision already exists for that item and date |
 | `PATCH /kitchen/pre-orders/{id}` | K | S | K10 | any of `quantity, target_date, customer_note, status` (`pending`, `confirmed`, `cancelled`); cancelled and past-dated pre-orders are read-only (409); only confirmed pre-orders count in the recommendation |
@@ -150,6 +151,9 @@ Abbreviations: **A** admin, **K** kitchen, **I** inventory. **(R)** means read-o
 | `GET /kitchen/ingredient-usage?date=` | A(R) K | S | K8 | per ingredient: `expected` (prepared x recipe), `recorded` (or null), `variance`, `note`; `items_without_recipe` lists prepared items with no recipe |
 | `POST /kitchen/ingredient-usage` | K | S | K8 | `{date?, ingredient_id, quantity >= 0, note?}`; one recorded figure per ingredient and day, recording again replaces it (200, first time 201); never changes stock |
 | `DELETE /kitchen/ingredient-usage/{id}` | K | S | K8 | removes a recorded figure |
+| `GET /kitchen/food-usage?date=` | A(R) K | M2 (added 9 Oct 2026) | K14 | Actual Food Usage: `entries` (one per item and usage type) and `balance` per item: `prepared`, `served`, `wasted`, `other_use` by type, `unaccounted` and `flags` (`used_more_than_prepared`) |
+| `POST /kitchen/food-usage` | K | M2 (added 9 Oct 2026) | K14 | `{date?, menu_item_id, usage_type: "staff_meal"\|"complimentary"\|"sample"\|"other", quantity > 0, note?}`; one figure per item, date and type, recording again replaces it (200, first time 201); the date cannot be in the future; `meta.warnings` when served, waste and other use together exceed prepared. Never changes sales, stock or the forecast |
+| `DELETE /kitchen/food-usage/{id}` | K | M2 (added 9 Oct 2026) | K14 | removes a recorded figure |
 | `POST /kitchen/shortage-reports` | K | S | K12 | `{ingredient_id, note?}` creates a critical `manual_shortage` alert visible to Admin and Inventory (201); a second report for the same ingredient updates the open alert (200). The alert closes itself (`closed_reason = restocked`) when that ingredient later gets a positive stock movement |
 
 ### 3.5 Alerts, dashboards, reports
@@ -169,6 +173,7 @@ Abbreviations: **A** admin, **K** kitchen, **I** inventory. **(R)** means read-o
 | `GET /reports/movements?from=&to=&ingredient_id=&type=` | A | S (built 21 Sep) | A13 | movements in a period, newest first; JSON shows at most 500 rows (`meta.total` is the full count), `format=csv` exports all |
 | `GET /reports/analytics?from=&to=` | A | S (built 21 Sep) | A12 | plain averages and ratios of recorded data: `weekday` (average portions per day by weekday), `calendar` (public, Poya, school holiday and ordinary days), `promotion` (promotion running or not), `forecast_error` (per day MAE and WAPE), `waste` (per day prepared, wasted, rate); default range is the last 90 days; day groups describe the data and do not prove cause |
 | `GET /reports/sales` and `/reports/waste` with `format=csv` | A | S (built) | A13 | the CSV is built from the same service rows as the JSON |
+| `GET /reports/food-usage?from=&to=` | A | M2 (added 9 Oct 2026) | A11, K14 | other food use (staff meals, complimentary, samples, other) per type and per item in the period, with totals; `format=csv` |
 | `GET /restaurant`, `PUT /restaurant` | A | S (built 21 Sep) | A6 | `{name, address?, contact?, opening_days?, opening_hours?}`; `name` required; `timezone` is returned but cannot be changed |
 | `GET /settings`, `PUT /settings` | A | S (built) | A6, A7 | thresholds, data-source banner, alert type switches |
 | `GET /reports/stock-movements` | A | S (not built) | A13 | use `GET /stock/movements` |
@@ -187,12 +192,12 @@ Reports and pages call the same service method, so a chart, its table and its CS
     "forecast_qty": 47.3, "forecast_method": "model", "weather_estimated": true,
     "preorder_qty": 0, "recommended_qty": 54,
     "status": "suggested", "final_qty": null, "override_reason": null,
-    "prepared_so_far": 0, "served_so_far": 0
+    "prepared_so_far": 0, "served_so_far": 0, "prep_status": null
   }]},
  "meta": {"generated_at": "2026-09-25T02:10:00Z"}}
 ```
 
-`status` is `suggested`, `accepted`, `overridden` or `no_forecast` (then `recommended_qty` is `null` and `forecast_qty` is `null`; the UI shows "No forecast yet"). When a decision exists, its `final_qty` is returned next to the *current* `recommended_qty`, so the UI can show if the forecast has since moved.
+`status` is `suggested`, `accepted`, `overridden` or `no_forecast` (then `recommended_qty` is `null` and `forecast_qty` is `null`; the UI shows "No forecast yet"). When a decision exists, its `final_qty` is returned next to the *current* `recommended_qty`, so the UI can show if the forecast has since moved. `prep_status` is `null` without a decision, otherwise `planned`, `in_progress` or `done`.
 
 ### 4.2 Requirements: `GET /recommendations/requirements?date=2026-09-25`
 
