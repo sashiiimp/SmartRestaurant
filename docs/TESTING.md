@@ -168,6 +168,7 @@ Tier column: which tier the test gates. M1 tests must pass before the demo.
 | ALT-2 | Repeated evaluation creates no duplicates; cleared conditions auto-close | M1 |
 | ALT-3 | Disabled type opens nothing; role visibility filter per API.md section 6 | M2 |
 | ALT-4 | Lazy refresh: reading alerts after more than 60 s re-evaluates | M2 |
+| ALT-5 | A manual shortage report closes on a restock recorded after it, even in the same second (compared by movement id); stock from before the report never closes it (added 9 Oct 2026 after the MySQL run) | M2 |
 | KIT-1 | Prepared entries for one day sum; served writes `sales_records` with source `kitchen`; served greater than prepared warns and flags; waste greater than prepared warns | M1 |
 | KIT-2 | `daily-summary` figures equal the underlying rows (S6) | M1 |
 

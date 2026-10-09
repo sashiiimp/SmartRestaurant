@@ -324,3 +324,39 @@ unchanged), and the report edits were committed (`9da3145`).
 Not changed, for the team to decide: the fixed 10% safety buffer (the supplement shows the trade-off), the reorder
 lead time capped at the 7-day horizon, stock that expires within the lead time counted as usable, and the
 school-vacation dates. Not run: the perf tests and `tests/ui/smoke.py` (both write to the database).
+
+## 18. MySQL 8.4 instance, data copy and full test run (9 Oct 2026, branch `feature/mysql`, not deployed)
+
+Production was not changed: it still runs on the private MariaDB 11.8 instance, which was not stopped or modified.
+Procedure and rollback: `docs/RUNBOOK_MYSQL.md`.
+
+| Step | Result |
+|---|---|
+| Install | MySQL Community Server **8.4.11 LTS**, official minimal tarball; MD5 and **GPG signature good** (MySQL Release Engineering, `BCA4 3417 … A8D3 785C`, key valid to 2027-10-23). In `/opt/mysql-8.4.11`; no apt package installed or removed; no missing libraries |
+| Instance | user `smartmysql`, data `/srv/smartrest-mysql`, `--defaults-file` only, `127.0.0.1:3308` and a socket, X Protocol off, binary log off, `utf8mb4_unicode_ci`, UTC; unit `smartrest-mysql` running, **not enabled at boot**; about 330 MB RAM; nothing new listening on a public address |
+| App login | PyMySQL over the Unix socket with `caching_sha2_password`, no new Python dependency |
+| Backup first | `backups/before_mysql_20261009_170332/`: MariaDB dump, `instance/models`, `.env`, SHA256SUMS; dump restored into a temporary MariaDB database with row counts equal to live |
+| Schema | built on MySQL by the project's own migrations (to `4c1e5e7a9b2d`); compared with MariaDB table by table: **identical** columns, types, nullability, 67 foreign keys, 44 CHECK constraints, unique keys and indexes (MariaDB's 6 automatic JSON checks become 6 native `JSON` columns) |
+| Data copy | **24,440 rows in 6 s**, foreign-key checks on; **30 of 30 tables identical** by row count and content checksum; **0 orphan rows** for all 67 foreign keys; AUTO_INCREMENT above the highest id everywhere; `flask smartrest check-stock`: consistent; MySQL-native baseline dump saved |
+| Same answers | 14 read services (sales and weekly sales, waste, forecast accuracy, forecasts, prep plan, requirements, ingredient forecast, reorder, analytics, daily summary, stock levels, data check, inventory trend) give **byte-identical results** on the MariaDB copy and the MySQL copy |
+| Full test suite, production code on MySQL (`TEST_ALL_ON_DATABASE=1`) | `3da6ed4`: 341 passed, 0 failed in the first complete run, but one test failed intermittently in later runs (the defect below). **After the fix: MySQL 343 passed, 0 failed; the same suite on MariaDB 343 passed; SQLite 333 passed** (2 timing tests skipped and run separately); includes the constraint and concurrency tests |
+| Demonstration pipeline on MySQL | `flask db upgrade` + `flask smartrest demo-reset` on a separate MySQL database: 7,680 synthetic sales imported, XGBoost trained (beats the baseline), 56-day backfill all ok, 7-day forecast for 10 of 10 items, alerts evaluated |
+| Browser walkthrough (`tests/ui/smoke.py`, fresh reset before each engine) | Chromium, Firefox and WebKit: kitchen, inventory, admin and responsive checks all ok (one WebKit run reported a request cancelled during navigation; two repeat runs were clean) |
+| Timing (same seeded data on a MariaDB and a MySQL test database) | full pipeline 24.0 s vs 25.1 s; PERF-1 forecast run 269 ms vs 256 ms; PERF-2 worst request 220 ms vs 267 ms (targets 5 s and 3 s) |
+| Feature branch (K4, K14) on MySQL | migrations `7d3e9a1c5b20` and `9b4f2c7e1d63` up, down and up again on a copy of the MySQL data: row counts unchanged; full suite with the restock fix: **377 passed, 0 failed** (before the fix one run had the intermittent failure below) |
+
+Defect found in the test harness, not the application: every test builds a new app and connection pool that was
+never closed, so a full run on a database server hit `max_connections` (40, the same on the MariaDB instance) and
+also spent about 8 s per test dropping and recreating 30 tables on MySQL. Fixed in `tests/conftest.py`: the pool is
+disposed after each test, and on a server the schema is built once per session and tables are truncated between
+tests (a full run takes 7 minutes instead of about 70).
+
+Defect found in the application by running everything on a database server: a manual shortage report (K12) closes
+when the ingredient is "restocked since the report", which compared `stock_movements.created_at > alert.created_at`.
+MySQL and MariaDB store `DATETIME` in whole seconds (MySQL rounds, MariaDB truncates), so a report and a stock-in in the
+same second carried the same timestamp: the restock was missed (with `>`), and with `>=` older stock in that second
+would count. SQLite keeps microseconds, which is why the fast suite never showed it; on MySQL the test failed in
+about two runs out of three. Fixed by comparing **movement ids** instead of times: the report stores the highest
+stock-movement id for that ingredient in its `details` (`last_movement_id`, kept on a repeat report), and a restock is
+a positive movement with a higher id; alerts created before the fix fall back to the time comparison. Two new tests
+force equal timestamps in both directions (both fail on the old code). No schema change.
