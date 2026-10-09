@@ -1,0 +1,20 @@
+[Unit]
+Description=SmartRestaurant private MySQL 8.4 (127.0.0.1:3308, socket /srv/smartrest-mysql/run/mysql.sock)
+After=network.target
+
+[Service]
+Type=simple
+User=smartmysql
+Group=smartmysql
+ExecStart=/opt/mysql-8.4.11/bin/mysqld --defaults-file=/srv/smartrest-mysql/my.cnf
+TimeoutStopSec=120
+Restart=on-failure
+LimitNOFILE=16384
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+ReadWritePaths=/srv/smartrest-mysql/data /srv/smartrest-mysql/run /srv/smartrest-mysql/log /srv/smartrest-mysql/tmp
+
+[Install]
+WantedBy=multi-user.target

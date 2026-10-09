@@ -24,11 +24,33 @@ def fixed_today(monkeypatch):
     monkeypatch.setenv("SMARTREST_FAST_HASH", "1")
 
 
+_server_schema_ready = False
+
+
+def _fresh_server_schema():
+    """On MySQL/MariaDB, build the schema once per session, then empty every table before each test: dropping and
+    creating 30 tables per test takes about 8 s on MySQL 8.4. TRUNCATE also resets the AUTO_INCREMENT counters, so
+    each test still starts from an empty database with ids from 1."""
+    global _server_schema_ready
+    if not _server_schema_ready:
+        _db.drop_all()
+        _db.create_all()
+        _server_schema_ready = True
+        return
+    with _db.engine.begin() as con:
+        con.exec_driver_sql("SET FOREIGN_KEY_CHECKS = 0")
+        for table in _db.metadata.sorted_tables:
+            con.exec_driver_sql(f"TRUNCATE TABLE `{table.name}`")
+        con.exec_driver_sql("SET FOREIGN_KEY_CHECKS = 1")
+
+
 @pytest.fixture()
 def app(request):
-    """Fresh app and empty schema per test. SQLite in memory unless the test is marked `mysql`."""
+    """Fresh app and empty schema per test. SQLite in memory unless the test is marked `mysql`, or every test when
+    TEST_ALL_ON_DATABASE=1 (used to run the whole suite against MySQL 8.4 and MariaDB)."""
     overrides = None
-    if request.node.get_closest_marker("mysql"):
+    on_server = bool(request.node.get_closest_marker("mysql")) or os.environ.get("TEST_ALL_ON_DATABASE") == "1"
+    if on_server:
         url = os.environ.get("TEST_DATABASE_URL")
         if not url:
             pytest.skip("TEST_DATABASE_URL not set")
@@ -42,14 +64,20 @@ def app(request):
         g.pop("_login_user", None)
 
     with application.app_context():
-        if request.node.get_closest_marker("mysql"):
-            _db.drop_all()
-        _db.create_all()
+        if on_server:
+            _fresh_server_schema()
+        else:
+            _db.create_all()
         _db.session.add(Outlet(id=1, name="Test Outlet"))
         _db.session.commit()
         yield application
         _db.session.remove()
-        _db.drop_all()
+        if on_server:
+            # Every test builds a new app and connection pool; close it, or a full run on a database server
+            # exhausts max_connections (40 on both private instances).
+            _db.engine.dispose()
+        else:
+            _db.drop_all()
 
 
 @pytest.fixture()

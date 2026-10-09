@@ -24,7 +24,7 @@ Not chasing coverage numbers for controllers and templates. **Target: at least 8
 |---|---|
 | Runner | `pytest`, `pytest-cov`. Flask test client for API and page tests. No browser automation (cut for time). |
 | Unit tests | SQLite in-memory (fast). Marker: none. |
-| Integration and API tests | MariaDB/MySQL database `smartrest_test` (`TEST_DATABASE_URL` in `.env`). Marker `@pytest.mark.mysql`. Needed for `FOR UPDATE`, constraint behaviour, concurrency. |
+| Integration and API tests | MySQL 8.4 (or MariaDB) database `smartrest_test` (`TEST_DATABASE_URL` in `.env`). Marker `@pytest.mark.mysql`. With `TEST_ALL_ON_DATABASE=1` **every** test runs against `TEST_DATABASE_URL` instead of in-memory SQLite (added 9 Oct 2026 for the MySQL migration; each test's connection pool is closed afterwards so a full run stays under `max_connections`). Needed for `FOR UPDATE`, constraint behaviour, concurrency. |
 | Clock | `SMARTREST_TODAY` env var overrides `utils.dates.today()` so tests and the demo are deterministic. Tests set it through a fixture. |
 | Data | `tests/factories.py` builders (`make_user(role)`, `make_item(batch_size=...)`, `make_ingredient(...)`, `add_batch(...)`, `add_recipe(...)`, `add_sales(...)`). Formula tests build their own small fixtures; they never depend on the seed data. |
 | Commands | `pytest -q -m "not mysql"` (fast, run constantly), `pytest -q` (everything), `pytest -q -m perf` (timing), `pytest --cov=app/services --cov=app/ml`. The perf tests are skipped unless `-m perf` is given, because they write a forecast run to the dev database. |

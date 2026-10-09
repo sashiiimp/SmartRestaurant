@@ -30,7 +30,7 @@ reports with CSV export.
 uv venv --python 3.14 .venv            # or: python3 -m venv .venv
 uv pip install --python .venv/bin/python -r requirements-dev.txt   # or: pip install -r requirements-dev.txt
 cp .env.example .env                   # then edit: SECRET_KEY, DATABASE_URL, TEST_DATABASE_URL, SEED_PASSWORD
-scripts/db.sh start                    # optional: a private MariaDB on port 3307 (see the script header)
+# database: MySQL 8.4 (production target, see docs/RUNBOOK_MYSQL.md) or the older private MariaDB (scripts/db.sh)
 export FLASK_APP=wsgi.py
 flask db upgrade                       # create the tables
 flask smartrest demo-reset             # seed + synthetic history + train + activate + backfill + forecast + alerts
