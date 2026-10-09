@@ -44,6 +44,11 @@ erDiagram
   forecasts ||--o| recommendations : "basis of"
   menu_items ||--o{ recommendations : "planned for"
   users ||--o{ audit_logs : acts
+  menu_items ||--o{ food_usage : "used otherwise"
+  menu_items ||--o{ orders : "ordered today"
+  ingredients ||--o{ ingredient_usage : "used as recorded"
+  stock_requests ||--o{ stock_request_lines : contains
+  ingredients ||--o{ stock_request_lines : requested
 ```
 
 Tables not in the diagram (no relations worth drawing): `login_attempts`, `settings`, `holidays`, `weather_daily`, `alerts`.
@@ -129,7 +134,7 @@ One movement row per batch touched: a stock-out that spans two batches writes tw
 **forecasts** (M1). BIGINT `id`, `outlet_id`, `run_id` FK, `model_version_id` NULL, `menu_item_id`, `target_date`, `predicted_qty` DECIMAL(10,2) >= 0, `method` CHECK in (`model`,`baseline`), `input_snapshot` JSON (holiday/poya flags, promo discount, rain and temperature used, `weather_estimated`, `lags_imputed`), `generated_at`, `is_latest` BOOL. Re-running never overwrites: it inserts new rows and flips `is_latest` on the previous ones in the same transaction (S1). Index (`outlet_id`, `menu_item_id`, `target_date`, `is_latest`).
 **Accuracy rule (A9):** actual vs the latest forecast whose run has `as_of_date <= target_date`, so a forecast made after the fact never counts.
 
-**recommendations** (M1). Written **only when the manager decides** (accept or override), never by a GET. `outlet_id`, `menu_item_id`, `target_date`, `forecast_id` NULL, `forecast_qty` DECIMAL(10,2), `buffer_pct` DECIMAL(5,2), `preorder_qty` INT, `batch_size` INT, `recommended_qty` INT (the system's number at decision time), `final_qty` INT >= 0, `status` CHECK in (`accepted`,`overridden`), `override_reason` (CHECK: required when `overridden`), `decided_by`, `decided_at`. UNIQUE (`outlet_id`, `menu_item_id`, `target_date`); a later decision updates the row and writes an audit entry. This is the store for FR11 "recommendations and outcomes"; outcomes (sold, prepared, wasted) live in their own tables and are joined by item and date (S6).
+**recommendations** (M1). Written **only when the manager decides** (accept or override), never by a GET. `outlet_id`, `menu_item_id`, `target_date`, `forecast_id` NULL, `forecast_qty` DECIMAL(10,2), `buffer_pct` DECIMAL(5,2), `preorder_qty` INT, `batch_size` INT, `recommended_qty` INT (the system's number at decision time), `final_qty` INT >= 0, `status` CHECK in (`accepted`,`overridden`), `override_reason` (CHECK: required when `overridden`), `decided_by`, `decided_at`; and, for the preparation workflow (K4, migration `7d3e9a1c5b20`, 9 Oct 2026), `prep_status` CHECK in (`planned`,`in_progress`,`done`) default `planned`, `prep_started_at`, `prep_done_at`, `prep_done_by` FK users. UNIQUE (`outlet_id`, `menu_item_id`, `target_date`); a later decision updates the row and writes an audit entry. This is the store for FR11 "recommendations and outcomes"; outcomes (sold, prepared, wasted) live in their own tables and are joined by item and date (S6).
 Undecided plans are computed live and not stored.
 
 **alerts** (M1). `outlet_id`, `alert_type` CHECK in (`low_stock`,`critical_stock`,`projected_stockout`,`expiry_warning`,`waste_risk`,`forecast_failed`,`manual_shortage`), `severity` CHECK in (`info`,`warning`,`critical`), `entity_type` (`ingredient`,`menu_item`,`batch`,`system`), `entity_id` NULL, `target_date` NULL, `message`, `details` JSON, `status` CHECK in (`open`,`acknowledged`,`closed`), `dedupe_key` (e.g. `low_stock:ingredient:12`), `open_key` NULL, `acknowledged_by`, `acknowledged_at`, `closed_at`, `closed_reason` (`cleared`,`manual`).
@@ -143,6 +148,8 @@ Who sees which type is a service constant listed in `API.md` section 6.
 **orders** (K10 daily orders, built; migration `165b04a3da7c`). `outlet_id`, `menu_item_id`, `order_date`, `quantity` > 0, `status` CHECK in (`open`,`fulfilled`,`cancelled`), `customer_note`, `created_by`. Index (`outlet_id`, `order_date`). An internal record only (no prices, no payment); it feeds no calculation. The date cannot be in the future (a future day is a pre-order). Only an `open` order can change.
 
 **ingredient_usage** (K8, built; same migration). `outlet_id`, `ingredient_id`, `usage_date`, `quantity` >= 0, `note`, `created_by`; UNIQUE (`outlet_id`, `ingredient_id`, `usage_date`): one recorded figure per ingredient and day, recording again replaces it. The expected figure (prepared x recipe) is computed, never stored. Recording never creates a stock movement (DB8).
+
+**food_usage** (K14, Actual Food Usage; migration `9b4f2c7e1d63`, 9 Oct 2026, feature branch). `outlet_id`, `menu_item_id`, `usage_date`, `usage_type` CHECK in (`staff_meal`,`complimentary`,`sample`,`other`), `quantity` INT > 0, `note`, `created_by`, timestamps; UNIQUE (`outlet_id`, `menu_item_id`, `usage_date`, `usage_type`): recording again replaces the figure. Index (`outlet_id`, `usage_date`). It never changes `sales_records`, stock or forecasts; the daily balance (prepared = served + wasted + other use + unaccounted) is computed, not stored.
 
 ## 3. Integrity rules (NFR8): where each is enforced
 

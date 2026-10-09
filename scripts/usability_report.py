@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-TASKS = {"kitchen": ["K1", "K2", "K3", "K4", "K5"], "inventory": ["I1", "I2", "I3", "I4", "I5"],
+TASKS = {"kitchen": ["K1", "K2", "K3", "K4", "K5", "K6", "K7"], "inventory": ["I1", "I2", "I3", "I4", "I5"],
          "admin": ["A1", "A2", "A3", "A4"]}
 CORE = {"kitchen": ["K1", "K3", "K5"], "inventory": ["I1", "I3", "I4"], "admin": ["A1", "A2", "A3"]}
 ROLE_NAME = {"kitchen": "Food Production Manager", "inventory": "Inventory & Procurement Manager",

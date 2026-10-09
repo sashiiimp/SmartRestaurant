@@ -50,3 +50,26 @@ class IngredientUsage(OutletScopedMixin, TimestampMixin, db.Model):
     quantity = db.Column(db.Numeric(12, 3), nullable=False)
     note = db.Column(db.String(255))
     created_by = db.Column(db.Integer, db.ForeignKey("users.id"))
+
+
+FOOD_USAGE_TYPES = ("staff_meal", "complimentary", "sample", "other")
+
+
+class FoodUsage(OutletScopedMixin, TimestampMixin, db.Model):
+    """Actual Food Usage (K14): prepared portions used other than sold or wasted (staff meals, complimentary portions,
+    tasting samples, other). One figure per item, day and type; it never changes sales, stock or the forecast."""
+
+    __tablename__ = "food_usage"
+    __table_args__ = (
+        db.UniqueConstraint("outlet_id", "menu_item_id", "usage_date", "usage_type", name="uq_food_usage_item_day_type"),
+        check("qty", "quantity > 0"),
+        check("usage_type", in_list("usage_type", FOOD_USAGE_TYPES)),
+        db.Index("ix_food_usage_date", "outlet_id", "usage_date"),
+    )
+    id = db.Column(db.Integer, primary_key=True)
+    menu_item_id = db.Column(db.Integer, db.ForeignKey("menu_items.id"), nullable=False)
+    usage_date = db.Column(db.Date, nullable=False)
+    usage_type = db.Column(db.String(20), nullable=False)
+    quantity = db.Column(db.Integer, nullable=False)
+    note = db.Column(db.String(255))
+    created_by = db.Column(db.Integer, db.ForeignKey("users.id"))

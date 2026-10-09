@@ -5,7 +5,7 @@ import pytest
 from sqlalchemy.exc import DBAPIError  # MariaDB reports CHECK failures as OperationalError (4025)
 
 from app.extensions import db
-from app.models import Alert, MenuItem, SalesRecord, StockBatch, StockMovement
+from app.models import Alert, FoodUsage, MenuItem, Recommendation, SalesRecord, StockBatch, StockMovement
 from tests.factories import make_ingredient, make_item
 
 pytestmark = pytest.mark.mysql
@@ -74,4 +74,24 @@ def test_one_open_alert_per_condition(app):
 def test_unique_menu_item_name(app):
     make_item(name="Dup")
     db.session.add(MenuItem(outlet_id=1, name="Dup", price=1))
+    _flush_fails()
+
+
+def test_preparation_status_is_one_of_the_three_steps(app):
+    """K4, added 9 Oct 2026."""
+    item = make_item()
+    db.session.add(Recommendation(outlet_id=1, menu_item_id=item.id, target_date=date(2026, 9, 25), forecast_qty=10,
+                                  buffer_pct=10, recommended_qty=12, final_qty=12, status="accepted", prep_status="cooking"))
+    _flush_fails()
+
+
+def test_one_food_usage_figure_per_item_day_and_type_and_quantity_above_zero(app):
+    """K14, added 9 Oct 2026."""
+    item = make_item()
+    usage = dict(outlet_id=1, menu_item_id=item.id, usage_date=date(2026, 9, 25), usage_type="staff_meal")
+    db.session.add(FoodUsage(**usage, quantity=3))
+    db.session.commit()
+    db.session.add(FoodUsage(**usage, quantity=2))
+    _flush_fails()
+    db.session.add(FoodUsage(**{**usage, "usage_type": "sample"}, quantity=0))
     _flush_fails()

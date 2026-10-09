@@ -46,6 +46,39 @@
         <sr-field-error :errors="wasteErrors" name="date"></sr-field-error>
         <button class="btn btn-outline-danger btn-lg-touch" type="button" :disabled="savingWaste" @click="saveWaste">Record waste</button>
       </div></div>
+      <div class="card mt-4"><div class="card-body">
+        <h2 class="h6">Other food use</h2>
+        <p class="text-muted small">Prepared portions that were neither sold nor wasted: staff meals, complimentary portions, tasting samples. Recording a type again for the same item and day replaces it. This does not change sales or the forecast.</p>
+        <div class="mb-2"><label class="form-label" for="u-item">Item</label>
+          <select id="u-item" class="form-select" v-model.number="food.menu_item_id"><option v-for="i in items" :key="i.menu_item_id" :value="i.menu_item_id">[[ i.name ]]</option></select>
+          <sr-field-error :errors="foodErrors" name="menu_item_id"></sr-field-error></div>
+        <div class="row g-2 mb-2">
+          <div class="col-7"><label class="form-label" for="u-type">Use</label>
+            <select id="u-type" class="form-select" v-model="food.usage_type"><option v-for="t in usageTypes" :key="t" :value="t">[[ usageLabel(t) ]]</option></select>
+            <sr-field-error :errors="foodErrors" name="usage_type"></sr-field-error></div>
+          <div class="col-5"><label class="form-label" for="u-qty">Portions</label>
+            <input id="u-qty" class="form-control" inputmode="numeric" v-model="food.quantity"><sr-field-error :errors="foodErrors" name="quantity"></sr-field-error></div>
+        </div>
+        <div class="mb-2"><label class="form-label" for="u-note">Note (optional)</label><input id="u-note" class="form-control" maxlength="255" v-model="food.note"></div>
+        <sr-field-error :errors="foodErrors" name="date"></sr-field-error>
+        <button class="btn btn-outline-primary btn-lg-touch" type="button" :disabled="savingFood" @click="saveFood">Record other use</button>
+        <ul v-if="foodUsage && foodUsage.entries.length" class="list-group list-group-flush mt-3 small">
+          <li class="list-group-item d-flex justify-content-between align-items-center px-0" v-for="e in foodUsage.entries" :key="e.usage_id">
+            <span>[[ e.item ]]: [[ usageLabel(e.usage_type) ]] [[ e.quantity ]]<span v-if="e.note" class="text-muted"> ([[ e.note ]])</span></span>
+            <button class="btn btn-sm btn-outline-secondary" type="button" @click="clearFood(e)">Clear</button></li></ul>
+      </div></div>
+    </div>
+    <div class="col-12">
+      <div class="card"><div class="card-body">
+        <h2 class="h6">Daily balance</h2>
+        <p class="text-muted small">Prepared = served + waste + other use + unaccounted. Unaccounted is shown once served is recorded; a negative figure means more was used than was prepared.</p>
+        <div v-if="foodUsage" class="table-responsive"><table class="table table-sm align-middle mb-0">
+          <thead><tr><th>Item</th><th class="text-end">Prepared</th><th class="text-end">Served</th><th class="text-end">Waste</th><th class="text-end">Other use</th><th class="text-end">Unaccounted</th></tr></thead>
+          <tbody><tr v-for="b in foodUsage.balance" :key="b.menu_item_id" :class="b.flags.length ? 'table-warning' : ''">
+            <td>[[ b.name ]]</td><td class="text-end">[[ b.prepared ]]</td><td class="text-end">[[ b.served === null ? '-' : b.served ]]</td>
+            <td class="text-end">[[ b.wasted ]]</td><td class="text-end">[[ b.other_total ]]</td>
+            <td class="text-end" :class="b.unaccounted < 0 ? 'text-danger fw-semibold' : ''">[[ b.unaccounted === null ? '-' : b.unaccounted ]]</td></tr></tbody></table></div>
+      </div></div>
     </div>
     <div class="col-12">
       <div class="card"><div class="card-body">

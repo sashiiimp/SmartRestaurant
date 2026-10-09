@@ -11,7 +11,7 @@
   <template v-else-if="d">
     <div class="row g-3 mb-3">
       <div class="col-6 col-lg-3"><sr-stat-tile label="Items to prepare" icon="clipboard" :value="d.tiles.items_to_prepare" href="/kitchen/prep"></sr-stat-tile></div>
-      <div class="col-6 col-lg-3"><sr-stat-tile label="Prepared / planned" icon="check" tone="success" :value="d.tiles.prepared_total + ' / ' + d.tiles.planned_total" :hint="preparedPct + '% of the plan prepared'"></sr-stat-tile></div>
+      <div class="col-6 col-lg-3"><sr-stat-tile label="Prepared / planned" icon="check" tone="success" :value="d.tiles.prepared_total + ' / ' + d.tiles.planned_total" :hint="preparedPct + '% of the plan prepared' + (d.tiles.items_planned ? ' · ' + d.tiles.items_done + ' of ' + d.tiles.items_planned + ' items done' : '')"></sr-stat-tile></div>
       <div class="col-6 col-lg-3"><sr-stat-tile label="Ingredient shortages" icon="warning" :value="d.tiles.shortage_count" :tone="d.tiles.shortage_count ? 'danger' : ''" href="/kitchen/requirements"></sr-stat-tile></div>
       <div class="col-6 col-lg-3"><sr-stat-tile label="Open alerts" icon="bell" :value="d.tiles.open_alerts" :tone="d.tiles.open_alerts ? 'warning' : ''"></sr-stat-tile></div>
     </div>
@@ -28,7 +28,7 @@
             <tbody><tr v-for="r in d.plan" :key="r.menu_item_id">
               <td>[[ r.name ]] <span v-if="!r.is_available" class="sr-badge sr-badge-danger ms-1">Unavailable</span></td><td class="text-end">[[ ui.num(r.forecast_qty, 1) ]]</td><td class="text-end">[[ r.recommended_qty ]]</td>
               <td class="text-end">[[ r.final_qty === null ? '-' : r.final_qty ]]</td><td class="text-end">[[ r.prepared ]]</td>
-              <td><sr-status-badge :status="r.status"></sr-status-badge></td></tr></tbody></table></div>
+              <td><sr-status-badge :status="r.prep_status || r.status"></sr-status-badge></td></tr></tbody></table></div>
         </div></div>
       </div>
       <div class="col-12 col-xl-4">

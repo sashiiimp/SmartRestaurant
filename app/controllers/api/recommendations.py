@@ -19,6 +19,13 @@ def prep_decision():
     return ok(rec.decide(current_outlet_id(), json_body(), current_user.id), status=201)
 
 
+@bp.route("/recommendations/prep/status", methods=["POST"])
+@roles_required("kitchen")
+def prep_status():
+    result = rec.set_prep_status(current_outlet_id(), json_body(), current_user.id)
+    return ok(result, {"warnings": result["warnings"]})
+
+
 @bp.route("/recommendations/requirements")
 @roles_required("admin", "kitchen", "inventory")
 def requirements():
