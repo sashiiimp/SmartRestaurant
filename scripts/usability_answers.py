@@ -44,6 +44,11 @@ def main():
                                               f"(needs {num(r['required'])}, has {num(r['usable_stock'])})" for r in short)
                                     or "nothing is short today"))
         print("  K5 Waste: Fried Chicken 2 pc, quantity 3, reason overproduction, appears in today's waste list.")
+        print("  K6 Chicken Burger: after K3 it shows 'In progress'; Mark done -> badge 'Done' and a Reopen button. If the "
+              "participant has not accepted a plan for Chicken Burger, Start and Mark done are not shown: accepting first "
+              "is the expected path (note it if the participant is confused). A warning that 24 is below the plan is correct.")
+        print(f"  K7 Other food use: Chicken Burger, Staff meal, 2. Unaccounted shows '-' until served is recorded for "
+              f"today; once it is, unaccounted = prepared - served - waste - 2.")
 
         print("\nINVENTORY")
         sugg = rec.get_reorder_suggestions(1)

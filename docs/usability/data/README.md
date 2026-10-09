@@ -7,7 +7,7 @@ Type each session's sheets into these CSV files (UTF-8, comma-separated, one hea
 | File | Columns | Values |
 |---|---|---|
 | `participants.csv` | participant, role, device, background | role: `kitchen`, `inventory` or `admin`; device: `phone` or `laptop`; background: one line, no name |
-| `tasks.csv` | participant, task, outcome, time, errors, seq | task: `K1`-`K5`, `I1`-`I5`, `A1`-`A4`; outcome: `S` success, `A` success after a hint, `F` failed; time: `m:ss` (for example `1:05`); errors: whole number; seq: 1-7 |
+| `tasks.csv` | participant, task, outcome, time, errors, seq | task: `K1`-`K7`, `I1`-`I5`, `A1`-`A4` (K6, K7 added 9 Oct 2026: preparation done, other food use); outcome: `S` success, `A` success after a hint, `F` failed; time: `m:ss` (for example `1:05`); errors: whole number; seq: 1-7 |
 | `sus.csv` | participant, q1 ... q10 | each answer 1 (strongly disagree) to 5 (strongly agree), exactly as ticked; the script does the SUS scoring |
 | `problems.csv` | participant, task, severity, description | severity: 1 prevents the task, 2 delay or error recovered from, 3 cosmetic; quote the description if it contains a comma |
 | `comments.csv` | participant, comment | Answers to the closing questions and notable quotes; quote the text if it contains a comma |

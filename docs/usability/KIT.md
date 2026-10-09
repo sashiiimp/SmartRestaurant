@@ -46,6 +46,12 @@ Burger quantity to **24** and give a reason.
 **Task K5 ★** At closing time, **3 portions of Fried Chicken (2 pc)** were thrown away because too much was made.
 Record this.
 
+**Task K6** You have finished cooking the **Chicken Burgers** for today. Tell the system that their preparation is
+**done**.
+
+**Task K7** **Two Chicken Burgers** were given to the staff as their meal today. Record this, and then say how many
+Chicken Burgers are **not accounted for** today (if the page can show it yet).
+
 # Task cards: Inventory and Procurement Manager
 
 *You manage the stock room and buy ingredients from suppliers. The system is already open and you are logged in.*
@@ -151,5 +157,9 @@ Participant P____
 3. When the system recommended a quantity or an order, did you **understand why**? Would you **trust** it?
 4. Is anything **missing** that you would expect?
 5. If you could change **one thing**, what would it be?
+6. (Kitchen) Was the difference between **prepared**, **served**, **waste** and **other use** (staff meals,
+   complimentary portions) clear? Would you record staff meals every day?
+7. Would you use this **every day** in your work, and on which device (phone, tablet, computer)?
+8. (Restaurant staff only) What would stop your outlet from using a system like this?
 
 Notes:

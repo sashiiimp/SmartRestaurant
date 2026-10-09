@@ -13,13 +13,19 @@ Results go into report section 10.4 and the NFR1 row of section 11.4.
 
 ## 2. Participants
 
-- **5 to 8 students or friends** who have **never used SmartRestaurant** and were not involved in building it.
+- **Pilot restaurant staff first (added 9 Oct 2026).** If a partner outlet agrees, test **2 to 3 real staff**: the
+  kitchen manager or a senior cook (kitchen role), the storekeeper (inventory role) and the owner or manager
+  (administrator role). They are the proposal's intended users (NFR1 "non-technical staff"); report them separately
+  from the students. Their sessions follow the same tasks, sheets and rules. **[TEAM: name the outlet only if it agrees
+  in writing; otherwise describe it as "a fast-food outlet in Colombo".]**
+- **Plus 3 to 5 students or friends** who have **never used SmartRestaurant** and were not involved in building it.
   Team members cannot take part.
 - One role per participant. Aim for at least **3 kitchen** participants (the main daily user), **2 inventory** and
   **1 to 2 administrator**. The Food Production Manager role should preferably be tested on a **phone**.
 - Record only an anonymous id (P1, P2 ...), role, device and a short background line (for example "IT student, uses
   food apps"). Do not record names in the results files; consent forms stay on paper or in a private folder.
-- State in the report that participants were students or friends, not restaurant staff (limitation).
+- In the report, state who the participants were (staff of one outlet and/or students), how many, and that with this
+  few participants the figures are indicative (limitation).
 
 ## 3. Measures
 
@@ -31,18 +37,30 @@ Results go into report section 10.4 and the NFR1 row of section 11.4.
 | Ease per task | Single Ease Question (SEQ): "Overall, how easy or difficult was this task?" 1 (very difficult) to 7 (very easy) | Average 5.5 or more |
 | Overall usability | System Usability Scale (SUS), 10 items, after all tasks (Brooke, 1996) | Mean **68 or more** (NFR1; 68 is the usual average benchmark) |
 | Comments | Think-aloud notes and the closing interview | Themes and concrete problems |
+| All tasks (added 9 Oct 2026) | Share of all tasks marked **S** | **80% or more** without help |
+| Problems | Severity per `problems.csv` | **No severity-1 problem** (one that prevents a task) left unfixed |
+
+The NFR1 core tasks stay K1, K3 and K5 for the kitchen so results remain comparable with the original definition;
+the two kitchen tasks added on 9 Oct 2026 (K6 mark preparation done, K7 record other food use) are reported as extra
+tasks with their own success, time and SEQ.
 
 ## 4. Set-up (operator, before each session)
 
-1. On the server, reset the demo so every participant starts from the same state:
-   `cd /srv/smartrest && runuser -u smartrest -- env FLASK_APP=wsgi.py .venv/bin/flask smartrest demo-reset` (about 20 seconds).
-   Never do this during a real demonstration.
-2. Print the answer key for today and give it to the observer:
-   `runuser -u smartrest -- .venv/bin/python scripts/usability_answers.py`
-3. Open the login page on the test device: `https://smartrest.developerstudio.space/login`. Log in for the participant with the
-   role's account (`kitchen`, `inventory` or `admin`; passwords as set on 8 Oct 2026, given to the session operator and not
-   kept in this repository; after a `demo-reset` the seeded `kitchen1` and `inventory1` with the `.env` passwords apply): logging in is not a
-   task being tested.
+**Changed 9 Oct 2026: sessions never use the live demonstration system.** Participants change data (they accept,
+override, record and order), and the earlier instruction to run `demo-reset` on the live server would also replace
+the live accounts and model. Sessions run on the **staging instance** (`/srv/smartrest-staging`, its own user
+`smartstage`, its own SQLite database and `.env`, reachable only through an SSH tunnel or the operator's laptop),
+deployed from the branch that is being tested (including the preparation workflow and other food use).
+
+1. On the server, reset the **staging** demo so every participant starts from the same state (about 20 seconds):
+   `cd /srv/smartrest-staging && runuser -u smartstage -- env FLASK_APP=wsgi.py .venv/bin/flask smartrest demo-reset`.
+   Check first that the prompt shows `/srv/smartrest-staging`; never run this in `/srv/smartrest`.
+2. Print the answer key for today from the same staging copy and give it to the observer:
+   `cd /srv/smartrest-staging && runuser -u smartstage -- .venv/bin/python scripts/usability_answers.py`
+3. Open the staging login page on the test device (through the tunnel set up by the developer, for example
+   `ssh -L 39520:127.0.0.1:39520 ...` then `http://127.0.0.1:39520/login`). Log in for the participant with the
+   seeded staging account for the role (`admin`, `kitchen1`, `inventory1`; staging passwords from the staging `.env`,
+   given to the operator only): logging in is not a task being tested.
 4. Have ready: task cards for the role, SEQ and SUS sheets, observer sheet, stopwatch (phone), pen.
 
 ## 5. Session (about 20 to 25 minutes)
