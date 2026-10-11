@@ -28,13 +28,13 @@
         <div class="card-head"><h2 class="h6">[[ isToday ? "Today's plan" : 'Plan for ' + ui.date(date) ]]</h2><a href="/kitchen/prep">Accept or change in Prep plan</a></div>
         <sr-empty v-if="!d.plan.length" message="No forecast for this date yet." icon="trending"></sr-empty>
         <div v-else class="table-responsive"><table class="table table-sm align-middle mb-0 plan-table">
-          <thead><tr><th>Item</th><th class="text-end">Forecast</th><th class="text-end">To prepare</th><th style="min-width: 9rem">Prepared</th><th>Status</th></tr></thead>
+          <thead><tr><th>Item</th><th class="text-end d-none d-sm-table-cell">Forecast</th><th class="text-end">To prepare</th><th class="col-prepared">Prepared</th><th class="d-none d-sm-table-cell">Status</th></tr></thead>
           <tbody><tr v-for="r in d.plan" :key="r.menu_item_id">
             <td>[[ r.name ]] <span v-if="!r.is_available" class="sr-badge sr-badge-danger ms-1">Unavailable</span></td>
-            <td class="text-end text-muted">[[ ui.num(r.forecast_qty, 0) ]]</td>
+            <td class="text-end text-muted d-none d-sm-table-cell">[[ ui.num(r.forecast_qty, 0) ]]</td>
             <td class="text-end fw-semibold">[[ toPrepare(r) ]]</td>
             <td><div class="prep-cell"><div class="progress progress-thin" role="progressbar" :aria-label="'Prepared for ' + r.name" :aria-valuenow="r.prepared" aria-valuemin="0" :aria-valuemax="toPrepare(r)"><div class="progress-bar" :class="r.prep_status === 'done' ? 'bg-success' : ''" :style="{ width: pct(r) + '%' }"></div></div><span>[[ r.prepared ]]</span></div></td>
-            <td><sr-status-badge :status="r.prep_status || r.status"></sr-status-badge></td></tr></tbody></table></div>
+            <td class="d-none d-sm-table-cell"><sr-status-badge :status="r.prep_status || r.status"></sr-status-badge></td></tr></tbody></table></div>
         <p class="table-note">"To prepare" is the quantity you accepted or set; until then it shows the recommendation: the forecast plus the safety buffer (or the confirmed pre-orders, if higher), rounded up to a whole batch.</p>
       </div></div></div>
       <div class="col-12 col-xl-4">
