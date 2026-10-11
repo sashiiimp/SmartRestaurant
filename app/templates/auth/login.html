@@ -12,39 +12,43 @@
 
     <div class="auth-story">
       <p class="auth-eyebrow"><span class="pulse-dot" aria-hidden="true"></span>Demand forecasting &middot; Preparation &middot; Inventory</p>
-      <h2 id="auth-hero-title">Every service, <span class="hl">forecast</span> before it begins.</h2>
-      <p class="lead-text">Item-level demand forecasts become preparation plans, ingredient checks and reorder suggestions, so the kitchen is ready before the rush.</p>
+      <h2 id="auth-hero-title">Every service, <span class="hl">forecast</span> <span class="nowrap">before it begins.</span></h2>
+      <p class="lead-text">Item-level forecasts turn into preparation plans, ingredient checks and reorder suggestions, so the kitchen is ready before the rush.</p>
     </div>
 
-    <figure class="forecast-card" aria-label="Illustration: three days of sales and a four-day demand forecast">
+    <figure class="forecast-card" aria-label="Illustrative example, not live restaurant data: three days of sales and a four-day demand forecast">
       <figcaption class="fc-head">
-        <span class="fc-title"><i class="sr-i" data-icon="trending" data-size="16"></i>Demand outlook</span>
+        <span class="fc-title"><i class="sr-i" data-icon="trending" data-size="16"></i>Demand outlook<span class="fc-badge">Illustrative example</span></span>
         <span class="fc-legend" aria-hidden="true"><span class="lg lg-actual">Actual</span><span class="lg lg-forecast">Forecast</span><span class="lg lg-band">Safety buffer</span></span>
       </figcaption>
-      <svg class="fc-chart" viewBox="0 0 550 210" aria-hidden="true" focusable="false">
+      <svg class="fc-chart" viewBox="0 0 550 166" aria-hidden="true" focusable="false">
         <defs>
           <linearGradient id="fc-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4338ca" stop-opacity=".16"/><stop offset="1" stop-color="#4338ca" stop-opacity="0"/></linearGradient>
           <linearGradient id="fc-band" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#6366f1" stop-opacity=".06"/><stop offset="1" stop-color="#6366f1" stop-opacity=".22"/></linearGradient>
           <linearGradient id="fc-line" x1="240" y1="0" x2="520" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#4f46e5"/><stop offset="1" stop-color="#9333ea"/></linearGradient>
         </defs>
         <g class="fc-grid">
-          <line x1="16" x2="534" y1="40" y2="40"/><line x1="16" x2="534" y1="85" y2="85"/><line x1="16" x2="534" y1="130" y2="130"/><line x1="16" x2="534" y1="175" y2="175"/>
+          <line x1="16" x2="534" y1="28.4" y2="28.4"/><line x1="16" x2="534" y1="64.4" y2="64.4"/><line x1="16" x2="534" y1="100.4" y2="100.4"/><line x1="16" x2="534" y1="136.4" y2="136.4"/>
         </g>
-        <rect class="fc-future" x="240" y="22" width="294" height="153" rx="10"/>
-        <line class="fc-reorder" x1="16" x2="534" y1="100" y2="100"/>
-        <text class="fc-reorder-label" x="22" y="94">Reorder point</text>
-        <path class="fc-area" d="M30 128 C41.7 124.3 76.7 104.3 100 106 C123.3 107.7 146.7 137.0 170 138 C193.3 139.0 228.3 116.3 240 112 L240 175 L30 175 Z" fill="url(#fc-area)"/>
-        <path class="fc-band" d="M240 112 C251.7 105.7 286.7 85.5 310 74 C333.3 62.5 356.7 46.2 380 43 C403.3 39.8 426.7 46.7 450 55 C473.3 63.3 508.3 86.7 520 93 L520 139 C508.3 131.3 473.3 104.0 450 93 C426.7 82.0 403.3 72.8 380 73 C356.7 73.2 333.3 87.5 310 94 C286.7 100.5 251.7 109.0 240 112 Z" fill="url(#fc-band)"/>
-        <path class="fc-actual" d="M30 128 C41.7 124.3 76.7 104.3 100 106 C123.3 107.7 146.7 137.0 170 138 C193.3 139.0 228.3 116.3 240 112" pathLength="1"/>
-        <path class="fc-forecast" d="M240 112 C251.7 107.3 286.7 93.0 310 84 C333.3 75.0 356.7 59.7 380 58 C403.3 56.3 426.7 64.3 450 74 C473.3 83.7 508.3 109.0 520 116" stroke="url(#fc-line)"/>
-        <line class="fc-now" x1="240" x2="240" y1="22" y2="175"/>
-        <circle class="fc-now-dot" cx="240" cy="112" r="5"/>
-        <g class="fc-peak"><circle cx="380" cy="58" r="11" class="fc-peak-halo"/><circle cx="380" cy="58" r="4.5" class="fc-peak-dot"/></g>
+        <rect class="fc-future" x="240" y="14" width="294" height="122.4" rx="9"/>
+        <line class="fc-reorder" x1="16" x2="534" y1="76.4" y2="76.4"/>
+        <text class="fc-reorder-label" x="22" y="70.5">Reorder point</text>
+        <path class="fc-area" d="M30 98.8 C41.7 95.8 76.7 79.8 100 81.2 C123.3 82.6 146.7 106 170 106.8 C193.3 107.6 228.3 89.4 240 86 L240 136.4 L30 136.4 Z" fill="url(#fc-area)"/>
+        <path class="fc-band" d="M240 86 C251.7 81 286.7 64.8 310 55.6 C333.3 46.4 356.7 33.4 380 30.8 C403.3 28.2 426.7 33.8 450 40.4 C473.3 47 508.3 65.8 520 70.8 L520 107.6 C508.3 101.4 473.3 79.6 450 70.8 C426.7 62 403.3 54.6 380 54.8 C356.7 55 333.3 66.4 310 71.6 C286.7 76.8 251.7 83.6 240 86 Z" fill="url(#fc-band)"/>
+        <path class="fc-actual" d="M30 98.8 C41.7 95.8 76.7 79.8 100 81.2 C123.3 82.6 146.7 106 170 106.8 C193.3 107.6 228.3 89.4 240 86" pathLength="1"/>
+        <path class="fc-forecast" d="M240 86 C251.7 82.2 286.7 70.8 310 63.6 C333.3 56.4 356.7 44.2 380 42.8 C403.3 41.4 426.7 47.8 450 55.6 C473.3 63.4 508.3 83.6 520 89.2" stroke="url(#fc-line)"/>
+        <line class="fc-now" x1="240" x2="240" y1="14" y2="136.4"/>
+        <circle class="fc-now-dot" cx="240" cy="86.0" r="5"/>
+        <g class="fc-peak"><circle cx="380" cy="42.8" r="10" class="fc-peak-halo"/><circle cx="380" cy="42.8" r="4.5" class="fc-peak-dot"/></g>
+        <g class="fc-note">
+          <path class="fc-note-line" d="M383 33.5 L390 26"/>
+          <rect x="378" y="4" width="142" height="22" rx="11"/>
+          <text x="449" y="19" text-anchor="middle">{{ day_names[(wd + 2) % 7] }} peak &middot; prep early</text>
+        </g>
         <g class="fc-days">
-          {% for k in range(8) %}<text x="{{ 30 + k * 70 }}" y="200" text-anchor="middle"{% if k == 3 %} class="is-today"{% endif %}>{{ 'Today' if k == 3 else day_names[(wd + k - 3) % 7] }}</text>{% endfor %}
+          {% for k in range(8) %}<text x="{{ 30 + k * 70 }}" y="158" text-anchor="middle"{% if k == 3 %} class="is-today"{% endif %}>{{ 'Today' if k == 3 else day_names[(wd + k - 3) % 7] }}</text>{% endfor %}
         </g>
       </svg>
-      <div class="fc-chip" aria-hidden="true"><span class="chip-dot"></span>{{ day_names[(wd + 2) % 7] }} peak &middot; prep early</div>
 
       <ol class="flow" aria-label="How one forecast reaches each role">
         <li class="flow-step role-admin"><span class="flow-ic"><i class="sr-i" data-icon="layers" data-size="16"></i></span><span><strong>Forecast</strong><small>Administrator</small></span></li>
