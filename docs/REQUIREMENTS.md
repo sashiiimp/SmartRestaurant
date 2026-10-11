@@ -270,7 +270,7 @@ function now has its own story, K14.)*
 
 ### I1 Inventory dashboard (P1), FR10
 *Covers: Inventory Dashboard.*
-- Shows current stock status counts (OK / low / out), low-stock and reorder alerts, next-7-day ingredient need vs stock, top reorder recommendations and expiring-soon batches.
+- Shows current stock status counts (low and out, with the OK count), low-stock and reorder alerts, the ingredients whose next-7-day need is above usable stock (the full need-vs-stock list is on Ingredient demand, I7), top reorder recommendations, expiring-soon batches and pending kitchen requests. *(Simplified 11 Oct 2026: only at-risk ingredients are drawn on the dashboard.)*
 
 ### I2 Ingredient management (P1), FR9
 *Covers: Ingredient Management.*

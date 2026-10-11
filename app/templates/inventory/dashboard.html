@@ -2,59 +2,57 @@
 {% block title %}Inventory - SmartRestaurant{% endblock %}
 {% block content %}
 <div id="app" v-cloak>
-  <h1 class="h4 mb-3">Inventory and purchasing</h1>
+  <div class="dash-head">
+    <div><h1 class="h4 m-0">Inventory</h1><p class="dash-sub">[[ ui.date(today) ]]</p></div>
+    <div class="dash-actions">
+      <a class="btn btn-primary btn-lg-touch" href="/inventory/movements"><sr-icon name="swap" :size="16"></sr-icon> Record stock</a>
+      <a class="btn btn-outline-primary btn-lg-touch" href="/inventory/reorder"><sr-icon name="refresh" :size="16"></sr-icon> Reorder</a>
+    </div>
+  </div>
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
   <sr-loading v-if="loading" :tiles="4" :cards="2"></sr-loading>
   <template v-else-if="d">
     <div class="row g-3 mb-3">
-      <div class="col-6 col-lg-3"><sr-stat-tile label="Stock OK" icon="check" :value="d.counts.ok" tone="success" href="/inventory/stock"></sr-stat-tile></div>
-      <div class="col-6 col-lg-3"><sr-stat-tile label="Low" icon="warning" :value="d.counts.low" :tone="d.counts.low ? 'warning' : ''" href="/inventory/stock"></sr-stat-tile></div>
-      <div class="col-6 col-lg-3"><sr-stat-tile label="Out of stock" icon="alert" :value="d.counts.out" :tone="d.counts.out ? 'danger' : ''" href="/inventory/stock"></sr-stat-tile></div>
-      <div class="col-6 col-lg-3"><sr-stat-tile label="Open alerts" icon="bell" :value="d.alert_counts.critical + d.alert_counts.warning" :hint="d.alert_counts.critical + ' critical'"></sr-stat-tile></div>
+      <div class="col-6 col-lg-3"><sr-stat-tile label="Low stock" icon="warning" :value="d.counts.low" :hint="d.counts.ok + ' of ' + stockTotal + ' ingredients OK'" :tone="d.counts.low ? 'warning' : 'success'" href="/inventory/stock"></sr-stat-tile></div>
+      <div class="col-6 col-lg-3"><sr-stat-tile label="Out of stock" icon="alert" :value="d.counts.out" :tone="d.counts.out ? 'danger' : 'success'" href="/inventory/stock"></sr-stat-tile></div>
+      <div class="col-6 col-lg-3"><sr-stat-tile label="Expiring in 3 days" icon="clock" :value="d.expiring.length >= 10 ? '10+' : d.expiring.length" :hint="expiredCount ? expiredCount + ' already expired' : 'batches'" :tone="expiredCount ? 'danger' : (d.expiring.length ? 'warning' : 'success')" href="/inventory/movements"></sr-stat-tile></div>
+      <div class="col-6 col-lg-3"><sr-stat-tile label="Kitchen requests" icon="inbox" :value="d.pending_requests" hint="waiting for a decision" :tone="d.pending_requests ? 'warning' : 'success'" href="/inventory/requests"></sr-stat-tile></div>
     </div>
     <div class="row g-3">
       <div class="col-12 col-xl-7">
         <div class="card mb-3"><div class="card-body">
-          <div class="card-head"><h2 class="h6">Reorder now (top 5)</h2><a href="/inventory/reorder">All suggestions</a></div>
-          <sr-empty v-if="!d.reorder.length" message="Nothing to reorder."></sr-empty>
-          <div v-else class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Ingredient</th><th class="text-end">Suggested</th><th>Supplier</th></tr></thead>
-            <tbody><tr v-for="r in d.reorder" :key="r.ingredient_id"><td>[[ r.name ]]</td><td class="text-end">[[ ui.qty(r.suggested_qty, r.unit) ]]</td><td>[[ r.supplier ]] <span class="text-muted small">([[ r.lead_time_days ]] d)</span></td></tr></tbody></table></div>
-        </div></div>
-        <div class="card mb-3"><div class="card-body">
-          <div class="card-head"><h2 class="h6">Next 7 days: need vs usable stock</h2></div>
-          <div v-for="r in d.need_vs_stock" :key="r.name" class="need-row">
-            <div class="d-flex justify-content-between small mb-1"><span class="fw-semibold">[[ r.name ]]</span><span class="text-muted">need [[ ui.qty(r.need, r.unit) ]] &middot; have [[ ui.qty(r.usable, r.unit) ]]</span></div>
-            <div class="progress" role="img" :aria-label="r.name + ' need versus stock'">
-              <div class="progress-bar bg-secondary" style="background: #cbd5e1 !important" :style="{ width: (r.usable / maxNeed * 100) + '%' }"></div></div>
-            <div class="progress mt-1"><div class="progress-bar" :class="r.need > r.usable ? 'bg-danger' : 'bg-success'" :style="{ width: (r.need / maxNeed * 100) + '%' }"></div></div>
-          </div>
-          <div class="need-legend"><span><i style="background:#cbd5e1"></i>Usable stock</span><span><i style="background:#198754"></i>7-day need</span><span><i style="background:#dc3545"></i>7-day need (stock will not cover it)</span></div>
+          <div class="card-head"><h2 class="h6">Reorder now</h2><a href="/inventory/reorder">All suggestions</a></div>
+          <sr-empty v-if="!d.reorder.length" message="Nothing to reorder." icon="check"></sr-empty>
+          <div v-else class="table-responsive"><table class="table table-sm align-middle mb-0"><thead><tr><th>Ingredient</th><th class="text-end">Order</th><th>Supplier</th></tr></thead>
+            <tbody><tr v-for="r in d.reorder" :key="r.ingredient_id"><td class="fw-semibold">[[ r.name ]]</td><td class="text-end">[[ ui.qty(r.suggested_qty, r.unit) ]]</td><td>[[ r.supplier ]] <span class="text-muted small">· arrives in [[ r.lead_time_days ]] [[ r.lead_time_days === 1 ? 'day' : 'days' ]]</span></td></tr></tbody></table></div>
         </div></div>
         <div class="card"><div class="card-body">
-          <div class="card-head"><h2 class="h6">Expiring soon</h2></div>
-          <sr-empty v-if="!d.expiring.length" message="No batches expiring in the next 3 days."></sr-empty>
-          <div v-else class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Ingredient</th><th>Batch</th><th class="text-end">Qty</th><th>Expiry</th></tr></thead>
-            <tbody><tr v-for="b in d.expiring" :key="b.id" :class="b.expired ? 'table-danger' : ''"><td>[[ b.ingredient ]]</td><td>[[ b.batch_no ]]</td><td class="text-end">[[ ui.qty(b.qty_remaining, b.unit) ]]</td>
-              <td>[[ ui.date(b.expiry_date) ]] <span v-if="b.expired" class="badge text-bg-danger">expired</span></td></tr></tbody></table></div>
+          <div class="card-head"><h2 class="h6">Stock-out risk, next 7 days</h2><a href="/inventory/forecast">Ingredient demand</a></div>
+          <sr-empty v-if="!risks.length" message="Usable stock covers the next 7 days of forecast demand." icon="check"></sr-empty>
+          <div v-else>
+            <div v-for="r in risks" :key="r.name" class="risk-row">
+              <div class="risk-top"><span class="fw-semibold">[[ r.name ]]</span><span class="text-muted">have [[ ui.qty(r.usable, r.unit) ]] of [[ ui.qty(r.need, r.unit) ]] needed</span></div>
+              <div class="progress progress-thin" role="progressbar" :aria-label="r.name + ': ' + cover(r) + '% of the 7-day need is in stock'" :aria-valuenow="cover(r)" aria-valuemin="0" aria-valuemax="100">
+                <div class="progress-bar" :class="cover(r) < 50 ? 'bg-danger' : 'bg-warning'" :style="{ width: cover(r) + '%' }"></div></div>
+              <small class="text-muted">[[ cover(r) ]]% covered · short by [[ ui.qty(Math.round((r.need - r.usable) * 1000) / 1000, r.unit) ]]</small>
+            </div>
+          </div>
+        </div></div>
+        <div class="card mt-3"><div class="card-body">
+          <div class="card-head"><h2 class="h6">Expiring soon</h2><a href="/inventory/movements">Batches</a></div>
+          <sr-empty v-if="!d.expiring.length" message="No batches expire in the next 3 days." icon="check"></sr-empty>
+          <ul v-else class="exp-list"><li v-for="b in d.expiring.slice(0, 5)" :key="b.id" :class="{ expired: b.expired }">
+            <span><strong>[[ b.ingredient ]]</strong> <small class="text-muted">[[ ui.qty(b.qty_remaining, b.unit) ]] · [[ b.batch_no ]]</small></span>
+            <span :class="b.expired ? 'sr-badge sr-badge-danger' : 'exp-date'">[[ b.expired ? 'Expired ' + ui.date(b.expiry_date) : ui.date(b.expiry_date) ]]</span></li></ul>
+          <a v-if="d.expiring.length > 5" class="small fw-semibold" href="/inventory/movements">See all [[ d.expiring.length >= 10 ? '10+' : d.expiring.length ]] batches</a>
         </div></div>
       </div>
       <div class="col-12 col-xl-5">
-        <div class="card mb-3"><div class="card-body">
-          <div class="card-head"><h2 class="h6">Stock status</h2><a href="/inventory/stock">View stock</a></div>
-          <div class="row align-items-center g-2">
-            <div class="col-12 col-sm-6 col-xl-12 col-xxl-6"><sr-doughnut-chart :labels="['OK', 'Low', 'Out of stock']" :data="[d.counts.ok, d.counts.low, d.counts.out]" :colors="['#2f9e6b', '#e0a020', '#b42318']" :center-value="stockTotal" center-label="ingredients" title="Ingredients by stock status"></sr-doughnut-chart></div>
-            <div class="col-12 col-sm-6 col-xl-12 col-xxl-6"><div class="legend-list">
-              <div><span><span class="legend-dot" style="background:#2f9e6b"></span>OK</span><strong>[[ d.counts.ok ]]</strong></div>
-              <div><span><span class="legend-dot" style="background:#e0a020"></span>Low</span><strong>[[ d.counts.low ]]</strong></div>
-              <div><span><span class="legend-dot" style="background:#b42318"></span>Out of stock</span><strong>[[ d.counts.out ]]</strong></div></div></div>
-          </div>
-        </div></div>
-        <div class="card mb-3"><div class="card-body">
-          <div class="card-head"><h2 class="h6">Kitchen requests</h2><a href="/inventory/requests">Open requests</a></div>
-          <div v-if="d.pending_requests" class="d-flex align-items-baseline gap-2"><span class="fs-3 fw-semibold">[[ d.pending_requests ]]</span><span class="text-muted">waiting for a decision</span></div>
-          <sr-empty v-else message="No pending kitchen requests." icon="inbox"></sr-empty>
-        </div></div>
-        <div class="card"><div class="card-body"><div class="card-head"><h2 class="h6">Alerts</h2></div><sr-alert-list :alerts="d.alerts" @acknowledge="ack"></sr-alert-list></div></div>
+        <div class="card" id="alerts"><div class="card-body">
+          <div class="card-head"><h2 class="h6">Needs attention</h2>
+            <span class="count-chips"><span class="chip chip-critical">[[ d.alert_counts.critical ]] critical</span><span class="chip chip-warning">[[ d.alert_counts.warning ]] warning</span></span></div>
+          <sr-alert-list :alerts="alerts" :limit="5" @acknowledge="ack"></sr-alert-list></div></div>
+
       </div>
     </div>
   </template>

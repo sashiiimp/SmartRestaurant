@@ -31,12 +31,15 @@
     </div>
     <div class="role-chip"><span class="role-dot"></span>{{ role_labels.get(current_user.role, current_user.role) }}</div>
     <nav id="nav" aria-label="Sections">
-      <ul class="side-nav">
-        {% for label, href in nav_links(current_user.role) %}
+      {% for heading, links in nav_groups(current_user.role) %}
+      <p class="side-heading" id="nav-h{{ loop.index }}">{{ heading }}</p>
+      <ul class="side-nav" aria-labelledby="nav-h{{ loop.index }}">
+        {% for label, href in links %}
         <li><a class="side-link {{ 'active' if request.path == href else '' }}" href="{{ href }}" {% if request.path == href %}aria-current="page"{% endif %}>
           <i class="sr-i" data-icon="{{ nav_icons.get(href, 'home') }}"></i><span>{{ label }}</span></a></li>
         {% endfor %}
       </ul>
+      {% endfor %}
     </nav>
     <div class="sidebar-foot">
       <div class="user-chip">
@@ -57,7 +60,7 @@
         {% if page.label %}<span class="crumb-sep" aria-hidden="true">/</span><span class="crumb-page">{{ page.label }}</span>{% endif %}
       </div>
       {% if data_source_label %}<span class="data-pill" role="note" title="All figures in this demo are synthetic"><span class="dot" aria-hidden="true"></span>{{ data_source_label }}</span>{% endif %}
-      <a class="bell" href="{{ home_href }}" id="alert-bell" title="Open alerts">
+      <a class="bell" href="{{ home_href }}#alerts" id="alert-bell" title="Open alerts">
         <i class="sr-i" data-icon="bell" data-size="18"></i><span class="bell-label">Alerts</span> <span class="count-badge" id="alert-count">0</span>
       </a>
     </header>

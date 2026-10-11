@@ -7,7 +7,7 @@
     <sr-date-nav v-model="date" @change="load"></sr-date-nav>
   </div>
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
-  <div v-if="plan" class="text-muted small mb-3">Safety buffer [[ plan.buffer_pct ]]%<span v-if="plan.model"> &middot; model [[ plan.model ]]</span></div>
+  <p v-if="plan" class="page-note">Recommended = forecast + [[ plan.buffer_pct ]]% safety buffer, rounded up to whole batches.<span v-if="anyWeatherEstimated"> Weather for this date is the seasonal average.</span><span v-if="plan.model" class="text-muted"> Model [[ plan.model ]].</span></p>
   <sr-loading v-if="loading"></sr-loading>
   <div v-else class="row g-3">
     <div class="col-12 col-md-6 col-xl-4" v-for="it in items" :key="it.menu_item_id">
@@ -21,19 +21,22 @@
             <p class="text-muted mb-2">No forecast yet for this date.</p>
           </template>
           <template v-else>
-            <dl class="row mb-2 small">
-              <dt class="col-7 fw-normal text-muted">Forecast</dt><dd class="col-5 text-end mb-0">[[ ui.num(it.forecast_qty, 1) ]]</dd>
-              <dt class="col-7 fw-normal text-muted">Safety buffer</dt><dd class="col-5 text-end mb-0">+[[ it.buffer_pct ]]%</dd>
-              <dt class="col-7 fw-normal text-muted">Confirmed pre-orders</dt><dd class="col-5 text-end mb-0">[[ it.preorder_qty ]]</dd>
-              <dt class="col-7 fw-normal text-muted">Batch size</dt><dd class="col-5 text-end mb-0">[[ it.batch_size ]]</dd>
-            </dl>
-            <div class="d-flex justify-content-between align-items-baseline border-top pt-2">
-              <span>Recommended</span><span class="fs-4 fw-semibold">[[ it.recommended_qty ]]</span>
+            <div class="prep-figures">
+              <div><span class="pf-label">Forecast</span><span class="pf-forecast">[[ ui.num(it.forecast_qty, 1) ]]</span></div>
+              <div class="text-end"><span class="pf-label">Recommended</span><span class="pf-rec">[[ it.recommended_qty ]]</span></div>
             </div>
-            <div class="small text-muted mb-2">
-              <span v-if="it.weather_estimated">Weather estimated (seasonal average). </span>
-              <span v-if="it.forecast_method === 'baseline'">Simple estimate (same day last week).</span>
-            </div>
+            <p v-if="it.preorder_qty" class="small mb-1">Includes [[ it.preorder_qty ]] confirmed pre-ordered portions.</p>
+            <p v-if="it.forecast_method === 'baseline'" class="small text-muted mb-1">Simple estimate (same day last week).</p>
+            <details class="calc">
+              <summary>How was this worked out?</summary>
+              <dl class="row mb-0 small">
+                <dt class="col-7 fw-normal text-muted">Forecast</dt><dd class="col-5 text-end mb-0">[[ ui.num(it.forecast_qty, 1) ]]</dd>
+                <dt class="col-7 fw-normal text-muted">Safety buffer</dt><dd class="col-5 text-end mb-0">+[[ it.buffer_pct ]]%</dd>
+                <dt class="col-7 fw-normal text-muted">Confirmed pre-orders</dt><dd class="col-5 text-end mb-0">[[ it.preorder_qty ]]</dd>
+                <dt class="col-7 fw-normal text-muted">Batch size</dt><dd class="col-5 text-end mb-0">[[ it.batch_size ]]</dd>
+              </dl>
+              <p class="small text-muted mb-0 mt-1">[[ ui.num(it.forecast_qty, 1) ]] + [[ it.buffer_pct ]]% = [[ ui.num(it.forecast_qty * (1 + it.buffer_pct / 100), 1) ]]<span v-if="it.preorder_qty"> (or [[ it.preorder_qty ]] pre-ordered, if higher)</span>, rounded up to a multiple of [[ it.batch_size ]] = [[ it.recommended_qty ]].</p>
+            </details>
             <div v-if="it.status !== 'suggested'" class="alert alert-light border py-2 small">
               <strong>[[ it.status === 'accepted' ? 'Accepted' : 'Overridden' ]]: [[ it.final_qty ]]</strong>
               <span v-if="it.status === 'accepted' && it.final_qty !== it.recommended_qty" class="text-warning"> (recommendation is now [[ it.recommended_qty ]])</span>
@@ -54,7 +57,7 @@
             </div>
           </template>
           <div class="border-top pt-2 mt-2 d-flex justify-content-between align-items-center small">
-            <span>Menu availability</span>
+            <span class="text-muted">[[ it.is_available ? 'On the menu' : 'Not on the menu today' ]]</span>
             <button class="btn btn-sm" :class="it.is_available ? 'btn-outline-danger' : 'btn-outline-success'" type="button" :disabled="st(it.menu_item_id).busy" @click="toggleAvailable(it)">[[ it.is_available ? 'Mark unavailable' : 'Mark available' ]]</button>
           </div>
           <div class="border-top pt-2 mt-2">

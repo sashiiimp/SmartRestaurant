@@ -68,10 +68,12 @@ def kitchen(browser):
     page.wait_for_selector("text=24", timeout=5000)
     visit(page, "/kitchen/prep", "k_prep_after", wait=".card-item")
     assert page.locator(".card-item.accepted").count() == 1 and page.locator(".card-item.overridden").count() == 1
-    visit(page, "/kitchen/record", "k_record", wait="#w-item")
+    visit(page, "/kitchen/record", "k_record", wait="input[id^=s]")
     page.locator("input[id^=s]").first.fill("999")
     page.get_by_role("button", name="Save served quantities").click()
     page.wait_for_selector("text=served above prepared", timeout=5000)
+    page.get_by_role("tab", name="Waste").click()
+    page.wait_for_selector("#w-item", timeout=2000)
     page.fill("#w-qty", "-4")
     page.get_by_role("button", name="Record waste").click()
     page.wait_for_selector("text=must be greater than 0", timeout=5000)
@@ -80,7 +82,7 @@ def kitchen(browser):
     page.wait_for_selector("text=Waste recorded", timeout=5000)
     assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth + 1"), "horizontal scroll at 390px"
     visit(page, "/kitchen", "k_dashboard", wait=".stat-tile")
-    assert page.locator(".stat-tile").count() == 4
+    assert page.locator(".stat-tile").count() == 3
     visit(page, "/kitchen/requirements", "k_requirements", wait="table")
     assert "Chicken" in page.locator("tr.table-danger").first.inner_text(), "chicken should be short today"
     r = page.goto(BASE + "/admin")

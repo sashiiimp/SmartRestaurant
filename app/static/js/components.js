@@ -86,19 +86,27 @@ window.SR = (function () {
         <button class="btn btn-outline-primary btn-lg-touch" type="button" @click="today()">Today</button></div>`,
     },
     'sr-alert-list': {
-      props: ['alerts'],
+      // limit: show only the first n alerts (most severe first, as the API sorts them) with a button for the rest.
+      props: { alerts: Array, limit: { type: Number, default: 0 } },
       emits: ['acknowledge'],
+      data() { return { all: false }; },
+      computed: {
+        shown() { return this.limit && !this.all ? (this.alerts || []).slice(0, this.limit) : (this.alerts || []); },
+        hidden() { return this.limit ? Math.max(0, (this.alerts || []).length - this.limit) : 0; },
+      },
       methods: { icon(sev) { return { critical: 'alert', warning: 'warning' }[sev] || 'info'; } },
       template: `<div><sr-empty v-if="!alerts || !alerts.length" message="No open alerts." icon="check"></sr-empty>
         <div v-else>
-          <div v-for="a in alerts" :key="a.id" class="alert-item" :class="['sev-' + a.severity, a.status === 'acknowledged' ? 'is-ack' : '']">
+          <div v-for="a in shown" :key="a.id" class="alert-item" :class="['sev-' + a.severity, a.status === 'acknowledged' ? 'is-ack' : '']">
             <span class="sev-icon"><sr-icon :name="icon(a.severity)" :size="18"></sr-icon></span>
             <div class="flex-grow-1 min-w-0">
               <div class="alert-msg">[[ a.message ]]</div>
-              <div class="alert-meta"><span class="sev-tag">[[ a.severity ]]</span><span>[[ a.alert_type.replace('_', ' ') ]]</span><span v-if="a.status === 'acknowledged'">&middot; acknowledged</span>
+              <div class="alert-meta"><span class="sev-tag">[[ a.severity ]]</span><span>[[ a.alert_type.replace(/_/g, ' ') ]]</span><span v-if="a.status === 'acknowledged'">&middot; acknowledged</span>
                 <button v-if="a.status === 'open'" class="btn btn-sm btn-outline-secondary ms-auto" type="button" @click="$emit('acknowledge', a)">Acknowledge</button></div>
             </div>
-          </div></div></div>`,
+          </div>
+          <button v-if="hidden" class="btn btn-sm btn-link alert-more" type="button" :aria-expanded="all ? 'true' : 'false'" @click="all = !all">[[ all ? 'Show fewer' : 'Show all ' + alerts.length + ' alerts' ]]</button>
+        </div></div>`,
     },
     'sr-line-chart': {
       props: ['labels', 'datasets', 'title', 'yTitle', 'height'],

@@ -2,9 +2,9 @@
 {% block title %}Admin - SmartRestaurant{% endblock %}
 {% block content %}
 <div id="app" v-cloak>
-  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-    <h1 class="h4 m-0">System overview</h1>
-    <div class="btn-group" role="group" aria-label="Range"><button class="btn btn-outline-secondary" :class="{ active: range === 7 }" @click="range = 7; load()">Last 7 days</button><button class="btn btn-outline-secondary" :class="{ active: range === 30 }" @click="range = 30; load()">Last 30 days</button></div>
+  <div class="dash-head">
+    <div><h1 class="h4 m-0">Overview</h1><p class="dash-sub" v-if="d">[[ ui.date(d.from) ]] to [[ ui.date(d.to) ]]</p></div>
+    <div class="btn-group" role="group" aria-label="Period"><button class="btn btn-outline-secondary" :class="{ active: range === 7 }" :aria-pressed="range === 7" @click="range = 7; load()">Last 7 days</button><button class="btn btn-outline-secondary" :class="{ active: range === 30 }" :aria-pressed="range === 30" @click="range = 30; load()">Last 30 days</button></div>
   </div>
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
   <sr-loading v-if="loading" :tiles="4" :cards="2"></sr-loading>
@@ -12,44 +12,51 @@
     <div v-if="d.items_without_recipe.length" class="alert alert-warning py-2">Menu items without a recipe (their ingredient needs count as zero): [[ d.items_without_recipe.join(', ') ]]. <a href="/admin/catalog">Add recipes</a></div>
     <div v-if="!d.active_model" class="alert alert-warning py-2">No active forecasting model. <a href="/admin/models">Train and activate one</a>.</div>
     <div class="row g-3 mb-3">
-      <div class="col-6 col-lg-3"><sr-stat-tile label="Portions sold" icon="bag" :value="ui.num(d.sales.quantity, 0)" :hint="'Revenue ' + ui.money(d.sales.revenue)" href="/admin/monitor"></sr-stat-tile></div>
-      <div class="col-6 col-lg-3"><sr-stat-tile label="Forecast, next 7 days" icon="trending" tone="info" :value="ui.num(d.forecast_next7_total, 0)" hint="portions" href="/admin/models"></sr-stat-tile></div>
-      <div class="col-6 col-lg-3"><sr-stat-tile label="Low or out of stock" icon="package" :value="d.low_stock_count" :tone="d.low_stock_count ? 'warning' : 'success'"></sr-stat-tile></div>
-      <div class="col-6 col-lg-3"><sr-stat-tile label="Food waste" icon="trash" :value="ui.num(d.waste.quantity, 0) + ' portions'" :hint="ui.money(d.waste.value) + ' at selling price'" href="/admin/monitor"></sr-stat-tile></div>
+      <div class="col-6 col-lg-3"><sr-stat-tile label="Portions sold" icon="bag" :value="ui.num(d.sales.quantity, 0)" :hint="ui.money(d.sales.revenue)" href="/admin/monitor"></sr-stat-tile></div>
+      <div class="col-6 col-lg-3"><sr-stat-tile label="Portions wasted" icon="trash" :value="ui.num(d.waste.quantity, 0)" :hint="ui.money(d.waste.value) + ' at selling price'" href="/admin/monitor"></sr-stat-tile></div>
+      <div class="col-6 col-lg-3"><sr-stat-tile label="Low or out of stock" icon="package" :value="d.low_stock_count" :hint="d.low_stock_count === 1 ? 'ingredient' : 'ingredients'" :tone="d.low_stock_count ? 'warning' : 'success'" href="/admin/inventory"></sr-stat-tile></div>
+      <div class="col-6 col-lg-3"><sr-stat-tile label="Forecast, next 7 days" icon="trending" tone="info" :value="ui.num(d.forecast_next7_total, 0)" hint="portions, all menu items" href="/admin/models"></sr-stat-tile></div>
     </div>
     <div class="row g-3 mb-3">
       <div class="col-12 col-xl-8"><div class="card h-100"><div class="card-body">
-        <div class="card-head"><h2 class="h6">Sales and waste, [[ ui.date(d.from) ]] to [[ ui.date(d.to) ]]</h2><a href="/admin/monitor">Full report</a></div>
-        <sr-line-chart v-if="trend" :labels="trendLabels" :datasets="trendData" y-title="Portions per day" :height="260"></sr-line-chart>
-        <div v-else-if="trend === undefined" class="sk" style="height: 260px"></div>
+        <div class="card-head"><h2 class="h6">Sales and waste per day</h2><a href="/admin/monitor">Reports</a></div>
+        <sr-line-chart v-if="trend" :labels="trendLabels" :datasets="trendData" y-title="Portions" :height="240" title=""></sr-line-chart>
+        <div v-else-if="trend === undefined" class="sk" style="height: 240px"></div>
         <sr-empty v-else message="Trend data is not available right now." icon="activity"></sr-empty>
       </div></div></div>
-      <div class="col-12 col-xl-4"><div class="card h-100"><div class="card-body">
-        <div class="card-head"><h2 class="h6">Alerts by severity</h2></div>
-        <sr-doughnut-chart :labels="['Critical', 'Warning', 'Info']" :data="[d.alert_counts.critical, d.alert_counts.warning, d.alert_counts.info || 0]"
-          :colors="['#b42318', '#e0a020', '#3b7dd8']" :center-value="alertTotal" center-label="open alerts" title="Open alerts by severity"></sr-doughnut-chart>
-        <div class="legend-list">
-          <div><span><span class="legend-dot" style="background:#b42318"></span>Critical</span><strong>[[ d.alert_counts.critical ]]</strong></div>
-          <div><span><span class="legend-dot" style="background:#e0a020"></span>Warning</span><strong>[[ d.alert_counts.warning ]]</strong></div>
-          <div><span><span class="legend-dot" style="background:#3b7dd8"></span>Info</span><strong>[[ d.alert_counts.info || 0 ]]</strong></div>
-        </div>
+      <div class="col-12 col-xl-4"><div class="card h-100"><div class="card-body perf">
+        <div class="card-head"><h2 class="h6">Forecast performance</h2><a href="/admin/models">Forecast models</a></div>
+        <template v-if="d.active_model">
+          <p class="perf-model">[[ d.active_model.label ]] <span class="text-muted">· [[ algoName(d.active_model.algorithm) ]]</span></p>
+          <div v-if="perf" class="perf-figures">
+            <div><span class="perf-num">[[ ui.num(perf.model, 1) ]]</span><span class="perf-cap">model's average error</span></div>
+            <div><span class="perf-num muted">[[ ui.num(perf.baseline, 1) ]]</span><span class="perf-cap">simple baseline (same day last week)</span></div>
+          </div>
+          <p v-if="perf" class="perf-note">Average error in portions per item per day, tested on [[ ui.date(perf.from) ]] to [[ ui.date(perf.to) ]] (sales the model did not see in training).<template v-if="perf.better > 0"> That is [[ perf.better ]]% smaller than the baseline.</template></p>
+          <span class="sr-badge" :class="d.active_model.beats_baseline ? 'sr-badge-success' : 'sr-badge-warning'">[[ d.active_model.beats_baseline ? 'Beats the baseline' : 'Does not beat the baseline' ]]</span>
+          <p v-if="d.last_run" class="perf-run">Last forecast run [[ ui.dateTime(d.last_run.started_at) ]]<span v-if="d.last_run.status !== 'ok'">: [[ d.last_run.status ]]</span></p>
+        </template>
+        <sr-empty v-else message="No active model yet." icon="layers"></sr-empty>
       </div></div></div>
     </div>
     <div class="row g-3">
-      <div class="col-12 col-xl-7">
-        <div class="card"><div class="card-body">
-          <div class="card-head"><h2 class="h6">Open alerts ([[ d.alert_counts.critical ]] critical, [[ d.alert_counts.warning ]] warning)</h2>
-            <button class="btn btn-sm btn-outline-primary" :disabled="running" @click="runAlerts"><span v-if="running" class="spinner-border spinner-border-sm me-1"></span>Run alert check</button></div>
-          <sr-alert-list :alerts="d.alerts" @acknowledge="ack"></sr-alert-list></div></div>
+      <div class="col-12 col-xl-8"><div class="card" id="alerts"><div class="card-body">
+        <div class="card-head"><h2 class="h6">Needs attention</h2>
+          <span class="count-chips"><span class="chip chip-critical">[[ d.alert_counts.critical ]] critical</span><span class="chip chip-warning">[[ d.alert_counts.warning ]] warning</span><span v-if="d.alert_counts.info" class="chip chip-info">[[ d.alert_counts.info ]] info</span></span></div>
+        <sr-alert-list :alerts="alerts" :limit="5" @acknowledge="ack"></sr-alert-list></div></div>
       </div>
-      <div class="col-12 col-xl-5">
-        <div class="card mb-3"><div class="card-body"><h2 class="h6">Forecasting</h2>
-          <div v-if="d.active_model">Active model: <strong>[[ d.active_model.label ]]</strong> ([[ d.active_model.algorithm ]])
-            <span class="sr-badge ms-1" :class="d.active_model.beats_baseline ? 'sr-badge-success' : 'sr-badge-warning'">[[ d.active_model.beats_baseline ? 'Beats the baseline' : 'Does not beat the baseline' ]]</span></div>
-          <div v-if="d.last_run" class="small text-muted mt-1">Last run [[ ui.dateTime(d.last_run.started_at) ]]: [[ d.last_run.status ]]<span v-if="d.last_run.reason"> ([[ d.last_run.reason ]])</span></div></div></div>
-        <div class="card"><div class="card-body"><h2 class="h6">Recent activity</h2>
-          <ul class="activity small"><li v-for="(a, i) in d.recent_activity" :key="i"><span class="when">[[ ui.dateTime(a.time) ]]</span><span class="what">[[ a.action ]]</span></li></ul></div></div>
-      </div>
+      <div class="col-12 col-xl-4"><div class="card"><div class="card-body">
+        <h2 class="h6">Manage</h2>
+        <nav class="manage-list" aria-label="Management">
+          <a href="/admin/catalog"><sr-icon name="book" :size="18"></sr-icon><span><strong>Menu &amp; recipes</strong><small>Items, prices and ingredients per portion</small></span></a>
+          <a href="/admin/users"><sr-icon name="users" :size="18"></sr-icon><span><strong>Users</strong><small>Accounts and roles</small></span></a>
+          <a href="/admin/data"><sr-icon name="database" :size="18"></sr-icon><span><strong>Import data</strong><small>Sales, holidays, promotions, weather</small></span></a>
+          <a href="/admin/settings"><sr-icon name="sliders" :size="18"></sr-icon><span><strong>Settings</strong><small>Restaurant details and alert rules</small></span></a>
+        </nav>
+        <h3 class="h6 mt-3 mb-2">Recent activity</h3>
+        <ul class="activity small"><li v-for="(a, i) in activityShown" :key="i"><span class="when">[[ ui.dateTime(a.time) ]]</span><span class="what">[[ activityText(a.action) ]]</span></li></ul>
+        <button v-if="d.recent_activity.length > 5" class="btn btn-sm btn-link alert-more" type="button" :aria-expanded="allActivity ? 'true' : 'false'" @click="allActivity = !allActivity">[[ allActivity ? 'Show fewer' : 'Show ' + d.recent_activity.length ]]</button>
+      </div></div></div>
     </div>
   </template>
 </div>

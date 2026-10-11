@@ -2,6 +2,7 @@ SR.createApp({
   data() {
     return {
       date: ui.todayIso(), items: [], loading: true, error: null, ui,
+      tab: 'served', tabs: [{ id: 'served', label: 'Served' }, { id: 'waste', label: 'Waste' }, { id: 'other', label: 'Other use' }, { id: 'balance', label: 'Daily balance' }],
       served: {}, savingServed: false, servedErrors: {}, conflicts: null, servedMessages: [],
       waste: { menu_item_id: '', quantity: '', reason: 'overproduction', note: '' }, wasteErrors: {}, savingWaste: false,
       usage: null, use: {}, usageErrors: {}, allIngredients: [], otherIng: '',
@@ -10,6 +11,10 @@ SR.createApp({
     };
   },
   async mounted() {
+    // A link such as /kitchen/record#waste opens that tab, also when only the address hash changes.
+    const fromHash = () => { const h = location.hash.slice(1); if (this.tabs.some(t => t.id === h)) this.tab = h; };
+    fromHash();
+    window.addEventListener('hashchange', fromHash);
     try { this.allIngredients = (await api.get('/ingredients', { active: true })).data; } catch (e) { /* the rest of the page still works */ }
     await this.load();
   },
@@ -17,6 +22,13 @@ SR.createApp({
     otherIngredients() { const shown = new Set(this.usage ? this.usage.rows.map(r => r.ingredient_id) : []); return this.allIngredients.filter(g => !shown.has(g.id)); },
   },
   methods: {
+    setTab(id) { this.tab = id; history.replaceState(null, '', '#' + id); },
+    moveTab(step) {
+      const i = this.tabs.findIndex(t => t.id === this.tab);
+      const next = this.tabs[(i + step + this.tabs.length) % this.tabs.length].id;
+      this.setTab(next);
+      this.$nextTick(() => document.getElementById('tab-' + next).focus());
+    },
     async load() {
       this.loading = true; this.error = null; this.conflicts = null; this.servedMessages = [];
       try {

@@ -73,14 +73,14 @@ def create_app(config_name: str | None = None, overrides: dict | None = None) ->
         if current_user.is_authenticated:
             label = settings.get(current_user.outlet_id, "data_source_label")
         from app.services import auth_service as _a
-        from app.utils.navigation import nav_links
+        from app.utils.navigation import nav_groups, nav_links
         home = _a.home_url_for(current_user.role) if current_user.is_authenticated else "/"
         restaurant = None
         if current_user.is_authenticated:
             from app.models import Outlet
             outlet = db.session.get(Outlet, current_user.outlet_id)
             restaurant = outlet.name if outlet else None
-        return {"data_source_label": label, "business_today": today(), "nav_links": nav_links, "home_href": home,
+        return {"data_source_label": label, "business_today": today(), "nav_links": nav_links, "nav_groups": nav_groups, "home_href": home,
                 "restaurant_name": restaurant}
 
     @app.after_request

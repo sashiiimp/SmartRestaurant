@@ -6,6 +6,7 @@ SR.createApp({
     items() { return this.plan ? this.plan.items : []; },
     isPast() { return this.date < ui.todayIso(); },
     isFuture() { return this.date > ui.todayIso(); },
+    anyWeatherEstimated() { return this.items.some(it => it.weather_estimated); },
   },
   async mounted() { await this.load(); },
   methods: {

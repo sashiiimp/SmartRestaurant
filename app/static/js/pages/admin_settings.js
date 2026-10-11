@@ -1,5 +1,5 @@
 SR.createApp({
-  data() { return { s: null, r: { name: '', address: '', contact: '', opening_days: '', opening_hours: '' }, rErrors: {}, savingR: false, loading: true, error: null, saving: false, errors: {}, ui }; },
+  data() { return { s: null, r: { name: '', address: '', contact: '', opening_days: '', opening_hours: '' }, rErrors: {}, savingR: false, loading: true, error: null, saving: false, running: false, errors: {}, ui }; },
   async mounted() {
     try { this.s = (await api.get('/settings')).data; this.r = this.blankToText((await api.get('/restaurant')).data); } catch (e) { this.error = ui.errorText(e); } finally { this.loading = false; }
   },
@@ -10,6 +10,11 @@ SR.createApp({
       try { this.r = this.blankToText((await api.put('/restaurant', this.r)).data); ui.toast('Restaurant information saved. The name shows in the sidebar from the next page.'); }
       catch (e) { this.rErrors = e.fields || {}; if (!Object.keys(this.rErrors).length) ui.toast(ui.errorText(e), 'danger'); }
       finally { this.savingR = false; }
+    },
+    async runAlerts() {
+      this.running = true;
+      try { const { data } = await api.post('/alerts/run'); ui.toast('Alerts checked: ' + data.opened + ' opened, ' + data.closed + ' cleared.'); }
+      catch (e) { ui.toast(ui.errorText(e), 'danger'); } finally { this.running = false; }
     },
     async save() {
       this.saving = true; this.errors = {};

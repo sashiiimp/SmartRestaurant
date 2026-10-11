@@ -8,7 +8,9 @@ About 17 minutes, three roles, one story: **the kitchen plans a busy day, finds 
 
 Run it at `https://smartrest.developerstudio.space` (since 7 Oct 2026; gunicorn itself listens only on `127.0.0.1:39500` behind nginx). Use the three demo accounts `admin`, `kitchen` and `inventory` (renamed from `kitchen1` and `inventory1` on 8 Oct 2026). Their passwords were set on 8 Oct 2026 and given to the presenters; they are not kept in this repository. Note: `flask smartrest demo-reset` recreates the seeded accounts (`admin`, `kitchen1`, `inventory1` with the passwords from `.env`), so after a reset use those instead. Open each role in its own browser profile or private window so you can switch without logging out.
 
-## Which model is live: read before showing the Models or Monitoring pages
+> Menu names follow the simplified menus of 11 Oct 2026 (for example Reports was Monitoring, Forecast models was Models, Ingredient needs was Ingredients).
+
+## Which model is live: read before showing the Forecast models or Reports pages
 
 The demo was rebuilt with `flask smartrest demo-reset` on **8 October 2026**. That regenerated the synthetic history up
 to 7 Oct and trained a new model, so **the live model is not the model evaluated in the research report**. The
@@ -26,9 +28,9 @@ shows the system working on a fresh run of the same pipeline.
 | Hold-out WAPE %: naive / XGBoost | 21.9 / 14.5 | 20.9 / 14.1 |
 | XGBoost against naive (MAE) | 33.7% lower | 32.3% lower |
 | Noise floor (MAE of the generator's expected demand) | 8.26 | 7.75 |
-| Where its figures appear | `docs/ML_EVALUATION.md`, the report (Chapter 11, Appendix C) | Admin > Models; Admin > Monitoring > Forecast accuracy |
+| Where its figures appear | `docs/ML_EVALUATION.md`, the report (Chapter 11, Appendix C) | Admin > Forecast models; Admin > Reports > Forecast accuracy |
 
-- **Quote the original model's figures** when discussing the research. The Models and Monitoring pages show the demo
+- **Quote the original model's figures** when discussing the research. The Forecast models and Reports pages show the demo
   model's figures, which differ slightly.
 - **The demo history is a new sample, not an extension.** Four more days shift the generator's random draws: comparing
   with the pre-reset backup, only 2.8% of the 7,630 item-days of 1 Sep 2024 to 3 Oct 2026 have the same quantity.
@@ -58,7 +60,7 @@ shows the system working on a fresh run of the same pipeline.
    - Inventory `/inventory/reorder`: **Chicken 80 kg** (Ceylon Poultry & Meats) and **Potato 50 kg** (Colombo Fresh Produce).
    - Inventory `/inventory`: Potato "critically low", Chicken "will run short today", two expired batches (Chicken
      `CHK-EXPIRED` 5 kg, Burger bun `BUN-OLD` 60 pcs) and several opening batches that expire on 12, 13 or 15 Oct.
-3. Make sure the demo has a forecast for today: the Kitchen **Forecast** page must show numbers for 12 to 14 Oct (see
+3. Make sure the demo has a forecast for today: the Kitchen **Demand forecast** page must show numbers for 12 to 14 Oct (see
    "What looks different on 12 October" below for 15 to 18 Oct).
 4. **Rehearse, then roll back.** The scenes create real records (pre-orders, requests, orders, stock). After a
    rehearsal, restore the dump from step 1 so the figures above hold on the day.
@@ -70,16 +72,16 @@ shows the system working on a fresh run of the same pipeline.
 | # | Do | You should see | Say |
 |---|---|---|---|
 | 1 | **Prep plan** (`/kitchen/prep`). Point at one card. On **Iced Milo** press **Mark unavailable**. | Card shows a red *Unavailable* badge; each card now has a *Confirmed pre-orders* line (0). Open **Dashboard**: the badge shows in the plan table. Press **Mark available** again. | *Manage Food Availability*: the manager can take an item off for the day. It does not change the forecast. |
-| 2 | **Orders** > **Pre-orders** > **Add pre-order**: Chicken Burger, tomorrow, quantity **120**, note "Corporate lunch", status *Pending* > **Save**. | Row shows *Pending*. | *Manage Pre-Order*. |
+| 2 | **Orders & pre-orders** > **Pre-orders** > **Add pre-order**: Chicken Burger, tomorrow, quantity **120**, note "Corporate lunch", status *Pending* > **Save**. | Row shows *Pending*. | *Manage Pre-Order*. |
 | 3 | **Prep plan**, press the date arrow to **tomorrow**. | Chicken Burger: confirmed pre-orders **0**, recommended **84** (the pending pre-order is ignored). | Only confirmed pre-orders count. |
-| 4 | Back to **Orders**, press **Confirm** on the pre-order, then repeat step 3. | Confirmed pre-orders **120**, recommended now **120** (120 is already whole batches of 6). | The prep quantity is `max(forecast x 1.10, pre-orders)` rounded up to whole batches. |
-| 5 | **Orders** > **Daily orders** > add Chicken Burger, quantity **6**, note "Table 4", then **Fulfilled**. | Row moves to *Accepted*; no buttons any more. Try tomorrow's date: no form, the page points to Pre-orders. | *Manage Daily Order*: an internal record only, no prices or payments, no effect on the forecast. |
+| 4 | Back to **Orders & pre-orders**, press **Confirm** on the pre-order, then repeat step 3. | Confirmed pre-orders **120**, recommended now **120** (120 is already whole batches of 6). | The prep quantity is `max(forecast x 1.10, pre-orders)` rounded up to whole batches. |
+| 5 | **Orders & pre-orders** > **Daily orders** > add Chicken Burger, quantity **6**, note "Table 4", then **Fulfilled**. | Row moves to *Accepted*; no buttons any more. Try tomorrow's date: no form, the page points to Pre-orders. | *Manage Daily Order*: an internal record only, no prices or payments, no effect on the forecast. |
 | 6 | **Prep plan** (today): on Chicken Burger type **24** in *Quantity* and **+ Add**. Then **Served & waste**, scroll to **Ingredient usage**. | Chicken expected **2.88 kg** (24 x 0.12), Burger bun 24, and so on. Type **3.1** for Chicken, note "extra for the sauce", **Save**. | Difference **+0.22** shows. *Record Ingredient Usage*: expected is prepared x recipe; the kitchen records what was actually used. It never changes stock. |
-| 7 | **Ingredients** (`/kitchen/requirements`). | Chicken row in red: short by **10.68 kg**, with **Request stock** and **Report shortage** buttons. | *Ingredient Requirements* and *Shortage Reporting*. |
+| 7 | **Ingredient needs** (`/kitchen/requirements`). | Chicken row in red: short by **10.68 kg**, with **Request stock** and **Report shortage** buttons. | *Ingredient Requirements* and *Shortage Reporting*. |
 | 8 | On **Potato** press **Report shortage**, type "crate looks half empty" > OK. | Toast "Shortage reported to Inventory". | The report becomes a critical alert for Inventory and Admin. |
 | 9 | **Stock requests** > **New request**: Cooking oil **10** L, note "Fryer top-up" > **Send request**. Send a second one: Egg **500** pcs, note "Breakfast batch". | Two cards, both *Pending*. | *Request Kitchen Stock*. |
 
-*(Optional, 20 seconds)* On **Ingredients**, press **Request stock** next to Chicken: the form opens with Chicken and 10.68 kg filled in. Press **Cancel**; the real fix for a buying gap comes from procurement in Scene 2.
+*(Optional, 20 seconds)* On **Ingredient needs**, press **Request stock** next to Chicken: the form opens with Chicken and 10.68 kg filled in. Press **Cancel**; the real fix for a buying gap comes from procurement in Scene 2.
 
 ---
 
@@ -95,7 +97,7 @@ shows the system working on a fresh run of the same pipeline.
 | 6 | Receive the remaining **40 kg**, then open the **Potato** order and receive **50**. | Both orders *Received*. | The reorder formula already counted "on order" and stock, so it needed no change: the recommendation, the order and the stock all agree. |
 | 7 | **Record stock** > **Wastage**: Chicken, **5**, reason *Expired*. Then Burger bun, **60**, reason *Expired* (on 12 Oct the old bun batch has expired too). | Both expired batches are written off (expired stock is taken first). | *Inventory Wastage Recording* (already existed). We do it now so the next step is clean. |
 | 8 | **Adjustment** tab: pick Chicken. The page shows *System on hand: N kg*. Enter **N minus 2**, reason "Stock take: 2 kg spillage" > **Save**. | The live line shows *difference -2*; history shows an *adjustment* of -2. | *Stock Adjustment*: you enter the counted quantity, the system posts the difference, and a reason is mandatory. Enter the same number again and it says there is nothing to adjust. |
-| 9 | **Stock** > **Data check** > **Run data check**. | Green "No problems found", checked 20 ingredients, no expired stock listed (both expired batches were written off in step 7). | *Validate Inventory Data*: the recorded movements add up exactly to the stock in the batches. (Also available as `flask smartrest check-stock`.) |
+| 9 | **Stock levels** > **Data check** > **Run data check**. | Green "No problems found", checked 20 ingredients, no expired stock listed (both expired batches were written off in step 7). | *Validate Inventory Data*: the recorded movements add up exactly to the stock in the batches. (Also available as `flask smartrest check-stock`.) |
 | 10 | **Suppliers** > **Add supplier** "Island Spice Traders", lead time 2 > **Save**, then **Deactivate** it. Open **Purchase orders** > **New purchase order**. | The supplier list does **not** include Island Spice Traders. | *Manage Suppliers*. A deactivated supplier keeps its history but cannot be chosen for new orders. |
 
 ---
@@ -105,8 +107,8 @@ shows the system working on a fresh run of the same pipeline.
 | # | Do | You should see | Say |
 |---|---|---|---|
 | 1 | **Dashboard** > **Run alert check**. | The Chicken projected stock-out and the Potato critical-stock alerts are gone; the *shortage of Potato* report has closed by itself (the ingredient was restocked). Expiry warnings for opening batches that expire today or soon stay, which is correct. | Alerts clear when the cause is fixed. |
-| 2 | **Inventory** (new sidebar entry). Walk through the four tabs; on *Stock levels* press **Download stock levels (CSV)**. | Stock levels, 7-day ingredient demand, batches with expiry, recent movements. | *Inventory Monitoring* and *Inventory Demand Forecast Monitoring*: read-only, same numbers as the inventory manager's screens. |
-| 3 | **Monitoring** > **Demand forecast**. | Next 7 days per item, with totals and a chart. Model name and last run at the top. | *Food Demand Forecast Monitoring*. |
+| 2 | **Inventory overview** (sidebar). Walk through the four tabs; on *Stock levels* press **Download stock levels (CSV)**. | Stock levels, 7-day ingredient demand, batches with expiry, recent movements. | *Inventory Monitoring* and *Inventory Demand Forecast Monitoring*: read-only, same numbers as the inventory manager's screens. |
+| 3 | **Reports** > **Demand forecast**. | Next 7 days per item, with totals and a chart. Model name and last run at the top. | *Food Demand Forecast Monitoring*. |
 | 4 | **Forecast accuracy**: choose **Chicken Burger** in *Menu item*. | The forecast-versus-actual chart and the error table follow the item; the CSV link keeps the filter. | Accuracy per item, not just overall. |
 | 5 | **Analytics**. | Average portions by weekday (Friday to Sunday highest), holiday and promotion days against ordinary days, forecast error over time, waste rate over time. The period and "Synthetic demo data" are stated. | *System Analytics*. Read the small print aloud: differences between kinds of day describe the data; they do not prove that a holiday or promotion caused them. |
 | 6 | **Inventory** tab, ingredient **Chicken**. | Closing stock day by day: today's steps up with the two receipts and down with the adjustment. **Download CSV**. | *System Reports*: rebuilt from the recorded movements, and the last figure equals the stock on hand. |
@@ -141,7 +143,7 @@ shows the system working on a fresh run of the same pipeline.
 
 The demo data ends on 7 Oct and the forecasts run from 8 to 14 Oct (8 Oct reset). On 12 Oct, therefore:
 
-- **Forecast pages** (Kitchen **Forecast**, Admin **Monitoring** > *Demand forecast*) show 12 to 14 Oct and "No forecast yet" for
+- **Forecast pages** (Kitchen **Demand forecast**, Admin **Reports** > *Demand forecast*) show 12 to 14 Oct and "No forecast yet" for
   15 to 18 Oct.
 - **Reorder** and **Ingredient demand** show a yellow note that the menu items have no forecast for 4 of the next 7 days, so
   their quantities cover 12 to 14 Oct only. The note is correct: it is the safeguard added on 7 Oct.

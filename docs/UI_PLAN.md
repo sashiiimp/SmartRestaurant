@@ -49,7 +49,7 @@ Tier here is the tier of the page; the service behind it may be built earlier.
 
 | Route | Page | Stories | Tier | API calls |
 |---|---|---|---|---|
-| `/kitchen` | Dashboard: today's tiles (items to prepare, prepared so far, ingredient shortages, open alerts) and a compact plan table | K1 | M1 | `dashboards/kitchen`, `alerts` |
+| `/kitchen` | Dashboard: preparation progress, ingredient shortages and open alerts tiles; today's plan table (forecast, to prepare, prepared bar, status); shortages with *Request stock*; top 3 alerts; buttons to Prep plan and Served & waste | K1 | M1 | `dashboards/kitchen`, `alerts` |
 | `/kitchen/forecast` | 7-day forecast per item (table, line chart for the selected item); "No forecast yet" states | K2 | M1 | `forecasts` |
 | `/kitchen/prep` | **The core screen.** One card per item: forecast, buffer, pre-orders, recommended, Accept / Override (qty and reason), and "prepared so far" with a quick add; since 9 Oct 2026 (K4) a status badge (Planned, In progress, Done), a progress bar of prepared against the plan and *Start*, *Mark done* and *Reopen* buttons; Accept and Override are hidden once an item is done | K3, K4, K5 | M1 | `recommendations/prep`, `.../decisions`, `.../status`, `kitchen/prepared` |
 | `/kitchen/record` | End-of-day entry: served quantity per item; record waste (item, qty, reason); **Ingredient usage** card (K8, built 21 Sep): expected use = prepared x recipe, an optional actual amount per ingredient with the difference, save, clear, add another ingredient; never changes stock; since 9 Oct 2026 (K14) an **Other food use** card under Record waste (item, use type, portions, note, list with Clear) and a full-width **Daily balance** table (prepared, served, waste, other use, unaccounted; negative rows highlighted) | K6, K7, K8, K14 | M1 | `kitchen/daily-summary`, `sales/served`, `kitchen/waste`, `kitchen/food-usage` |
@@ -63,7 +63,7 @@ The availability toggle (K13, built 21 Sep) is a *Mark unavailable / available* 
 
 | Route | Page | Stories | Tier | API calls |
 |---|---|---|---|---|
-| `/inventory` | Dashboard: status counts (OK, low, out), open alerts, 7-day need vs stock, top reorder suggestions, expiring-soon batches | I1, I8 | M1 | `dashboards/inventory`, `alerts` |
+| `/inventory` | Dashboard: low, out, expiring-in-3-days and kitchen-request tiles; top 5 reorders; stock-out risk (only ingredients whose 7-day need is above usable stock); 5 expiring batches; top 5 alerts; buttons to Record stock and Reorder | I1, I8 | M1 | `dashboards/inventory`, `alerts` |
 | `/inventory/stock` | Stock levels table (on hand, usable, status, last movement) with search and status filter; add or edit ingredient (modal) including min stock, reorder level, pack size | I2, I3, I4 | M1 | `stock/levels`, `ingredients` |
 | `/inventory/movements` | Three forms (stock-in, stock-out, wastage) in tabs, and a movement history table with filters. The Stock page also has a **Data check** panel (I16, built 21 Sep). **Adjustment** is a fourth tab (I14, built 21 Sep): counted quantity, date and a required reason, with the system on-hand and the difference shown live. | I5, I6, I13 | M1 | `stock/in`, `.../out`, `.../wastage`, `stock/movements`, `stock/batches` |
 | `/inventory/forecast` | Ingredient demand for the next 7 days per ingredient, days of cover, "unknown" items | I7 | M1 | `recommendations/ingredient-forecast` |
@@ -77,7 +77,7 @@ The availability toggle (K13, built 21 Sep) is a *Mark unavailable / available* 
 
 | Route | Page | Stories | Tier | API calls |
 |---|---|---|---|---|
-| `/admin` | Dashboard: 7/30-day sales, next-7-day forecast total, low-stock count, waste, alerts by severity, recent activity, "items without recipe" warning | A1 | M2 | `dashboards/admin` |
+| `/admin` | Dashboard: 7/30-day sales, waste, low-stock count and next-7-day forecast tiles; sales and waste trend; forecast performance (active model's hold-out error vs the naive baseline); top 5 alerts with severity counts; management links; 10 recent activities in plain English (5 shown); "items without recipe" warning | A1 | M2 | `dashboards/admin` |
 | `/admin/users` | User list, create, edit role, deactivate | A2, A3 | M2 | `users` |
 | `/admin/catalog` | Menu items table with edit modal; "Recipe" button opens a recipe editor (ingredient rows with quantity, unit shown read-only) | A4, A5 | M2 | `menu-items`, `.../recipe`, `ingredients` |
 | `/admin/data` | Tabs: Sales import, Holidays, Weather, Promotions. Import tabs use `sr-csv-import`; promotions use a form and a list | A14, A15 | M2 | `sales/import`, `holidays`, `weather`, `promotions` |
@@ -105,31 +105,32 @@ The availability toggle (K13, built 21 Sep) is a *Mark unavailable / available* 
 
 After Accept the card shows "Accepted 54" with a grey Undo-by-override link. Override opens an inline quantity box and a required reason field.
 
-**Kitchen dashboard (desktop):**
+**Kitchen dashboard (desktop, simplified 11 Oct 2026):**
 
 ```
 +---------------------------------------------------------------+
-| Today Fri 25 Sep   [<] [Today] [>]                            |
-| [To prepare: 10 items] [Prepared: 312/540] [Short: 2] [Alerts 3]|
+| Today's kitchen  Mon 12 Oct   [<][date][>][Today] [Open prep plan] [Record served & waste] |
+| [Preparation progress 52% ====    ] [Shortages 1] [Alerts 5]  |
 +--------------------------------+------------------------------+
-| Plan                            | Alerts                       |
-| item  fcst rec final prepared   | ! Chicken short by 3.5 kg    |
-| ...                             | ! Fried Chicken waste risk   |
+| Today's plan                    | Ingredient shortages          |
+| item  forecast  to prepare      |  Chicken short by 13.48 kg    |
+|       prepared (bar)  status    |  [Request stock]              |
+|                                 | Alerts (top 3, Show all)      |
 +--------------------------------+------------------------------+
 ```
 
-**Inventory dashboard:**
+**Inventory dashboard (simplified 11 Oct 2026):**
 
 ```
 +---------------------------------------------------------------+
-| Stock: [OK 14] [Low 4] [Out 1]    Open alerts: 5              |
+| Inventory  Mon 12 Oct                 [Record stock] [Reorder] |
+| [Low 2: 18 of 20 OK] [Out 0] [Expiring in 3 days] [Kitchen requests] |
 +------------------------------+--------------------------------+
-| Reorder now (top 5)          | Next 7 days: need vs stock     |
-| Chicken   25 kg  Ceylon P.   |  bar per ingredient            |
-| ...                          |                                |
+| Reorder now (top 5)          | Needs attention                |
+| Stock-out risk, next 7 days  |  top 5 alerts, Show all        |
+|  one bar per at-risk item    |                                |
+| Expiring soon (5)            |                                |
 +------------------------------+--------------------------------+
-| Expiring soon: batch, qty, expiry (expired rows in red)        |
-+---------------------------------------------------------------+
 ```
 
 **Admin models page:**
@@ -193,5 +194,17 @@ Display-only layer on top of the vendored Bootstrap; no data, API, route or busi
 - **Role accents** (one design system, colour set by `body[data-role]`): Administrator indigo, Food Production burnt orange, Inventory teal. Sidebar tint follows the role.
 - **Tokens and components** are in `static/css/app.css` (CSS variables for colour, radius, shadow; semantic success/warning/danger/info colours are the same in every role). Shared Vue components in `components.js`: `sr-stat-tile` (icon, tone), `sr-status-badge`, `sr-alert-list` (severity icon and tag), `sr-empty` (icon), `sr-loading` (skeleton), `sr-icon`, and the Chart.js wrappers `sr-line-chart`, `sr-bar-chart`, `sr-doughnut-chart`.
 - **Icons** are inline SVG from `static/js/icons.js`; no icon font, web font or CDN.
-- **Charts added from existing endpoints only:** Admin dashboard (sales and waste trend from `/reports/sales` and `/reports/waste`; alerts by severity), Kitchen dashboard (forecast, recommended and prepared by item), Inventory dashboard (stock status). The Monitoring, forecast and need-versus-stock views keep their charts.
+- **Charts added from existing endpoints only:** Admin dashboard (sales and waste trend from `/reports/sales` and `/reports/waste`). Since 11 Oct 2026 the kitchen and inventory dashboards have no charts (their charts repeated the tables next to them); the Reports, forecast and need-versus-stock pages keep theirs.
 - **Login** is a split layout (product panel and form) that collapses to the form on tablets and phones; error pages share the same look.
+
+## 10. Simplified dashboards and menus (11 Oct 2026)
+
+Display-only change after a UI audit; no API, service, model, ML or database change.
+
+- **Menus are grouped** under short headings, with plain names (URLs unchanged). Administrator: *Overview* (Dashboard, Reports, Inventory overview), *Forecasting* (Forecast models, Import data), *Setup* (Menu & recipes, Users, Settings). Food Production: *Today* (Dashboard, Demand forecast, Prep plan, Served & waste), *Ingredients* (Ingredient needs, Stock requests), *Orders* (Orders & pre-orders). Inventory & Procurement: *Stock* (Dashboard, Stock levels, Record stock, Kitchen requests), *Purchasing* (Ingredient demand, Reorder, Purchase orders, Suppliers). Defined in `utils/navigation.py`.
+- **Dashboards** follow one order: summary tiles, the main work, then "Needs attention". Repeated numbers were removed (alerts doughnut, stock doughnut, kitchen bar chart, open-alerts tile on inventory). Alert lists load the full role list from `/alerts` after the dashboard call (never in parallel, so the alert check runs once) and show 5 (kitchen 3) with *Show all*; `sr-alert-list` takes an optional `limit`.
+- **Admin "Forecast performance"** reads the active model's hold-out MAE and the `naive_lag7` baseline from `/model-versions`.
+- **"Check alerts now"** moved from the admin dashboard to Settings > Alert types (same `POST /alerts/run`).
+- **Prep plan:** the buffer, weather note and model are shown once in the page header; each card shows forecast and recommended, and the calculation opens under *How was this worked out?*. All actions are unchanged.
+- **Served & waste:** four tabs (Served, Waste, Other use, Daily balance with ingredient usage); `#waste` etc. open a tab directly. All forms are unchanged.
+

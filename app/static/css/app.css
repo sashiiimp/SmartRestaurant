@@ -266,7 +266,7 @@ input[type="file"]::file-selector-button { border: 0; background: var(--accent-s
 .badge.text-bg-warning { background: var(--warning-bg) !important; color: var(--warning) !important; border: 1px solid var(--warning-line); }
 .badge.text-bg-light { background: var(--neutral-bg) !important; color: var(--neutral) !important; border: 1px solid var(--neutral-line); }
 
-.alert-item { display: flex; gap: .8rem; align-items: flex-start; padding: .8rem 0; border-bottom: 1px solid var(--border); }
+.alert-item { display: flex; gap: .8rem; align-items: flex-start; padding: .65rem 0; border-bottom: 1px solid var(--border); }
 .alert-item:last-child { border-bottom: 0; padding-bottom: 0; }
 .alert-item:first-child { padding-top: 0; }
 .sev-icon { width: 34px; height: 34px; flex: none; border-radius: 10px; display: grid; place-items: center; }
@@ -320,6 +320,76 @@ input[type="file"]::file-selector-button { border: 0; background: var(--accent-s
 .doughnut-centre span { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
 .legend-list { display: grid; gap: .35rem; margin-top: .6rem; font-size: .84rem; }
 .legend-list div { display: flex; justify-content: space-between; align-items: center; }
+
+/* simplified dashboards (Oct 2026): page header with actions, severity chips, compact lists, thin progress bars */
+.side-heading { margin: .9rem .8rem .3rem; font-size: .66rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--nav-text); opacity: .62; }
+#nav > .side-heading:first-child { margin-top: .2rem; }
+.dash-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: .75rem 1rem; margin-bottom: 1.1rem; }
+.dash-sub { margin: .15rem 0 0; color: var(--muted); font-size: .88rem; }
+.dash-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.dash-actions > .btn { display: inline-flex; align-items: center; gap: .4rem; }
+.count-chips { display: inline-flex; flex-wrap: wrap; gap: .35rem; }
+.chip { font-size: .72rem; font-weight: 650; padding: .15rem .55rem; border-radius: 999px; white-space: nowrap; border: 1px solid transparent; }
+.chip-critical { color: var(--danger); background: var(--danger-bg); border-color: var(--danger-line); }
+.chip-warning { color: var(--warning); background: var(--warning-bg); border-color: var(--warning-line); }
+.chip-info { color: var(--info); background: var(--info-bg); border-color: var(--info-line); }
+.alert-more { padding: .6rem 0 0; font-weight: 600; text-decoration: none; }
+.progress-thin { height: 6px !important; border-radius: 99px; background: var(--neutral-bg); }
+.perf-model { margin: 0 0 .7rem; font-weight: 650; }
+.perf-figures { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; margin-bottom: .6rem; }
+.perf-num { display: block; font-size: 1.7rem; font-weight: 700; line-height: 1.1; letter-spacing: -.02em; color: var(--accent); font-variant-numeric: tabular-nums; }
+.perf-num.muted { color: var(--text-2); }
+.perf-cap { display: block; font-size: .76rem; color: var(--muted); line-height: 1.3; margin-top: .15rem; }
+.perf-note { font-size: .8rem; color: var(--text-2); margin: 0 0 .6rem; }
+.perf-run { font-size: .78rem; color: var(--muted); margin: .6rem 0 0; }
+.manage-list { display: grid; gap: .25rem; }
+.manage-list a { display: flex; gap: .7rem; align-items: center; padding: .4rem .55rem; margin: 0 -.55rem; border-radius: 10px; color: var(--text); text-decoration: none; }
+.manage-list a:hover { background: var(--accent-soft); color: var(--text); }
+.manage-list .sr-i { color: var(--accent); }
+.manage-list strong { display: block; font-size: .9rem; font-weight: 600; }
+.manage-list small { display: block; font-size: .77rem; color: var(--muted); }
+.plan-table td, .plan-table th { white-space: nowrap; }
+.prep-cell { display: flex; align-items: center; gap: .55rem; }
+.prep-cell .progress { flex: 1 1 auto; min-width: 4rem; }
+.prep-cell span { min-width: 2rem; text-align: right; font-variant-numeric: tabular-nums; }
+.table-note { margin: .75rem 0 0; font-size: .78rem; color: var(--muted); }
+.short-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .6rem; }
+.short-list li { display: grid; gap: .05rem; padding: .6rem .75rem; border-radius: 10px; background: var(--danger-bg); border: 1px solid var(--danger-line); }
+.short-list span { color: var(--danger); font-weight: 600; font-size: .9rem; }
+.short-list small { color: var(--text-2); }
+.risk-row { display: grid; gap: .3rem; }
+.risk-row + .risk-row { margin-top: 1rem; }
+.risk-top { display: flex; justify-content: space-between; gap: .75rem; flex-wrap: wrap; font-size: .88rem; }
+.exp-list { list-style: none; margin: 0 0 .5rem; padding: 0; }
+.exp-list li { display: flex; justify-content: space-between; align-items: center; gap: .75rem; padding: .55rem 0; border-bottom: 1px solid var(--border); font-size: .9rem; }
+.exp-list li:first-child { padding-top: 0; }
+.exp-list li:last-child { border-bottom: 0; }
+.exp-date { color: var(--text-2); font-size: .84rem; white-space: nowrap; }
+.page-note { margin: -.4rem 0 1rem; font-size: .86rem; color: var(--text-2); }
+/* prep plan cards */
+.prep-figures { display: flex; justify-content: space-between; align-items: flex-end; gap: 1rem; padding: .35rem 0 .5rem; }
+.pf-label { display: block; font-size: .74rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+.pf-forecast { font-size: 1.2rem; font-weight: 600; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.pf-rec { font-size: 1.9rem; font-weight: 750; line-height: 1; color: var(--accent); font-variant-numeric: tabular-nums; }
+.calc { margin: .1rem 0 .65rem; font-size: .84rem; }
+.calc summary { cursor: pointer; color: var(--accent); font-weight: 600; font-size: .8rem; width: max-content; max-width: 100%; }
+.calc summary:focus-visible { outline: 3px solid rgba(var(--accent-rgb), .35); outline-offset: 2px; border-radius: 4px; }
+.calc[open] { padding: .55rem .7rem; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; }
+.calc[open] summary { margin-bottom: .4rem; }
+/* tabs (served & waste) */
+.sr-tabs { display: flex; gap: .25rem; padding: .25rem; margin-bottom: 1rem; background: var(--neutral-bg); border-radius: 12px; overflow-x: auto; width: max-content; max-width: 100%; }
+.sr-tab { flex: none; border: 0; background: transparent; padding: .5rem .95rem; border-radius: 9px; font-weight: 600; font-size: .9rem; color: var(--text-2); white-space: nowrap; }
+.sr-tab:hover { color: var(--text); background: rgba(255, 255, 255, .6); }
+.sr-tab.active { background: var(--surface); color: var(--accent-strong); box-shadow: var(--shadow); }
+.sr-tab:focus-visible { outline: 3px solid rgba(var(--accent-rgb), .35); outline-offset: 1px; }
+.tab-panel { max-width: 920px; }
+.tab-narrow { max-width: 560px; }
+@media (max-width: 575.98px) {
+  .dash-actions { width: 100%; }
+  .dash-actions > .btn { flex: 1 1 auto; justify-content: center; }
+  .perf-num { font-size: 1.45rem; }
+  .manage-list small { display: none; }
+}
 
 /* ---- 10 login ---------------------------------------------------------------------------------------------- */
 /* Light canvas with the three role colours (indigo, orange, teal) as quiet accents; a framed hero tells the forecast ->
