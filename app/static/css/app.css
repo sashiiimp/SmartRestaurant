@@ -349,6 +349,7 @@ input[type="file"]::file-selector-button { border: 0; background: var(--accent-s
 .manage-list strong { display: block; font-size: .9rem; font-weight: 600; }
 .manage-list small { display: block; font-size: .77rem; color: var(--muted); }
 .plan-table td, .plan-table th { white-space: nowrap; }
+.plan-table .col-prepared { min-width: 9rem; }
 .prep-cell { display: flex; align-items: center; gap: .55rem; }
 .prep-cell .progress { flex: 1 1 auto; min-width: 4rem; }
 .prep-cell span { min-width: 2rem; text-align: right; font-variant-numeric: tabular-nums; }
@@ -389,6 +390,10 @@ input[type="file"]::file-selector-button { border: 0; background: var(--accent-s
   .dash-actions > .btn { flex: 1 1 auto; justify-content: center; }
   .perf-num { font-size: 1.45rem; }
   .manage-list small { display: none; }
+  .plan-table td:first-child, .plan-table th { white-space: normal; }
+  .plan-table .col-prepared { min-width: 5rem; }
+  .prep-cell .progress { min-width: 2.5rem; }
+  .plan-table > :not(caption) > * > * { padding-left: .4rem; padding-right: .4rem; }
 }
 
 /* ---- 10 login ---------------------------------------------------------------------------------------------- */
