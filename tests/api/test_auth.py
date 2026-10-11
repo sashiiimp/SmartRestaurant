@@ -19,7 +19,7 @@ def test_wrong_password_and_unknown_user_look_identical(app, users, client):
     a = login(client, users["admin"].username, "wrong-password")
     b = login(client, "no-such-user", "whatever1")
     assert a.status_code == b.status_code == 401
-    strip = lambda r: r.get_data(as_text=True).split('name="csrf_token"')[0].split('<div class="alert')[1][:90]
+    strip = lambda r: r.get_data(as_text=True).split('name="csrf_token"')[0].split('<div class="auth-alert"')[1][:90]
     assert strip(a) == strip(b)
     assert b"Incorrect username or password." in a.get_data()
 
