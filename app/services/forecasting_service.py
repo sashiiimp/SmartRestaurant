@@ -16,7 +16,7 @@ from app.ml.experiments import FOLD_DAYS, FOLDS
 from app.ml.features import build_features
 from app.ml.predict import BASELINES, predict
 from app.ml.train import HOLDOUT_DAYS, train_and_compare
-from app.models import Forecast, ForecastRun, Holiday, MenuItem, ModelVersion
+from app.models import Forecast, ForecastRun, Holiday, MenuItem, ModelVersion, Outlet
 from app.models.base import utcnow
 from app.services import audit, settings
 from app.services import data_management_service as dm
@@ -30,6 +30,8 @@ ORACLE_PATH = "data/synthetic/oracle_expected.csv"
 MAX_HORIZON_DAYS = 14  # a short-term forecast (FR4); lags beyond 7 days ahead are already imputed
 MAX_RUNS_LISTED = 200
 MAX_FORECAST_RANGE_DAYS = 62  # the pages ask for 7 days; the cap stops one request listing millions of missing dates
+DAILY_MAX_FAILURES = 3      # the scheduled run stops retrying for the day after this many failed runs
+STALE_RUN_MINUTES = 30      # a run still marked running after this long is treated as crashed, not in progress
 
 
 def _num(x):
@@ -250,6 +252,9 @@ def _do_run(outlet_id, run, mv, as_of, horizon, use_estimated_weather, data, use
                                "lags_imputed": bool(rec.lags_imputed)},
             "generated_at": now, "is_latest": True})
     if rows:
+        # Two runs at once (the daily timer and the "Run forecast now" button) would each flip the old rows and leave
+        # two "latest" rows per item and day. Locking the outlet row makes the second run wait and then replace the first.
+        db.session.query(Outlet).filter(Outlet.id == outlet_id).with_for_update().one()
         Forecast.query.filter(Forecast.outlet_id == outlet_id, Forecast.menu_item_id.in_({r["menu_item_id"] for r in rows}),
                               Forecast.target_date.in_({r["target_date"] for r in rows}),
                               Forecast.is_latest.is_(True)).update({"is_latest": False}, synchronize_session=False)
@@ -271,6 +276,38 @@ def _do_run(outlet_id, run, mv, as_of, horizon, use_estimated_weather, data, use
             run.reason = "Simple estimate (same day last week) used for some or all items."
     db.session.commit()
     return _summary(run, mv.version_label, 0, len(items), missing)
+
+
+def run_daily_forecast(outlet_id: int) -> dict:
+    """The scheduled run (deploy/systemd/smartrest-forecast.timer calls `flask smartrest forecast-daily` every hour).
+    It forecasts today and the next six days once per Asia/Colombo day and is safe to call any number of times:
+    it does nothing when today's forecast already succeeded with the active model (from an earlier timer run or the
+    "Run forecast now" button), when another run for today is still in progress, or after 3 failed runs today."""
+    day = today()
+    mv = get_active_model(outlet_id)
+    if mv is None:
+        log.warning("Daily forecast for %s not run: no active model", day)
+        return {"action": "not_run", "reason": "No active model. Train and activate a model first.", "as_of": day.isoformat()}
+    horizon = settings.get_int(outlet_id, "forecast_horizon_days")
+    runs = ForecastRun.query.filter(ForecastRun.outlet_id == outlet_id, ForecastRun.as_of_date == day,
+                                    ForecastRun.trigger_type != "backfill").all()
+    if any(r.status in ("ok", "partial") and r.model_version_id == mv.id and r.horizon_days >= horizon for r in runs):
+        return {"action": "already_done", "as_of": day.isoformat()}
+    cutoff = utcnow() - timedelta(minutes=STALE_RUN_MINUTES)
+    if any(r.status == "running" and r.created_at >= cutoff for r in runs):
+        log.info("Daily forecast for %s not started: another run is in progress", day)
+        return {"action": "in_progress", "as_of": day.isoformat()}
+    failures = sum(1 for r in runs if r.status == "failed")
+    if failures >= DAILY_MAX_FAILURES:
+        log.error("Daily forecast for %s not retried: %s runs failed today. Check the log, then use Run forecast now",
+                  day, failures)
+        return {"action": "gave_up", "failures": failures, "as_of": day.isoformat()}
+    log.info("Daily forecast for %s starting (model %s)", day, mv.version_label)
+    r = run_forecast(outlet_id, as_of=day, horizon=horizon, trigger="cli")
+    level = logging.ERROR if r["status"] in ("failed", "skipped") else logging.INFO
+    log.log(level, "Daily forecast for %s finished: %s, %s items, %s ms%s", day, r["status"], r["items_forecast"],
+            r["duration_ms"], f" ({r['reason']})" if r["reason"] else "")
+    return {"action": "ran", **r}
 
 
 def _check_backfill_out_of_sample(outlet_id: int, start: date) -> None:

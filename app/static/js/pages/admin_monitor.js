@@ -39,11 +39,15 @@ SR.createApp({
       this.demand.rows.forEach(r => seen.set(r.menu_item_id, r.item));
       return [...seen].map(([id, name]) => {
         const cells = this.demandDates.map(d => this.demand.rows.find(r => r.menu_item_id === id && r.date === d) || null);
-        return { id, name, cells, total: cells.reduce((a, c) => a + (c ? c.predicted_qty : 0), 0) };
+        return { id, name, cells, total: cells.reduce((a, c) => a + (c ? c.predicted_qty : 0), 0), partial: cells.some(c => !c) };
       });
     },
-    demandDayTotals() { return this.demandDates.map((d, i) => this.demandTable.reduce((a, t) => a + (t.cells[i] ? t.cells[i].predicted_qty : 0), 0)); },
-    demandGrand() { return this.demandDayTotals.reduce((a, v) => a + v, 0); },
+    // null for a day without any forecast, so the table shows "-" and the chart a gap instead of a false 0
+    demandDayTotals() { return this.demandDates.map((d, i) => this.demandTable.some(t => t.cells[i]) ? this.demandTable.reduce((a, t) => a + (t.cells[i] ? t.cells[i].predicted_qty : 0), 0) : null); },
+    demandGrand() { return this.demandDayTotals.reduce((a, v) => a + (v || 0), 0); },
+    // days of the window that have a forecast for at least one item; a total over fewer than 7 days is labelled partial
+    demandDaysCovered() { return this.demandDayTotals.filter(v => v !== null).length; },
+    demandTotalLabel() { const n = this.demandDaysCovered; return n === 7 ? '7-day total' : n + '-day total (partial)'; },
     demandChart() { return [{ label: 'Forecast (portions, all items)', data: this.demandDayTotals }]; },
   },
   methods: {

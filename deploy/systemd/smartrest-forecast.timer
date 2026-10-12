@@ -1,0 +1,12 @@
+[Unit]
+Description=Run the SmartRestaurant daily forecast check every hour (Asia/Colombo)
+
+[Timer]
+# Every hour at minute 5, Sri Lanka time. The first run after midnight makes today's forecast; the later ones
+# do nothing unless that run failed or the server was off. systemd never starts the service while it is running.
+OnCalendar=*-*-* *:05:00 Asia/Colombo
+Persistent=true
+RandomizedDelaySec=60
+
+[Install]
+WantedBy=timers.target

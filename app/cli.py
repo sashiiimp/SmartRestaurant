@@ -126,6 +126,17 @@ def forecast_cmd(as_of, from_, to_):
     click.echo(r)
 
 
+@group.command("forecast-daily")
+def forecast_daily_cmd():
+    """The scheduled 7-day forecast: runs once per Asia/Colombo day, skips when today's forecast already exists."""
+    from app.services import forecasting_service as fs
+
+    r = fs.run_daily_forecast(1)
+    click.echo(r)
+    if r["action"] in ("not_run", "gave_up") or r.get("status") in ("failed", "skipped"):
+        raise SystemExit(1)   # a failed timer run shows up in `systemctl status smartrest-forecast`
+
+
 @group.command("demo-reset")
 @click.pass_context
 def demo_reset_cmd(ctx):

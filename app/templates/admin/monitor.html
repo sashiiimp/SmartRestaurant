@@ -29,11 +29,12 @@
       <sr-empty v-if="!demand.rows.length" message="No forecast for this period."></sr-empty>
       <template v-else>
         <div class="table-responsive mb-2"><table class="table table-sm align-middle">
-          <thead><tr><th>Item</th><th v-for="d in demandDates" :key="d" class="text-end">[[ ui.date(d) ]]</th><th class="text-end">7-day total</th></tr></thead>
+          <thead><tr><th>Item</th><th v-for="d in demandDates" :key="d" class="text-end">[[ ui.date(d) ]]</th><th class="text-end">[[ demandTotalLabel ]]</th></tr></thead>
           <tbody><tr v-for="t in demandTable" :key="t.id"><td>[[ t.name ]]</td>
             <td v-for="(c, i) in t.cells" :key="i" class="text-end"><span v-if="c">[[ ui.num(c.predicted_qty, 0) ]]<span v-if="c.method === 'baseline'" title="Simple estimate (same day last week)"> *</span><span v-if="c.is_poya" class="badge text-bg-light ms-1" title="Poya day">P</span></span><span v-else class="text-muted">-</span></td>
-            <td class="text-end fw-semibold">[[ ui.num(t.total, 0) ]]</td></tr></tbody>
-          <tfoot><tr class="fw-semibold"><td>All items</td><td v-for="(v, i) in demandDayTotals" :key="i" class="text-end">[[ ui.num(v, 0) ]]</td><td class="text-end">[[ ui.num(demandGrand, 0) ]]</td></tr></tfoot></table></div>
+            <td class="text-end fw-semibold">[[ ui.num(t.total, 0) ]]<span v-if="t.partial && demandDaysCovered === 7" title="Some days have no forecast for this item"> (partial)</span></td></tr></tbody>
+          <tfoot><tr class="fw-semibold"><td>All items</td><td v-for="(v, i) in demandDayTotals" :key="i" class="text-end"><span v-if="v !== null">[[ ui.num(v, 0) ]]</span><span v-else class="text-muted">-</span></td><td class="text-end">[[ ui.num(demandGrand, 0) ]]</td></tr></tfoot></table></div>
+        <div v-if="demandDaysCovered < 7" class="small text-warning-emphasis mb-1">Partial total: it covers [[ demandDaysCovered ]] of the 7 days, so it is not a full 7-day figure.</div>
         <div class="small text-muted mb-3">Portions per day. * simple estimate (same day last week). P = Poya day. Weather is estimated from the seasonal average unless it was entered.</div>
         <div class="card"><div class="card-body"><sr-line-chart :labels="demandDates.map(ui.date)" :datasets="demandChart" y-title="Portions per day" title="Forecast, all items"></sr-line-chart></div></div>
       </template>

@@ -225,3 +225,155 @@ def test_forecasts_say_when_they_go_past_the_holiday_calendar(world):
     meta = fs.get_forecasts(1, TODAY, TODAY + timedelta(days=6))["meta"]
     assert meta["holiday_calendar_ends"] == (TODAY + timedelta(days=3)).isoformat() and meta["beyond_holiday_calendar"] is True
     assert fs.get_forecasts(1, TODAY, TODAY + timedelta(days=2))["meta"]["beyond_holiday_calendar"] is False
+
+
+# ---- the scheduled daily run (forecast-daily) --------------------------------------------------------
+def latest_dates():
+    return {f.target_date for f in Forecast.query.filter_by(is_latest=True)}
+
+
+def test_daily_run_covers_today_and_the_next_six_days_once(world):
+    train(world)
+    r = fs.run_daily_forecast(1)
+    assert r["action"] == "ran" and r["status"] == "ok"
+    assert latest_dates() == {TODAY + timedelta(days=i) for i in range(7)}
+    assert fs.get_forecasts(1, TODAY, TODAY + timedelta(days=6))["meta"]["missing_dates"] == []
+    assert fs.run_daily_forecast(1)["action"] == "already_done"      # the next hourly check does nothing
+    assert ForecastRun.query.filter(ForecastRun.trigger_type != "backfill").count() == 1
+
+
+def test_daily_run_skips_when_the_button_already_ran_today(world):
+    train(world)
+    fs.run_forecast(1, trigger="admin")
+    assert fs.run_daily_forecast(1)["action"] == "already_done"
+    assert ForecastRun.query.count() == 1
+
+
+def test_next_day_extends_the_window_and_keeps_history(world, monkeypatch):
+    """Date change: the run on the 26th adds 2 Oct and leaves the 25th's forecasts in place for accuracy."""
+    train(world)
+    fs.run_daily_forecast(1)
+    monkeypatch.setenv("SMARTREST_TODAY", "2026-09-26")
+    tomorrow = TODAY + timedelta(days=1)
+    r = fs.run_daily_forecast(1)
+    assert r["action"] == "ran" and r["as_of"] == tomorrow.isoformat()
+    assert latest_dates() == {TODAY} | {tomorrow + timedelta(days=i) for i in range(7)}
+    assert Forecast.query.count() == 2 * 7 + 2 * 7                    # nothing deleted: old rows only lose is_latest
+    assert fs.get_forecasts(1, tomorrow, tomorrow + timedelta(days=6))["meta"]["missing_dates"] == []
+    assert fs.run_daily_forecast(1)["action"] == "already_done"
+
+
+def test_daily_run_retries_a_failed_run_then_gives_up(world, caplog, monkeypatch):
+    import logging
+    # the migration tests run Alembic's fileConfig, which disables loggers that already exist
+    monkeypatch.setattr(logging.getLogger("smartrest"), "disabled", False)
+    caplog.set_level(logging.INFO, logger="smartrest")
+    train(world)
+    os.remove(fs.get_active_model(1).artifact_path)
+    from app.ml import registry
+    registry.clear_cache()
+    for _ in range(fs.DAILY_MAX_FAILURES):
+        r = fs.run_daily_forecast(1)
+        assert r["action"] == "ran" and r["status"] == "failed"
+    assert fs.run_daily_forecast(1)["action"] == "gave_up"
+    assert ForecastRun.query.filter_by(status="failed").count() == fs.DAILY_MAX_FAILURES   # no fourth attempt
+    assert "Daily forecast for 2026-09-25 finished: failed" in caplog.text
+    assert "not retried" in caplog.text
+
+
+def test_daily_run_waits_for_a_run_in_progress_but_not_a_crashed_one(world):
+    from app.extensions import db
+    from app.models.base import utcnow
+    train(world)
+    mv = fs.get_active_model(1)
+    running = ForecastRun(outlet_id=1, as_of_date=TODAY, horizon_days=7, trigger_type="admin", status="running",
+                          model_version_id=mv.id, created_at=utcnow())
+    db.session.add(running); db.session.commit()
+    assert fs.run_daily_forecast(1)["action"] == "in_progress"
+    running.created_at = utcnow() - timedelta(minutes=fs.STALE_RUN_MINUTES + 5)   # left behind by a crash
+    db.session.commit()
+    assert fs.run_daily_forecast(1)["action"] == "ran"
+
+
+def test_daily_run_without_a_model_records_nothing(world):
+    assert fs.run_daily_forecast(1)["action"] == "not_run"
+    assert ForecastRun.query.count() == 0
+
+
+def test_daily_run_again_after_a_new_model_is_activated(world):
+    train(world)
+    fs.run_daily_forecast(1)
+    b = train(world, activate=False)
+    fs.activate_model(1, b["version_label"])
+    assert fs.run_daily_forecast(1)["action"] == "ran"
+    assert {f.model_version_id for f in Forecast.query.filter_by(is_latest=True)} == {b["version_id"]}
+
+
+def test_forecast_daily_command_exit_codes(world, app):
+    runner = app.test_cli_runner()
+    assert runner.invoke(args=["smartrest", "forecast-daily"]).exit_code == 1   # no model yet
+    train(world)
+    res = runner.invoke(args=["smartrest", "forecast-daily"])
+    assert res.exit_code == 0 and "'action': 'ran'" in res.output
+    assert runner.invoke(args=["smartrest", "forecast-daily"]).exit_code == 0   # already done is not an error
+
+
+def test_kitchen_and_inventory_use_the_daily_forecast_for_all_seven_days(world):
+    """The prep plan for day 7 and the 7-day ingredient needs come from the daily run's latest forecasts."""
+    from app.models import Forecast as F
+    from app.services import recommendation_service as rec
+    from tests.factories import add_recipe, make_ingredient
+    train(world)
+    bun = make_ingredient(name="Bun", unit="pcs")
+    add_recipe(world["items"][0], [(bun, 1)])
+    before = rec.get_ingredient_forecast(1, TODAY, 7)
+    assert {i["name"] for i in before["items_without_forecast"]} == {"Burger", "Fries"}   # nothing forecast yet
+    fs.run_daily_forecast(1)
+    last_day = TODAY + timedelta(days=6)
+    plan = {r["name"]: r for r in rec.get_prep_plan(1, last_day)["items"]}
+    burger_fc = F.query.filter_by(is_latest=True, menu_item_id=world["items"][0].id, target_date=last_day).one()
+    assert plan["Burger"]["forecast_qty"] == float(burger_fc.predicted_qty) and plan["Burger"]["status"] == "suggested"
+    after = rec.get_ingredient_forecast(1, TODAY, 7)
+    assert after["items_without_forecast"] == []
+    daily = [r for r in after["ingredients"] if r["name"] == "Bun"][0]["daily"]
+    expected = [rec.get_prep_plan(1, TODAY + timedelta(days=i))["items"] for i in range(7)]
+    assert daily == [float(next(r["recommended_qty"] for r in day if r["name"] == "Burger")) for day in expected]  # 1 bun each
+
+
+@pytest.mark.mysql
+def test_two_runs_at_once_leave_one_latest_row_per_item_and_day(world, app, monkeypatch):
+    """The timer and the button at the same moment: both runs succeed and each item and day still has exactly one
+    latest forecast. Each run pauses after writing so the two transactions overlap (without the outlet lock one of
+    them failed with a deadlock)."""
+    import threading
+    import time
+
+    from app.extensions import db
+    train(world)
+    barrier, results = threading.Barrier(2), []
+    real_insert = db.session.bulk_insert_mappings
+
+    def slow_insert(*args, **kwargs):
+        out = real_insert(*args, **kwargs)
+        time.sleep(2)
+        return out
+
+    monkeypatch.setattr(db.session, "bulk_insert_mappings", slow_insert, raising=False)
+
+    def worker():
+        with app.app_context():
+            barrier.wait()
+            try:
+                results.append(fs.run_forecast(1, trigger="admin")["status"])
+            except Exception as exc:  # surface anything unexpected instead of hiding it in the thread
+                results.append(f"error: {type(exc).__name__}: {exc}")
+            finally:
+                db.session.remove()
+
+    threads = [threading.Thread(target=worker) for _ in range(2)]
+    [t.start() for t in threads]
+    [t.join() for t in threads]
+    assert results == ["ok", "ok"]
+    db.session.rollback()
+    assert Forecast.query.count() == 28
+    assert Forecast.query.filter_by(is_latest=True).count() == 14

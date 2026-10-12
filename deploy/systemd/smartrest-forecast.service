@@ -1,0 +1,18 @@
+[Unit]
+Description=SmartRestaurant daily 7-day forecast (skips when today's forecast already exists)
+Requires=smartrest-mysql.service
+After=smartrest-mysql.service
+
+[Service]
+Type=oneshot
+User=smartrest
+Group=smartrest
+WorkingDirectory=/srv/smartrest
+Environment=APP_ENV=prod
+ExecStart=/srv/smartrest/.venv/bin/flask --app wsgi smartrest forecast-daily
+TimeoutStartSec=15min
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+ReadWritePaths=/srv/smartrest/instance
