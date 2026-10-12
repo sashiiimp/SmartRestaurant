@@ -247,3 +247,40 @@ def test_items_without_a_forecast_are_reported_not_hidden(kitchen_world):
     view = rec.get_reorder_view(1, TODAY)
     assert view["rows"] == rec.get_reorder_suggestions(1, TODAY)          # quantities unchanged
     assert {i["name"] for i in view["items_without_forecast"]} >= {"Fried Chicken 2 pc", "Chicken Burger"}
+
+
+@pytest.mark.mysql
+def test_two_requests_evaluating_at_once_both_succeed(stock_world, monkeypatch):
+    """The dashboard and the alert bell load together after login and both find the last check over 60 s old. Both
+    see the alert missing and insert it; the second insert used to fail on the unique open_key (500 on the dashboard)."""
+    import threading
+    set_usable(stock_world, 4)
+    barrier, results, first = threading.Barrier(2), [], threading.local()
+    real_desired = al._desired
+
+    def desired_then_wait(outlet_id):
+        out = real_desired(outlet_id)
+        if not getattr(first, "done", False):   # only the first attempt waits; a retry runs straight through
+            first.done = True
+            barrier.wait(timeout=10)   # both requests have read the alerts table before either one writes
+        return out
+
+    monkeypatch.setattr(al, "_desired", desired_then_wait)
+
+    def worker():
+        with stock_world_app.app_context():
+            try:
+                results.append([a["alert_type"] for a in al.list_alerts(1, "admin")["rows"]])
+            except Exception as exc:  # surface anything unexpected instead of hiding it in the thread
+                results.append(f"error: {type(exc).__name__}: {exc}")
+            finally:
+                db.session.remove()
+
+    from flask import current_app
+    stock_world_app = current_app._get_current_object()
+    threads = [threading.Thread(target=worker) for _ in range(2)]
+    [t.start() for t in threads]
+    [t.join() for t in threads]
+    assert results == [["critical_stock"], ["critical_stock"]]
+    db.session.rollback()
+    assert Alert.query.filter_by(status="open").count() == 1

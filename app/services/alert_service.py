@@ -105,7 +105,28 @@ def _desired(outlet_id: int) -> list[dict]:
     return out
 
 
+def _retry_on_duplicate(fn):
+    """The dashboard and the alert bell load together, so two requests can evaluate at once. Both see an alert missing
+    and insert it, and the second insert fails on the unique open_key (1062). Evaluation is idempotent: roll back and
+    run it again on a fresh snapshot, where the other request's alerts are already there."""
+    import functools
+
+    from sqlalchemy.exc import IntegrityError
+
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        for attempt in range(3):
+            try:
+                return fn(*args, **kwargs)
+            except IntegrityError:
+                db.session.rollback()
+                if attempt == 2:
+                    raise
+    return wrapper
+
+
 @inv._retry_on_conflict  # the dashboard and the alert bell both refresh lazily, so two requests can evaluate at once (1020)
+@_retry_on_duplicate
 def evaluate(outlet_id: int) -> dict:
     """Recompute the true conditions; open the missing ones and close those that no longer hold. Idempotent."""
     desired = {d["dedupe_key"]: d for d in _desired(outlet_id) if settings.get_bool(outlet_id, f"alert.{d['alert_type']}.enabled")}
