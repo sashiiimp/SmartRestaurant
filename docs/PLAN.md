@@ -181,7 +181,7 @@ Fallbacks: a `mysqldump` of the ready-to-demo state; screenshots of every step i
 | Time: 62 h planned vs 56 h available | High | Trim ladder (section 7); S tier is a wish list |
 | Python 3.14 on this machine lacks wheels for scikit-learn or XGBoost | Medium | Check on D0; use Python 3.12 (needs installing) |
 | Model does not beat the baseline | Medium | Reported honestly (S1); the decision layer still demonstrates the system |
-| Vue and Jinja delimiter mistakes cost time | Medium | `[[ ]]` rule in `CLAUDE.md` and the page skeleton in `UI_PLAN.md` |
+| Vue and Jinja delimiter mistakes cost time | Medium | `[[ ]]` rule in `docs/DEVELOPMENT.md` and the page skeleton in `UI_PLAN.md` |
 | Holiday file errors | Low | Generator and app read the same file; verify before the report |
 | Demo-day machine or network trouble | Medium | Local fallback and vendored JS from the start |
 | The database here is MariaDB 11.8, not MySQL | Low | Portable types only; integration tests run on it |

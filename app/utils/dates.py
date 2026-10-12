@@ -1,4 +1,4 @@
-"""Business dates are Asia/Colombo dates. Never call date.today() directly (CLAUDE.md)."""
+"""Business dates are Asia/Colombo dates. Never call date.today() directly (docs/DEVELOPMENT.md)."""
 import os
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo

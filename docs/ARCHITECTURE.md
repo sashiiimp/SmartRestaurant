@@ -123,7 +123,7 @@ smartrest/
 │   ├── unit/  integration/  api/
 │   └── test_architecture.py     # import-rule enforcement
 ├── docs/                        # this documentation set
-├── .env.example  requirements.txt  wsgi.py  README.md  CLAUDE.md
+├── .env.example  requirements.txt  wsgi.py  README.md
 └── docker-compose.yml           # optional: mysql + app
 ```
 
@@ -324,7 +324,7 @@ Rules:
 ### 7.5 Frontend pattern (D3)
 
 - Each page template has a root `<div id="app">` and one script in `static/js/pages/`.
-- **Delimiter clash:** Jinja and Vue both use `{{ }}`. Vue is configured with `delimiters: ['[[', ']]']`, and the rule is documented in `CLAUDE.md`.
+- **Delimiter clash:** Jinja and Vue both use `{{ }}`. Vue is configured with `delimiters: ['[[', ']]']`, and the rule is documented in `docs/DEVELOPMENT.md`.
 - `static/js/api.js` wraps `fetch`: adds the CSRF header, unwraps the envelope, and shows field errors from a `422`.
 - Charts use Chart.js. Rendering logic only; numbers come from the API, so a chart and its table always match.
 - Layout is Bootstrap 5 grid, so pages work at 360 px (NFR4). Bootstrap and Vue are vendored.
