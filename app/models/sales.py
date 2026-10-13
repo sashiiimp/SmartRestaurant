@@ -2,7 +2,7 @@ from app.extensions import db
 from app.models.base import BigInt, OutletScopedMixin, TimestampMixin, check, in_list
 
 SALES_SOURCES = ("import", "kitchen", "synthetic", "manual")
-PREORDER_STATUSES = ("pending", "confirmed", "cancelled")
+PREORDER_STATUSES = ("pending", "confirmed", "completed", "cancelled")
 ORDER_STATUSES = ("open", "fulfilled", "cancelled")
 
 
@@ -40,6 +40,11 @@ class PreOrder(OutletScopedMixin, TimestampMixin, db.Model):
     status = db.Column(db.String(20), nullable=False, default="pending")
     customer_note = db.Column(db.String(255))
     created_by = db.Column(db.Integer, db.ForeignKey("users.id"))
+    # added 13 Oct 2026 (migration c4e1a7b9d052); nullable so pre-orders recorded before then stay valid
+    customer_name = db.Column(db.String(100))
+    customer_contact = db.Column(db.String(60))
+    pickup_time = db.Column(db.Time)
+    completed_at = db.Column(db.DateTime)
 
 
 class Order(OutletScopedMixin, TimestampMixin, db.Model):

@@ -237,7 +237,7 @@ function now has its own story, K14.)*
 
 ### K10 Daily orders and pre-orders (P2), FR5
 *Covers: Daily Order Management, Pre-Order Management.*
-- Manager enters, edits or cancels orders and pre-orders (item, quantity, date, customer note). Only confirmed pre-orders count in K3.
+- Manager enters, edits or cancels orders and pre-orders (item, quantity, date, customer note). Since 13 Oct 2026 a pre-order also has a customer name, optional contact, pickup time, and the status flow pending -> confirmed -> completed (or cancelled); a details view shows who created it and what it can move to. Confirmed and completed pre-orders count in K3 (as a floor, see ML_PLAN B1).
 - Editing a pre-order after the plan is confirmed prompts to refresh the plan.
 
 ### K11 Kitchen stock request (P2), FR9

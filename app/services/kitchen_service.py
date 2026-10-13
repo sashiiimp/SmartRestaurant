@@ -1,10 +1,10 @@
 """Prepared / served / waste recording (Kitchen Operations service, ARCH section 3)."""
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 
 from app.extensions import db
 from app.models import (FoodUsage, FoodWaste, Ingredient, IngredientUsage, MenuItem, Order, PreOrder, PreparationRecord,
-                        RecipeLine, Recommendation, SalesRecord)
+                        RecipeLine, Recommendation, SalesRecord, User)
 from app.models.base import utcnow
 from app.models.kitchen import FOOD_USAGE_TYPES, WASTE_REASONS
 from app.models.sales import ORDER_STATUSES, PREORDER_STATUSES
@@ -52,6 +52,8 @@ def record_prepared(outlet_id: int, data: dict, actor_id: int | None = None) -> 
     plan = Recommendation.query.filter_by(outlet_id=outlet_id, menu_item_id=item.id, target_date=day).first()
     if plan is not None and plan.prep_status == "planned":
         plan.prep_status, plan.prep_started_at = "in_progress", utcnow()
+    audit.record(outlet_id, actor_id, "prepared.record", "menu_item", item.id,
+                 {"item": item.name, "date": day.isoformat(), "quantity": qty})
     db.session.commit()
     return {"menu_item_id": item.id, "date": day.isoformat(), "added": qty,
             "total_prepared": _prepared_total(outlet_id, item.id, day)}
@@ -119,6 +121,8 @@ def record_waste(outlet_id: int, data: dict, actor_id: int | None = None) -> dic
     item = dm.get_menu_item(outlet_id, item_id)
     db.session.add(FoodWaste(outlet_id=outlet_id, menu_item_id=item.id, waste_date=day, quantity=qty, reason=reason,
                              unit_price=item.price, note=note, created_by=actor_id))
+    audit.record(outlet_id, actor_id, "waste.record", "menu_item", item.id,
+                 {"item": item.name, "date": day.isoformat(), "quantity": qty, "reason": reason})
     db.session.commit()
     total, prepared = _waste_total(outlet_id, item.id, day), _prepared_total(outlet_id, item.id, day)
     warnings = []
@@ -127,11 +131,27 @@ def record_waste(outlet_id: int, data: dict, actor_id: int | None = None) -> dic
     return {"menu_item_id": item.id, "date": day.isoformat(), "added": qty, "total_waste": total, "warnings": warnings}
 
 
-# ---- pre-orders (K10) ---------------------------------------------------------------------------
-# Only confirmed pre-orders count in the preparation quantity (recommendation_service reads them). "Cancelled" is final.
+# ---- pre-orders (K10, Preorder Management) -----------------------------------------------------------
+# A customer orders ahead for a given day and pickup time. Status flow:
+#   pending -> confirmed -> completed (handed over)      pending or confirmed -> cancelled
+#   confirmed -> pending (back on hold)                   completed and cancelled are final
+# Confirmed and completed pre-orders are committed demand for their day, so the prep plan counts both
+# (recommendation_service._preorder_totals); pending and cancelled ones are ignored. Completing a pre-order records no
+# sale: the kitchen's served total for the day already includes the portions handed over, so it is never counted twice.
+PREORDER_TRANSITIONS = {"pending": ("confirmed", "cancelled"), "confirmed": ("pending", "completed", "cancelled"),
+                        "completed": (), "cancelled": ()}
+
+
 def pre_order_dict(p: PreOrder, item_name: str) -> dict:
     return {"id": p.id, "menu_item_id": p.menu_item_id, "item": item_name, "target_date": p.target_date.isoformat(),
-            "quantity": p.quantity, "status": p.status, "customer_note": p.customer_note}
+            "pickup_time": p.pickup_time.strftime("%H:%M") if p.pickup_time else None, "quantity": p.quantity,
+            "status": p.status, "customer_name": p.customer_name, "customer_contact": p.customer_contact,
+            "customer_note": p.customer_note, "created_at": p.created_at.isoformat() + "Z" if p.created_at else None,
+            "completed_at": p.completed_at.isoformat() + "Z" if p.completed_at else None,
+            "counts_in_plan": p.status in PLAN_STATUSES}
+
+
+PLAN_STATUSES = ("confirmed", "completed")
 
 
 def _decision_warning(outlet_id: int, item_id: int, day) -> list[str]:
@@ -148,6 +168,16 @@ def get_pre_order(outlet_id: int, pre_order_id: int) -> PreOrder:
     return p
 
 
+def pre_order_detail(outlet_id: int, pre_order_id: int) -> dict:
+    """One pre-order with who created it, when it was last changed and which status changes are allowed next."""
+    p = get_pre_order(outlet_id, pre_order_id)
+    item = db.session.get(MenuItem, p.menu_item_id)
+    creator = db.session.get(User, p.created_by) if p.created_by else None
+    return {**pre_order_dict(p, item.name), "created_by": (creator.full_name or creator.username) if creator else None,
+            "updated_at": p.updated_at.isoformat() + "Z" if p.updated_at else None,
+            "allowed_status": list(PREORDER_TRANSITIONS[p.status])}
+
+
 def list_pre_orders(outlet_id: int, start=None, end=None, status: str | None = None, item_id: int | None = None) -> list[dict]:
     q = db.session.query(PreOrder, MenuItem.name).join(MenuItem, MenuItem.id == PreOrder.menu_item_id).filter(
         PreOrder.outlet_id == outlet_id)
@@ -161,7 +191,27 @@ def list_pre_orders(outlet_id: int, start=None, end=None, status: str | None = N
         q = q.filter(PreOrder.status == status)
     if item_id:
         q = q.filter(PreOrder.menu_item_id == item_id)
-    return [pre_order_dict(p, name) for p, name in q.order_by(PreOrder.target_date, PreOrder.id).all()]
+    return [pre_order_dict(p, name) for p, name in
+            q.order_by(PreOrder.target_date, PreOrder.pickup_time, PreOrder.id).all()]
+
+
+def upcoming_pre_orders(outlet_id: int, days: int = 7) -> dict:
+    """Confirmed pre-orders from today for `days` days (the admin dashboard card), with portions per item."""
+    rows = list_pre_orders(outlet_id, today(), today() + timedelta(days=days - 1), "confirmed")
+    by_item: dict = {}
+    for r in rows:
+        by_item[r["item"]] = by_item.get(r["item"], 0) + r["quantity"]
+    return {"from": today().isoformat(), "days": days, "rows": rows, "count": len(rows),
+            "portions": sum(r["quantity"] for r in rows),
+            "by_item": [{"item": k, "quantity": v} for k, v in sorted(by_item.items(), key=lambda kv: -kv[1])]}
+
+
+def _customer_fields(f: Fields):
+    name = f.text("customer_name", max_len=100)
+    contact = f.text("customer_contact", required=False, max_len=60)
+    pickup = f.time("pickup_time")
+    note = f.text("customer_note", required=False, max_len=255)
+    return name, contact, pickup, note
 
 
 def create_pre_order(outlet_id: int, data: dict, actor_id: int | None = None) -> dict:
@@ -169,7 +219,7 @@ def create_pre_order(outlet_id: int, data: dict, actor_id: int | None = None) ->
     item_id = f.integer("menu_item_id", gt=0)
     day = f.date("target_date")
     qty = f.portions("quantity", gt=0)
-    note = f.text("customer_note", required=False, max_len=255)
+    name, contact, pickup, note = _customer_fields(f)
     status = f.choice("status", ("pending", "confirmed"), default="pending")
     if day and day < today():
         f.error("target_date", "cannot be in the past")
@@ -178,7 +228,7 @@ def create_pre_order(outlet_id: int, data: dict, actor_id: int | None = None) ->
     if not item.is_active:
         raise ValidationError("That menu item is not active.", {"menu_item_id": "is not active"})
     p = PreOrder(outlet_id=outlet_id, menu_item_id=item.id, target_date=day, quantity=qty, status=status,
-                 customer_note=note, created_by=actor_id)
+                 customer_name=name, customer_contact=contact, pickup_time=pickup, customer_note=note, created_by=actor_id)
     db.session.add(p)
     db.session.flush()
     audit.record(outlet_id, actor_id, "preorder.create", "pre_order", p.id,
@@ -188,29 +238,49 @@ def create_pre_order(outlet_id: int, data: dict, actor_id: int | None = None) ->
 
 
 def update_pre_order(outlet_id: int, pre_order_id: int, data: dict, actor_id: int | None = None) -> dict:
-    """Edit quantity, date or note, or confirm / cancel. Past-dated and cancelled pre-orders are history."""
+    """Edit the details, or move the status along PREORDER_TRANSITIONS. Completed and cancelled pre-orders are history.
+    A pre-order for a past date can only be completed (handed over, recorded late)."""
     p = get_pre_order(outlet_id, pre_order_id)
-    if p.status == "cancelled":
-        raise ConflictError("A cancelled pre-order cannot be changed.")
-    if p.target_date < today():
+    if p.status in ("cancelled", "completed"):
+        raise ConflictError(f"A {p.status} pre-order cannot be changed.")
+    new_status = data.get("status", p.status)
+    if new_status != p.status and new_status in PREORDER_STATUSES and new_status not in PREORDER_TRANSITIONS[p.status]:
+        raise ConflictError(f"A {p.status} pre-order cannot be marked {new_status}.", code="invalid_transition")
+    detail_keys = ("quantity", "target_date", "pickup_time", "customer_name", "customer_contact", "customer_note")
+    if p.target_date < today() and not (new_status == "completed" and not any(k in data for k in detail_keys)):
         raise ConflictError("A pre-order for a past date cannot be changed.")
-    merged = {"quantity": p.quantity, "target_date": p.target_date, "customer_note": p.customer_note, "status": p.status}
+    merged = {"quantity": p.quantity, "target_date": p.target_date, "customer_note": p.customer_note, "status": p.status,
+              "customer_name": p.customer_name, "customer_contact": p.customer_contact, "pickup_time": p.pickup_time}
     merged.update({k: data[k] for k in merged if k in data})
     f = Fields(merged)
     qty = f.portions("quantity", gt=0)
     day = f.date("target_date")
+    # pre-orders recorded before 13 Oct 2026 have no name or pickup time; they stay editable without one
+    name = f.text("customer_name", required=p.customer_name is not None or "customer_name" in data, max_len=100)
+    contact = f.text("customer_contact", required=False, max_len=60)
+    pickup = f.time("pickup_time", required=p.pickup_time is not None or "pickup_time" in data)
     note = f.text("customer_note", required=False, max_len=255)
     status = f.choice("status", PREORDER_STATUSES)
-    if day and day < today():
+    if day and day < today() and status != "completed":
         f.error("target_date", "cannot be in the past")
+    if status == "completed" and day and day > today():
+        f.error("status", "a pre-order can be completed on or after its date")
     f.check()
     before = (p.quantity, p.target_date, p.status)
     old_day, old_status = p.target_date, p.status
     p.quantity, p.target_date, p.customer_note, p.status = qty, day, note, status
-    audit.record(outlet_id, actor_id, "preorder.update", "pre_order", p.id,
-                 {"from": [before[0], before[1].isoformat(), before[2]], "to": [qty, day.isoformat(), status]})
+    p.customer_name, p.customer_contact, p.pickup_time = name, contact, pickup
+    if status == "completed" and old_status != "completed":
+        p.completed_at = utcnow()
+    action = {"confirmed": "confirm", "cancelled": "cancel", "completed": "complete", "pending": "hold"}.get(status)
+    audit.record(outlet_id, actor_id, f"preorder.{action}" if status != old_status else "preorder.update", "pre_order", p.id,
+                 {"item": db.session.get(MenuItem, p.menu_item_id).name, "quantity": qty, "date": day.isoformat(),
+                  "from": [before[0], before[1].isoformat(), before[2]], "to": [qty, day.isoformat(), status]})
     warnings = []
-    if "confirmed" in (old_status, status):     # only confirmed pre-orders change the plan
+    # the plan changes when the pre-order starts or stops counting, or when a counted one moves or changes size
+    plan_changed = (old_status in PLAN_STATUSES) != (status in PLAN_STATUSES) or (
+        status in PLAN_STATUSES and (old_day != day or before[0] != qty))
+    if plan_changed:
         warnings = _decision_warning(outlet_id, p.menu_item_id, day)
         if old_day != day:
             warnings += _decision_warning(outlet_id, p.menu_item_id, old_day)

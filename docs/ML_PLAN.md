@@ -180,6 +180,8 @@ need        = max(base, confirmed_preorders)
 recommended = ceil(need / batch_size) * batch_size      (0 if need = 0)
 ```
 
+**Pre-orders and double counting (13 Oct 2026).** The model is trained on `sales_records`, the portions actually served each day, which include pre-ordered portions handed over that day. So the forecast is *total* demand, and adding pre-orders on top would count them twice. Pre-orders therefore act as a floor: `need = max(forecast x (1 + buffer), committed pre-orders)`, where committed = `confirmed` + `completed` for that date (a completed pre-order stays counted so the plan does not shrink as orders are collected). Assumption: pre-orders are part of the demand the model has learned. If pre-ordered volume became large and unusual (for example a one-off catering order), the floor still guarantees it is prepared, but the walk-in part may then be under-planned; the manager can override with a reason. The forecast itself is never changed by pre-orders, waste or overrides.
+
 This satisfies all three parts of K3: buffer applied, rounded up to a batch, never below confirmed pre-orders (rounding is applied after the floor, so the result is a batch multiple and never below the floor). No forecast gives `status = no_forecast` and no number.
 
 **Decision.** *Accept* stores `final_qty = recommended_qty`. *Override* requires an integer `final_qty >= 0` and a reason; an override below confirmed pre-orders is allowed but returns a warning. The stored row keeps the system's number and the manager's (FR11).

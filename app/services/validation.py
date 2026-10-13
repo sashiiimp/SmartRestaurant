@@ -1,5 +1,5 @@
 """Small field validator used by every service (C4, NFR8). Collects all errors, then raises once."""
-from datetime import date
+from datetime import date, time
 from decimal import Decimal, InvalidOperation
 
 from app.services.errors import ValidationError
@@ -125,6 +125,21 @@ class Fields:
             return None
         self.values[name] = d
         return d
+
+    def time(self, name, required=True):
+        """A clock time as HH:MM (24-hour), e.g. a pre-order pickup time."""
+        v = self._raw(name)
+        if v is None:
+            self.values[name] = None
+            return self._missing(name, required)
+        try:
+            t = v if isinstance(v, time) else time.fromisoformat(str(v))
+        except ValueError:
+            self.errors[name] = "must be a time (HH:MM)"
+            return None
+        t = t.replace(second=0, microsecond=0)
+        self.values[name] = t
+        return t
 
     def choice(self, name, options, required=True, default=None):
         v = self._raw(name)

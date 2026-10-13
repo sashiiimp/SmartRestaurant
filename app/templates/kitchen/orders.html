@@ -7,43 +7,65 @@
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
   <div v-if="tab === 'pre'">
   <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
-    <p class="text-muted small m-0">Customer pre-orders for a future day. Only <strong>confirmed</strong> pre-orders are counted when the preparation quantity is recommended; pending and cancelled ones are ignored.</p>
+    <p class="text-muted small m-0">Customer pre-orders for a day and pickup time. <strong>Confirmed</strong> and <strong>completed</strong> pre-orders count in the preparation plan for their day; pending and cancelled ones do not.</p>
     <button class="btn btn-primary" type="button" @click="startNew">Add pre-order</button>
   </div>
   <div v-if="notice" class="alert alert-warning py-2" role="status">[[ notice ]] <a href="/kitchen/prep">Open the prep plan</a></div>
 
   <div v-if="form" class="card mb-3"><div class="card-body">
-    <h2 class="h6">[[ form.id ? 'Edit pre-order' : 'New pre-order' ]]</h2>
+    <h2 class="h6">[[ form.id ? 'Edit pre-order #' + form.id : 'New pre-order' ]]</h2>
     <div class="row g-2">
+      <div class="col-12 col-md-4"><label class="form-label" for="p-name">Customer name</label><input id="p-name" class="form-control" maxlength="100" autocomplete="off" v-model="form.customer_name"><sr-field-error :errors="errors" name="customer_name"></sr-field-error></div>
+      <div class="col-12 col-md-4"><label class="form-label" for="p-contact">Contact (optional)</label><input id="p-contact" class="form-control" maxlength="60" autocomplete="off" inputmode="tel" v-model="form.customer_contact"><sr-field-error :errors="errors" name="customer_contact"></sr-field-error></div>
       <div class="col-12 col-md-4"><label class="form-label" for="p-item">Menu item</label>
         <select id="p-item" class="form-select" v-model.number="form.menu_item_id" :disabled="!!form.id"><option value="">Choose an item</option><option v-for="i in items" :key="i.id" :value="i.id">[[ i.name ]]</option></select>
         <sr-field-error :errors="errors" name="menu_item_id"></sr-field-error></div>
-      <div class="col-6 col-md-3"><label class="form-label" for="p-date">For date</label><input id="p-date" type="date" class="form-control" :min="today" v-model="form.target_date"><sr-field-error :errors="errors" name="target_date"></sr-field-error></div>
+      <div class="col-6 col-md-3"><label class="form-label" for="p-date">Preparation date</label><input id="p-date" type="date" class="form-control" :min="today" v-model="form.target_date"><sr-field-error :errors="errors" name="target_date"></sr-field-error></div>
+      <div class="col-6 col-md-3"><label class="form-label" for="p-time">Pickup time</label><input id="p-time" type="time" class="form-control" v-model="form.pickup_time"><sr-field-error :errors="errors" name="pickup_time"></sr-field-error></div>
       <div class="col-6 col-md-2"><label class="form-label" for="p-qty">Quantity</label><input id="p-qty" class="form-control" inputmode="numeric" v-model="form.quantity"><sr-field-error :errors="errors" name="quantity"></sr-field-error></div>
-      <div class="col-12 col-md-3" v-if="!form.id"><label class="form-label" for="p-status">Status</label>
+      <div class="col-6 col-md-4" v-if="!form.id"><label class="form-label" for="p-status">Status</label>
         <select id="p-status" class="form-select" v-model="form.status"><option value="pending">Pending</option><option value="confirmed">Confirmed</option></select></div>
-      <div class="col-12"><label class="form-label" for="p-note">Customer note (optional)</label><input id="p-note" class="form-control" maxlength="255" v-model="form.customer_note"><sr-field-error :errors="errors" name="customer_note"></sr-field-error></div>
+      <div class="col-12"><label class="form-label" for="p-note">Notes (optional)</label><input id="p-note" class="form-control" maxlength="255" v-model="form.customer_note"><sr-field-error :errors="errors" name="customer_note"></sr-field-error></div>
     </div>
     <div class="mt-3 d-flex gap-2"><button class="btn btn-primary" type="button" :disabled="saving" @click="save">Save</button><button class="btn btn-outline-secondary" type="button" @click="form = null">Cancel</button></div>
+  </div></div>
+
+  <div v-if="detail" class="card mb-3" id="pre-order-detail"><div class="card-body">
+    <div class="card-head"><h2 class="h6">Pre-order #[[ detail.id ]]</h2><button class="btn btn-sm btn-outline-secondary" type="button" @click="detail = null">Close</button></div>
+    <dl class="row small mb-2">
+      <dt class="col-5 col-md-3">Customer</dt><dd class="col-7 col-md-9">[[ detail.customer_name || 'Not recorded' ]]<span v-if="detail.customer_contact" class="text-muted"> &middot; [[ detail.customer_contact ]]</span></dd>
+      <dt class="col-5 col-md-3">Item and quantity</dt><dd class="col-7 col-md-9">[[ detail.quantity ]] x [[ detail.item ]]</dd>
+      <dt class="col-5 col-md-3">Preparation date</dt><dd class="col-7 col-md-9">[[ ui.date(detail.target_date) ]]<template v-if="detail.pickup_time">, pickup [[ detail.pickup_time ]]</template></dd>
+      <dt class="col-5 col-md-3">Status</dt><dd class="col-7 col-md-9"><sr-status-badge :status="detail.status"></sr-status-badge> <span class="text-muted">[[ detail.counts_in_plan ? 'Counts in the prep plan for this day' : 'Not counted in the prep plan' ]]</span></dd>
+      <dt class="col-5 col-md-3">Notes</dt><dd class="col-7 col-md-9">[[ detail.customer_note || 'None' ]]</dd>
+      <dt class="col-5 col-md-3">Created</dt><dd class="col-7 col-md-9">[[ ui.dateTime(detail.created_at) ]]<template v-if="detail.created_by"> by [[ detail.created_by ]]</template></dd>
+      <template v-if="detail.completed_at"><dt class="col-5 col-md-3">Completed</dt><dd class="col-7 col-md-9">[[ ui.dateTime(detail.completed_at) ]]</dd></template>
+    </dl>
+    <div class="d-flex flex-wrap gap-2" v-if="detail.allowed_status.length">
+      <button v-for="s in detail.allowed_status" :key="s" class="btn btn-sm" :class="s === 'cancelled' ? 'btn-outline-danger' : 'btn-outline-primary'" type="button" @click="setStatus(detail, s)">[[ actionLabel(s) ]]</button>
+    </div>
   </div></div>
 
   <div class="row g-2 mb-2 align-items-end">
     <div class="col-6 col-md-2"><label class="form-label" for="f-from">From</label><input id="f-from" type="date" class="form-control" v-model="from" @change="load"></div>
     <div class="col-6 col-md-2"><label class="form-label" for="f-to">To</label><input id="f-to" type="date" class="form-control" v-model="to" @change="load"></div>
     <div class="col-6 col-md-3"><label class="form-label" for="f-status">Status</label>
-      <select id="f-status" class="form-select" v-model="status" @change="load"><option value="">All</option><option value="pending">Pending</option><option value="confirmed">Confirmed</option><option value="cancelled">Cancelled</option></select></div>
+      <select id="f-status" class="form-select" v-model="status" @change="load"><option value="">All</option><option value="pending">Pending</option><option value="confirmed">Confirmed</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select></div>
   </div>
   <sr-loading v-if="loading"></sr-loading>
-  <sr-empty v-else-if="!rows.length" message="No pre-orders in this period." icon="bag"></sr-empty>
+  <sr-empty v-else-if="!rows.length" message="No pre-orders match these dates and status." icon="bag"></sr-empty>
   <div v-else class="table-responsive"><table class="table table-sm align-middle">
-    <thead><tr><th>For date</th><th>Item</th><th class="text-end">Quantity</th><th>Note</th><th>Status</th><th></th></tr></thead>
+    <thead><tr><th>#</th><th>Date and pickup</th><th>Customer</th><th>Item</th><th class="text-end">Qty</th><th>Status</th><th></th></tr></thead>
     <tbody><tr v-for="r in rows" :key="r.id" :class="r.status === 'cancelled' ? 'text-muted' : ''">
-      <td class="text-nowrap">[[ ui.date(r.target_date) ]]</td><td>[[ r.item ]]</td><td class="text-end">[[ r.quantity ]]</td><td>[[ r.customer_note ]]</td>
-      <td><sr-status-badge :status="r.status === 'confirmed' ? 'accepted' : r.status"></sr-status-badge></td>
-      <td class="text-nowrap"><template v-if="editable(r)">
-        <button v-if="r.status === 'pending'" class="btn btn-sm btn-success me-1" type="button" @click="setStatus(r, 'confirmed')">Confirm</button>
-        <button class="btn btn-sm btn-outline-secondary me-1" type="button" @click="edit(r)">Edit</button>
-        <button class="btn btn-sm btn-outline-danger" type="button" @click="setStatus(r, 'cancelled')">Cancel</button></template></td></tr></tbody></table></div>
+      <td class="text-muted">[[ r.id ]]</td>
+      <td class="text-nowrap">[[ ui.date(r.target_date) ]]<span v-if="r.pickup_time" class="text-muted">, [[ r.pickup_time ]]</span></td>
+      <td>[[ r.customer_name || '-' ]]</td><td>[[ r.item ]]</td><td class="text-end">[[ r.quantity ]]</td>
+      <td><sr-status-badge :status="r.status"></sr-status-badge></td>
+      <td class="text-nowrap text-end">
+        <button v-if="r.status === 'pending' && r.target_date >= today" class="btn btn-sm btn-success me-1" type="button" @click="setStatus(r, 'confirmed')">Confirm</button>
+        <button v-if="r.status === 'confirmed' && r.target_date <= today" class="btn btn-sm btn-success me-1" type="button" @click="setStatus(r, 'completed')">Complete</button>
+        <button v-if="editable(r)" class="btn btn-sm btn-outline-secondary me-1" type="button" @click="edit(r)">Edit</button>
+        <button class="btn btn-sm btn-outline-secondary" type="button" @click="view(r)">Details</button></td></tr></tbody></table></div>
   </div>
 
   <div v-if="tab === 'daily'">

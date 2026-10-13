@@ -284,3 +284,25 @@ def test_two_requests_evaluating_at_once_both_succeed(stock_world, monkeypatch):
     assert results == [["critical_stock"], ["critical_stock"]]
     db.session.rollback()
     assert Alert.query.filter_by(status="open").count() == 1
+
+
+def test_forecast_pre_order_plan_and_ingredients_chain_without_moving_stock(kitchen_world):
+    """Forecast 40 burgers + 10 % buffer = 44; a confirmed pre-order of 60 is higher, so the plan is 60 (batch 1).
+    Chicken needed = 60 x 0.120 = 7.2 kg against 12 kg usable (the expired 5 kg batch is not counted)."""
+    from app.models import Forecast, PreOrder, StockMovement
+    w = kitchen_world
+    run = ForecastRun(outlet_id=1, as_of_date=TODAY, horizon_days=7, trigger_type="cli", status="ok")
+    db.session.add(run); db.session.flush()
+    db.session.add(Forecast(outlet_id=1, run_id=run.id, menu_item_id=w["burger"].id, target_date=TODAY,
+                            predicted_qty=Decimal("40"), method="model", is_latest=True))
+    db.session.add(PreOrder(outlet_id=1, menu_item_id=w["burger"].id, target_date=TODAY, quantity=60, status="confirmed"))
+    db.session.commit()
+    movements = StockMovement.query.count()
+    row = next(r for r in rec.get_prep_plan(1, TODAY)["items"] if r["name"] == "Chicken Burger")
+    assert (row["forecast_qty"], row["preorder_qty"], row["recommended_qty"]) == (40.0, 60, 60)   # forecast kept as is
+    by = {r["name"]: r for r in rec.get_requirements(1, TODAY)["ingredients"]}
+    assert (by["Chicken"]["required"], by["Chicken"]["usable_stock"], by["Chicken"]["status"]) == (7.2, 12.0, "sufficient")
+    assert by["Bun"]["required"] == 60.0
+    rec.decide(1, {"menu_item_id": w["burger"].id, "date": TODAY.isoformat(), "action": "accept"})
+    rec.get_requirements(1, TODAY)
+    assert StockMovement.query.count() == movements          # planning never deducts stock

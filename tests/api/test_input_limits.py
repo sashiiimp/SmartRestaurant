@@ -68,10 +68,10 @@ def test_absurd_pre_order_can_no_longer_reach_the_reorder_screen(as_role):
     client = as_role("kitchen")
     item = make_item(name="Burger")
     r = client.post("/api/v1/kitchen/pre-orders", json={"menu_item_id": item.id, "target_date": "2026-09-26",
-                                                        "quantity": 10**9, "status": "confirmed"})
+                                                        "quantity": 10**9, "status": "confirmed", "customer_name": "Nimal Perera", "pickup_time": "12:30"})
     assert r.status_code == 422 and PreOrder.query.count() == 0
     ok = client.post("/api/v1/kitchen/pre-orders", json={"menu_item_id": item.id, "target_date": "2026-09-26",
-                                                         "quantity": 120, "status": "confirmed"})
+                                                         "quantity": 120, "status": "confirmed", "customer_name": "Nimal Perera", "pickup_time": "12:30"})
     assert ok.status_code == 201
 
 

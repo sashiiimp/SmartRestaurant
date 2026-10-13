@@ -97,10 +97,10 @@ def test_pre_orders_over_http_and_roles(as_role, app, users):
     from tests.factories import make_item
     item = make_item(name="Burger", batch_size=6)
     c = as_role("kitchen")
-    r = c.post("/api/v1/kitchen/pre-orders", json={"menu_item_id": item.id, "target_date": "2026-09-26", "quantity": 12})
+    r = c.post("/api/v1/kitchen/pre-orders", json={"menu_item_id": item.id, "target_date": "2026-09-26", "quantity": 12, "customer_name": "Nimal Perera", "pickup_time": "12:30"})
     assert r.status_code == 201 and r.get_json()["data"]["status"] == "pending"
     pid = r.get_json()["data"]["id"]
-    bad = c.post("/api/v1/kitchen/pre-orders", json={"menu_item_id": item.id, "target_date": "2026-09-01", "quantity": 12})
+    bad = c.post("/api/v1/kitchen/pre-orders", json={"menu_item_id": item.id, "target_date": "2026-09-01", "quantity": 12, "customer_name": "Nimal Perera", "pickup_time": "12:30"})
     assert bad.status_code == 422 and "target_date" in bad.get_json()["error"]["fields"]
     r = c.patch(f"/api/v1/kitchen/pre-orders/{pid}", json={"status": "confirmed", "quantity": 15})
     assert r.status_code == 200 and (r.get_json()["data"]["status"], r.get_json()["data"]["quantity"]) == ("confirmed", 15)

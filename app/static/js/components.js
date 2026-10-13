@@ -44,7 +44,7 @@ window.SR = (function () {
     'sr-status-badge': {
       props: ['status'],
       computed: {
-        cls() { return { ok: 'success', sufficient: 'success', accepted: 'success', low: 'warning', warning: 'warning', suggested: 'accent', overridden: 'warning', short: 'danger', out: 'danger', critical: 'danger', open: 'danger', no_forecast: 'neutral', acknowledged: 'neutral', draft: 'neutral', pending: 'warning', approved: 'accent', issued: 'success', rejected: 'danger', sent: 'accent', partially_received: 'warning', received: 'success', cancelled: 'neutral', planned: 'accent', in_progress: 'warning', done: 'success' }[this.status] || 'neutral'; },
+        cls() { return { ok: 'success', sufficient: 'success', accepted: 'success', low: 'warning', warning: 'warning', suggested: 'accent', overridden: 'warning', short: 'danger', out: 'danger', critical: 'danger', open: 'danger', no_forecast: 'neutral', acknowledged: 'neutral', draft: 'neutral', pending: 'warning', approved: 'accent', issued: 'success', rejected: 'danger', sent: 'accent', partially_received: 'warning', received: 'success', confirmed: 'success', completed: 'accent', cancelled: 'neutral', planned: 'accent', in_progress: 'warning', done: 'success' }[this.status] || 'neutral'; },
         text() { const t = { no_forecast: 'no forecast' }[this.status] || String(this.status || '').replace(/_/g, ' '); return t.charAt(0).toUpperCase() + t.slice(1); },
       },
       template: '<span :class="\'sr-badge sr-badge-\' + cls">[[ text ]]</span>',

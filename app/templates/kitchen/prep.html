@@ -7,7 +7,7 @@
     <sr-date-nav v-model="date" @change="load"></sr-date-nav>
   </div>
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
-  <p v-if="plan" class="page-note">Recommended = forecast + [[ plan.buffer_pct ]]% safety buffer, rounded up to whole batches.<span v-if="anyWeatherEstimated"> Weather for this date is the seasonal average.</span><span v-if="plan.model" class="text-muted"> Model [[ plan.model ]].</span></p>
+  <p v-if="plan" class="page-note">Recommended = forecast + [[ plan.buffer_pct ]]% safety buffer, or the pre-ordered portions if that is higher, rounded up to whole batches. The forecast predicts total demand, which already includes pre-orders, so they are not added on top.<span v-if="anyWeatherEstimated"> Weather for this date is the seasonal average.</span><span v-if="plan.model" class="text-muted"> Model [[ plan.model ]].</span></p>
   <sr-loading v-if="loading"></sr-loading>
   <div v-else class="row g-3">
     <div class="col-12 col-md-6 col-xl-4" v-for="it in items" :key="it.menu_item_id">
@@ -25,14 +25,14 @@
               <div><span class="pf-label">Forecast</span><span class="pf-forecast">[[ ui.num(it.forecast_qty, 1) ]]</span></div>
               <div class="text-end"><span class="pf-label">Recommended</span><span class="pf-rec">[[ it.recommended_qty ]]</span></div>
             </div>
-            <p v-if="it.preorder_qty" class="small mb-1">Includes [[ it.preorder_qty ]] confirmed pre-ordered portions.</p>
+            <p v-if="it.preorder_qty" class="small mb-1">[[ it.preorder_qty ]] portions pre-ordered (confirmed or collected). The plan never goes below this.</p>
             <p v-if="it.forecast_method === 'baseline'" class="small text-muted mb-1">Simple estimate (same day last week).</p>
             <details class="calc">
               <summary>How was this worked out?</summary>
               <dl class="row mb-0 small">
                 <dt class="col-7 fw-normal text-muted">Forecast</dt><dd class="col-5 text-end mb-0">[[ ui.num(it.forecast_qty, 1) ]]</dd>
                 <dt class="col-7 fw-normal text-muted">Safety buffer</dt><dd class="col-5 text-end mb-0">+[[ it.buffer_pct ]]%</dd>
-                <dt class="col-7 fw-normal text-muted">Confirmed pre-orders</dt><dd class="col-5 text-end mb-0">[[ it.preorder_qty ]]</dd>
+                <dt class="col-7 fw-normal text-muted">Pre-orders (confirmed or collected)</dt><dd class="col-5 text-end mb-0">[[ it.preorder_qty ]]</dd>
                 <dt class="col-7 fw-normal text-muted">Batch size</dt><dd class="col-5 text-end mb-0">[[ it.batch_size ]]</dd>
               </dl>
               <p class="small text-muted mb-0 mt-1">[[ ui.num(it.forecast_qty, 1) ]] + [[ it.buffer_pct ]]% = [[ ui.num(it.forecast_qty * (1 + it.buffer_pct / 100), 1) ]]<span v-if="it.preorder_qty"> (or [[ it.preorder_qty ]] pre-ordered, if higher)</span>, rounded up to a multiple of [[ it.batch_size ]] = [[ it.recommended_qty ]].</p>

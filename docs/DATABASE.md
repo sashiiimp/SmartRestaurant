@@ -123,7 +123,7 @@ One movement row per batch touched: a stock-out that spans two batches writes tw
 
 **food_waste** (M1). `outlet_id`, `menu_item_id`, `waste_date`, `quantity` INT > 0, `reason` CHECK in (`overproduction`,`quality`,`expired`,`other`), `unit_price` DECIMAL(12,2) (price snapshot; **waste value = quantity x unit_price**, labelled "at selling price"), `note`, `created_by`. Index (`outlet_id`, `waste_date`).
 
-**pre_orders** (S; K3 already reads it, and the sum is 0 when the table is empty). `outlet_id`, `menu_item_id`, `target_date`, `quantity` INT > 0, `status` CHECK in (`pending`,`confirmed`,`cancelled`), `customer_note`, `created_by`. Only `confirmed` counts in S2.
+**pre_orders** (S; K3 already reads it, and the sum is 0 when the table is empty). `outlet_id`, `menu_item_id`, `target_date`, `quantity` INT > 0, `status` CHECK in (`pending`,`confirmed`,`completed`,`cancelled`), `customer_note`, `created_by`; since 13 Oct 2026 (migration `c4e1a7b9d052`, additive) also `customer_name` VARCHAR(100), `customer_contact` VARCHAR(60), `pickup_time` TIME and `completed_at` DATETIME, all nullable so older rows stay valid (the service requires name and pickup time for new pre-orders). `confirmed` and `completed` count in S2.
 
 ### 2.6 Forecasting, recommendations, alerts
 

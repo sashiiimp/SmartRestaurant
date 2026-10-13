@@ -33,8 +33,11 @@ def compute_recommended(forecast_qty, buffer_pct, preorders: int, batch_size: in
 
 
 def _preorder_totals(outlet_id: int, day: date) -> dict:
+    """Committed pre-order portions per item for one day: confirmed ones, plus completed ones (already handed over),
+    so the plan for a day does not drop as pre-orders are collected. Pending and cancelled ones are not demand yet."""
     rows = (db.session.query(PreOrder.menu_item_id, db.func.sum(PreOrder.quantity))
-            .filter(PreOrder.outlet_id == outlet_id, PreOrder.target_date == day, PreOrder.status == "confirmed")
+            .filter(PreOrder.outlet_id == outlet_id, PreOrder.target_date == day,
+                    PreOrder.status.in_(("confirmed", "completed")))
             .group_by(PreOrder.menu_item_id).all())
     return {i: int(q) for i, q in rows}
 

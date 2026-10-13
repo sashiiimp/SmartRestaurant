@@ -52,6 +52,12 @@ def create_pre_order():
     return ok(result, {"warnings": result["warnings"]}, status=201)
 
 
+@bp.route("/kitchen/pre-orders/<int:pre_order_id>")
+@roles_required("admin", "kitchen")
+def get_pre_order(pre_order_id):
+    return ok(kit.pre_order_detail(current_outlet_id(), pre_order_id))
+
+
 @bp.route("/kitchen/pre-orders/<int:pre_order_id>", methods=["PATCH"])
 @roles_required("kitchen")
 def update_pre_order(pre_order_id):
