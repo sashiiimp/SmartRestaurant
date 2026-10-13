@@ -2,6 +2,8 @@
 
 SmartRestaurant, CSE5015 final project (Team ForeSight). This guide covers the Administrator dashboard at `/admin`, as redesigned on 13 Oct 2026 (branch `dashboard-redesign`).
 
+> **Second pass, 13 Oct 2026 (branch `system-integration`):** the Inventory alerts card now has one row per ingredient with **Now / Forecast / Expiry** columns, there is an **Upcoming confirmed pre-orders** card, the Alerts card has **Open / History** tabs, Recent activity shows plain sentences with the user, and the forecast total is the sum of the 7 day values. Pre-orders, BOM, waste and the full system are explained in `SMARTRESTAURANT_VIVA_GUIDE.md` (sections 6 to 10).
+
 The figures quoted as examples come from the **staging copy** of the synthetic demo data (sales recorded up to 8 Oct 2026, viewed on 13 Oct 2026). On the live site the numbers will differ, but the meaning and the formulas are the same.
 
 ---
