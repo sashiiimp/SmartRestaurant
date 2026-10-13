@@ -163,7 +163,7 @@ Abbreviations: **A** admin, **K** kitchen, **I** inventory. **(R)** means read-o
 | `GET /alerts?status=open&type=&refresh=` | A K I | M1 | I8, S4 | filtered by role (section 6). Evaluates first if the last evaluation is over 60 s old, or when `refresh=true`. |
 | `POST /alerts/{id}/acknowledge` | A K I | M1 | I8 | only for alerts the role can see |
 | `POST /alerts/run` | A | M1 | S4 | manual run, returns counts opened/closed |
-| `GET /dashboards/admin?range=7\|30` | A | M2 | A1 | |
+| `GET /dashboards/admin?range=7\|30` | A | M2 | A1 | Period = the last 7 or 30 days ending yesterday. Besides the totals: `waste_rate {prepared, wasted, pct}` (pct = wasted / prepared x 100, null if nothing prepared), `waste_threshold_pct`, `coverage {days, days_with_sales, latest_sales_date}`, `forecast_next7` (7 rows `{date, qty, items}`; qty null = no forecast), `menu_items_active`, `stock {ingredients, out, low, rows}` (out first, then by usable / reorder level). Opening it runs the alert check like `GET /alerts`. |
 | `GET /dashboards/kitchen?date=` | K, A(R) | M1 | K1 | |
 | `GET /dashboards/inventory` | I, A(R) | M1 | I1 | |
 | `GET /reports/sales?from=&to=&group_by=day\|week\|month&item_id=` | A | M2 | A8 | rows plus totals plus top/bottom items |

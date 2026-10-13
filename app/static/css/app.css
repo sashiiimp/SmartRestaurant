@@ -642,3 +642,64 @@ input[type="file"]::file-selector-button { border: 0; background: var(--accent-s
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }
+
+/* ---- 12 administrator theme and dashboard (Oct 2026) ------------------------------------------------------- */
+/* Administrator: light sidebar, neutral grey canvas, green accent. Kitchen and inventory keep their own colours. */
+body[data-role="admin"] {
+  --bg: #f5f6f7; --border: #e4e7eb; --border-strong: #cfd4dc;
+  --accent: #047857; --accent-strong: #065f46; --accent-soft: #e8f5ef; --accent-rgb: 4, 120, 87;
+  --nav-bg: #fff; --nav-bg-2: #fff; --nav-text: #475467; --nav-line: var(--border);
+}
+body[data-role="admin"] .sidebar { background: var(--surface) !important; border-right: 1px solid var(--border); }
+body[data-role="admin"] .brand, body[data-role="admin"] .brand:hover { color: var(--text); }
+body[data-role="admin"] .brand-mark { background: var(--accent); box-shadow: none; }
+body[data-role="admin"] .brand-text small { color: var(--muted); opacity: 1; }
+body[data-role="admin"] .role-chip { color: var(--accent-strong); background: var(--accent-soft); border-color: rgba(var(--accent-rgb), .18); }
+body[data-role="admin"] .role-dot { filter: none; box-shadow: 0 0 0 3px rgba(var(--accent-rgb), .16); }
+body[data-role="admin"] .side-heading { color: var(--muted); opacity: 1; }
+body[data-role="admin"] .side-link .sr-i { color: var(--muted); }
+body[data-role="admin"] .side-link:hover { background: var(--surface-2); color: var(--text); }
+body[data-role="admin"] .side-link.active { background: var(--accent-soft); color: var(--accent-strong); }
+body[data-role="admin"] .side-link.active .sr-i { color: var(--accent); }
+body[data-role="admin"] .side-link.active::before { filter: none; background: var(--accent); }
+body[data-role="admin"] .user-meta strong { color: var(--text); }
+body[data-role="admin"] .user-meta small { color: var(--muted); opacity: 1; }
+body[data-role="admin"] .avatar { background: var(--accent); border-color: var(--accent-soft); }
+body[data-role="admin"] .btn-logout { background: var(--surface); border-color: var(--border-strong); color: var(--text-2); }
+body[data-role="admin"] .btn-logout:hover { background: var(--surface-2); border-color: var(--border-strong); color: var(--text); }
+body[data-role="admin"] .sidebar .btn-close-white { filter: none; }
+body[data-role="admin"] .topbar { background: var(--surface); backdrop-filter: none; }
+body[data-role="admin"] .topbar::after { display: none; }
+
+/* dashboard sections: notes, card subtitles, forecast footer, stock table, quick actions */
+.admin-dash .card-head { align-items: flex-start; }
+.admin-dash .card-head h2 { margin: 0 !important; }
+.card-sub { margin: .15rem 0 0; font-size: .8rem; color: var(--muted); line-height: 1.35; }
+.dash-notes { display: grid; gap: .5rem; margin-bottom: 1rem; }
+.dash-notes:empty { display: none; }
+.dash-note { display: flex; align-items: flex-start; gap: .55rem; margin: 0; padding: .55rem .8rem; font-size: .85rem; line-height: 1.4; border: 1px solid; border-radius: 10px; }
+.dash-note .sr-i { margin-top: .1rem; }
+.note-synthetic { background: var(--surface); border-color: var(--border); color: var(--text-2); }
+.note-synthetic .sr-i { color: var(--info); }
+.note-partial { background: var(--warning-bg); border-color: var(--warning-line); color: #6b3f03; }
+.note-partial .sr-i { color: #b7791f; }
+.dash-fc-foot { display: grid; gap: .6rem; margin-top: .85rem; padding-top: .85rem; border-top: 1px solid var(--border); }
+.dash-fc-total strong { display: block; font-size: 1.35rem; font-weight: 700; line-height: 1.15; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.dash-fc-total span { font-size: .78rem; color: var(--muted); }
+.dash-fc-model { display: grid; gap: .1rem; font-size: .78rem; color: var(--text-2); }
+.stock-counts { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .75rem; }
+.crit-note { display: block; margin-top: .15rem; font-size: .72rem; font-weight: 600; color: var(--danger); }
+.quick-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem; }
+.quick-actions a { display: flex; align-items: flex-start; gap: .7rem; padding: .75rem .85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--text); text-decoration: none; transition: background .15s, border-color .15s; }
+.quick-actions a:hover { background: var(--accent-soft); border-color: rgba(var(--accent-rgb), .4); color: var(--text); }
+.qa-icon { width: 34px; height: 34px; flex: none; display: grid; place-items: center; border-radius: 10px; background: var(--accent-soft); color: var(--accent); }
+.quick-actions strong { display: block; font-size: .9rem; font-weight: 650; }
+.quick-actions small { display: block; margin-top: .05rem; font-size: .77rem; line-height: 1.35; color: var(--muted); }
+.qa-note { margin: .85rem 0 0; font-size: .78rem; color: var(--muted); }
+@media (max-width: 575.98px) {
+  .quick-actions { grid-template-columns: 1fr; }
+  .admin-dash .stock-table .table > :not(caption) > * > * { padding-left: .55rem; padding-right: .55rem; }
+  .admin-dash .stat-tile .value { font-size: 1.4rem; }
+  .admin-dash .stat-tile .card-body { padding: .85rem .9rem .9rem; }
+  .admin-dash .stat-icon { display: none; }
+}

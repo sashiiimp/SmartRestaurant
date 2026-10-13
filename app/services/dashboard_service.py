@@ -161,7 +161,9 @@ def waste_report(outlet_id: int, start: date, end: date, group_by: str = "day") 
 
 
 def admin_dashboard(outlet_id: int, range_days: int = 7) -> dict:
-    """A1: headline numbers for the last 7 or 30 days, all from the same service methods as the detail pages."""
+    """A1: headline numbers for the last 7 or 30 days, all from the same service methods as the detail pages.
+    The period ends yesterday, because today's sales and waste are still being recorded. Historical figures (sales,
+    waste, production) and predicted figures (forecasts for today and the next 6 days) are kept in separate keys."""
     if range_days not in (7, 30):
         raise ValidationError("Please fix the highlighted fields.", {"range": "must be 7 or 30"})
     day = today()
@@ -174,11 +176,18 @@ def admin_dashboard(outlet_id: int, range_days: int = 7) -> dict:
     recent = (AuditLog.query.filter_by(outlet_id=outlet_id).order_by(AuditLog.id.desc()).limit(10).all())
     last_run = fs.list_runs(outlet_id, 1)
     active = fs.get_active_model(outlet_id)
+    from app.services import settings
     return {"range_days": range_days, "from": start.isoformat(), "to": end.isoformat(),
             "sales": {"quantity": sales["totals"]["quantity"], "revenue": sales["totals"]["revenue"]},
             "forecast_next7_total": round(sum(float(v["qty"]) for v in fmap.values()), 1),
+            "forecast_next7": _forecast_days(fmap, day),
+            "menu_items_active": MenuItem.query.filter_by(outlet_id=outlet_id, is_active=True).count(),
             "low_stock_count": sum(1 for r in levels if r["status"] != "ok"),
+            "stock": _stock_summary(levels),
             "waste": {"quantity": waste["food"]["totals"]["quantity"], "value": waste["food"]["totals"]["value"]},
+            "waste_rate": _waste_rate(outlet_id, start, end, waste["food"]["totals"]["quantity"]),
+            "waste_threshold_pct": float(settings.get_decimal(outlet_id, "waste_risk_threshold_pct")),
+            "coverage": _coverage(outlet_id, start, end),
             "alert_counts": alerts["counts"], "alerts": alerts["rows"][:6],
             "items_without_recipe": [m.name for m in dm.items_without_recipe(outlet_id)],
             "active_model": None if not active else {"label": active.version_label, "algorithm": active.algorithm,
@@ -187,6 +196,50 @@ def admin_dashboard(outlet_id: int, range_days: int = 7) -> dict:
             "recent_activity": [{"time": a.created_at.isoformat() + "Z", "action": a.action, "entity": a.entity_type,
                                  "entity_id": a.entity_id} for a in recent],
             "data_source": settings_label(outlet_id)}
+
+
+def _forecast_days(fmap: dict, day: date) -> list[dict]:
+    """Predicted portions per day, today and the next 6 days, from the latest stored forecasts. A day with no forecast
+    rows has qty None (shown as "no forecast"), never 0, so a missing forecast is not mistaken for zero demand."""
+    totals, counts = defaultdict(Decimal), defaultdict(int)
+    for (_, d), v in fmap.items():
+        totals[d] += v["qty"]
+        counts[d] += 1
+    days = [day + timedelta(days=i) for i in range(7)]
+    return [{"date": d.isoformat(), "qty": round(float(totals[d]), 1) if counts[d] else None, "items": counts[d]}
+            for d in days]
+
+
+def _stock_summary(levels: list[dict]) -> dict:
+    """Counts by status and the ingredients that need attention: out of stock first, then lowest usable stock
+    relative to the reorder level. Status comes from inventory_service.stock_status (usable, non-expired stock)."""
+    at_risk = [r for r in levels if r["status"] != "ok"]
+    at_risk.sort(key=lambda r: (r["status"] != "out", r["usable"] / r["reorder_level"] if r["reorder_level"] else 0, r["name"]))
+    return {"ingredients": len(levels), "out": sum(1 for r in levels if r["status"] == "out"),
+            "low": sum(1 for r in levels if r["status"] == "low"),
+            "rows": [{"id": r["id"], "name": r["name"], "unit": r["unit"], "usable": r["usable"], "on_hand": r["on_hand"],
+                      "min_stock": r["min_stock"], "reorder_level": r["reorder_level"], "status": r["status"],
+                      "is_critical": r["is_critical"]} for r in at_risk]}
+
+
+def _waste_rate(outlet_id: int, start: date, end: date, wasted: int) -> dict:
+    """Food waste rate = portions wasted / portions prepared x 100 over the period (the same ratio as the Analytics
+    waste-rate chart and the waste-risk alert). None when nothing was prepared, rather than a misleading 0%."""
+    prepared = int(db.session.query(db.func.coalesce(db.func.sum(PreparationRecord.quantity), 0)).filter(
+        PreparationRecord.outlet_id == outlet_id, PreparationRecord.prep_date >= start,
+        PreparationRecord.prep_date <= end).scalar())
+    return {"prepared": prepared, "wasted": wasted, "pct": round(wasted * 100 / prepared, 1) if prepared else None}
+
+
+def _coverage(outlet_id: int, start: date, end: date) -> dict:
+    """How many days of the period have sales records, and the latest sales date overall, so the dashboard can say
+    when a period is only partly recorded instead of presenting a short total as a full one."""
+    days = db.session.query(db.func.count(db.distinct(SalesRecord.sale_date))).filter(
+        SalesRecord.outlet_id == outlet_id, SalesRecord.sale_date >= start, SalesRecord.sale_date <= end).scalar()
+    latest = db.session.query(db.func.max(SalesRecord.sale_date)).filter(
+        SalesRecord.outlet_id == outlet_id, SalesRecord.sale_date <= end).scalar()
+    return {"days": (end - start).days + 1, "days_with_sales": int(days or 0),
+            "latest_sales_date": latest.isoformat() if latest else None}
 
 
 def food_usage_report(outlet_id: int, start: date, end: date) -> dict:
