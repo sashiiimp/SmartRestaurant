@@ -4,12 +4,13 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 from app.extensions import db
-from app.models import (AuditLog, FoodUsage, FoodWaste, Holiday, Ingredient, MenuItem, PreparationRecord, Promotion, SalesRecord,
-                        StockBatch, StockMovement)
+from app.models import (Alert, AuditLog, FoodUsage, FoodWaste, ForecastRun, Holiday, Ingredient, MenuItem, PreparationRecord,
+                        Promotion, Recommendation, SalesRecord, StockBatch, StockMovement, User)
 from app.services import alert_service
 from app.services import data_management_service as dm
 from app.services import forecasting_service as fs
 from app.services import inventory_service as inv
+from app.services import kitchen_service as kit
 from app.services import recommendation_service as rec
 from app.models.inventory import MOVEMENT_TYPES
 from app.models.kitchen import FOOD_USAGE_TYPES
@@ -156,8 +157,43 @@ def waste_report(outlet_id: int, start: date, end: date, group_by: str = "day") 
                                            for k, v in ing_tot.items()), key=lambda r: -r["value"])[:10],
                   "by_reason": [{"reason": k, "quantity": float(v)} for k, v in sorted(ir.items())],
                   "totals": {"value": float(sum(v[1] for v in ip.values()))}}
+    food["by_item"] = _waste_by_item(outlet_id, start, end)
     return {"from": start.isoformat(), "to": end.isoformat(), "group_by": group_by, "food": food,
             "ingredient": ingredient, "data_source": settings_label(outlet_id)}
+
+
+def _waste_by_item(outlet_id: int, start: date, end: date) -> list[dict]:
+    """Per menu item over the period: planned (accepted or overridden plans only), prepared, sold, wasted, the waste
+    rate (wasted / prepared x 100) and, above the waste-risk limit, a suggestion. The suggestion is advice for the
+    person deciding the plan; it never changes a forecast or a stored plan."""
+    from app.services import settings
+    limit = settings.get_decimal(outlet_id, "waste_risk_threshold_pct")
+
+    def per_item(model, qty_col, date_col):
+        return {i: int(q) for i, q in db.session.query(model.menu_item_id, db.func.sum(qty_col)).filter(
+            model.outlet_id == outlet_id, date_col >= start, date_col <= end).group_by(model.menu_item_id)}
+    prepared = per_item(PreparationRecord, PreparationRecord.quantity, PreparationRecord.prep_date)
+    sold = per_item(SalesRecord, SalesRecord.quantity_sold, SalesRecord.sale_date)
+    wasted = per_item(FoodWaste, FoodWaste.quantity, FoodWaste.waste_date)
+    planned = per_item(Recommendation, Recommendation.final_qty, Recommendation.target_date)
+    prep_days = {i: int(n) for i, n in db.session.query(PreparationRecord.menu_item_id,
+                                                         db.func.count(db.distinct(PreparationRecord.prep_date))).filter(
+        PreparationRecord.outlet_id == outlet_id, PreparationRecord.prep_date >= start,
+        PreparationRecord.prep_date <= end).group_by(PreparationRecord.menu_item_id)}
+    rows = []
+    for item in MenuItem.query.filter_by(outlet_id=outlet_id).order_by(MenuItem.name):
+        p, w = prepared.get(item.id, 0), wasted.get(item.id, 0)
+        if not (p or w or sold.get(item.id)):
+            continue
+        rate = round(w * 100 / p, 1) if p else None
+        tip = None
+        if rate is not None and rate > limit and prep_days.get(item.id):
+            per_day = round(w / prep_days[item.id], 1)
+            tip = (f"About {per_day:g} portions a day were wasted. Consider planning that many fewer, or override the "
+                   f"recommendation on days you expect lower demand.")
+        rows.append({"item": item.name, "planned": planned.get(item.id), "prepared": p, "sold": sold.get(item.id, 0),
+                     "wasted": w, "waste_pct": rate, "days_prepared": prep_days.get(item.id, 0), "suggestion": tip})
+    return sorted(rows, key=lambda r: -(r["waste_pct"] or 0))
 
 
 def admin_dashboard(outlet_id: int, range_days: int = 7) -> dict:
@@ -173,17 +209,20 @@ def admin_dashboard(outlet_id: int, range_days: int = 7) -> dict:
     fmap = fs.forecast_map(outlet_id, day, day + timedelta(days=6))
     alerts = alert_service.list_alerts(outlet_id, "admin")
     levels = inv.stock_levels(outlet_id, day)
-    recent = (AuditLog.query.filter_by(outlet_id=outlet_id).order_by(AuditLog.id.desc()).limit(10).all())
     last_run = fs.list_runs(outlet_id, 1)
     active = fs.get_active_model(outlet_id)
+    # the 7-day total is the sum of the displayed day values, so the card total and the chart always agree
+    fdays = _forecast_days(fmap, day)
     from app.services import settings
     return {"range_days": range_days, "from": start.isoformat(), "to": end.isoformat(),
             "sales": {"quantity": sales["totals"]["quantity"], "revenue": sales["totals"]["revenue"]},
-            "forecast_next7_total": round(sum(float(v["qty"]) for v in fmap.values()), 1),
-            "forecast_next7": _forecast_days(fmap, day),
+            "forecast_next7": fdays,
+            "forecast_next7_total": round(sum(f["qty"] for f in fdays if f["qty"] is not None), 1),
             "menu_items_active": MenuItem.query.filter_by(outlet_id=outlet_id, is_active=True).count(),
             "low_stock_count": sum(1 for r in levels if r["status"] != "ok"),
             "stock": _stock_summary(levels),
+            "inventory_alerts": _inventory_alerts(outlet_id, levels, day),
+            "pre_orders": kit.upcoming_pre_orders(outlet_id, 7),
             "waste": {"quantity": waste["food"]["totals"]["quantity"], "value": waste["food"]["totals"]["value"]},
             "waste_rate": _waste_rate(outlet_id, start, end, waste["food"]["totals"]["quantity"]),
             "waste_threshold_pct": float(settings.get_decimal(outlet_id, "waste_risk_threshold_pct")),
@@ -193,9 +232,92 @@ def admin_dashboard(outlet_id: int, range_days: int = 7) -> dict:
             "active_model": None if not active else {"label": active.version_label, "algorithm": active.algorithm,
                                                       "beats_baseline": active.beats_baseline},
             "last_run": last_run[0] if last_run else None,
-            "recent_activity": [{"time": a.created_at.isoformat() + "Z", "action": a.action, "entity": a.entity_type,
-                                 "entity_id": a.entity_id} for a in recent],
+            "recent_activity": recent_activity(outlet_id),
             "data_source": settings_label(outlet_id)}
+
+
+ALERT_INGREDIENT_TYPES = ("low_stock", "critical_stock", "projected_stockout", "expiry_warning", "manual_shortage")
+
+
+def _inventory_alerts(outlet_id: int, levels: list[dict], day: date) -> list[dict]:
+    """One row per ingredient that needs attention, putting together what is true NOW (usable stock against the
+    reorder level and minimum), what the FORECAST says (the first day the plan needs more than usable stock) and
+    EXPIRY (expired or soon-expiring batches). Built from the open alerts that alert_service has just evaluated, so it
+    always agrees with the alert list; it adds no rule of its own."""
+    by_ing: dict = {}
+    batch_ing = {}
+    alerts = Alert.query.filter(Alert.outlet_id == outlet_id, Alert.status.in_(("open", "acknowledged")),
+                                Alert.alert_type.in_(ALERT_INGREDIENT_TYPES)).all()
+    batch_ids = [a.entity_id for a in alerts if a.entity_type == "batch"]
+    if batch_ids:
+        batch_ing = {b.id: b for b in StockBatch.query.filter(StockBatch.id.in_(batch_ids))}
+    for a in alerts:
+        if a.entity_type == "batch":
+            b = batch_ing.get(a.entity_id)
+            if b is None:
+                continue
+            row = by_ing.setdefault(b.ingredient_id, {"alerts": [], "expiry": []})
+            row["expiry"].append({"batch_no": b.batch_no, "qty": float(b.qty_remaining), "date": b.expiry_date.isoformat(),
+                                  "expired": b.expiry_date < day})
+        else:
+            row = by_ing.setdefault(a.entity_id, {"alerts": [], "expiry": []})
+            if a.alert_type == "projected_stockout":
+                row["forecast"] = {"date": a.target_date.isoformat() if a.target_date else None,
+                                   "short_by": (a.details or {}).get("short_by")}
+            if a.alert_type == "manual_shortage":
+                row["reported"] = True
+        row["alerts"].append({"id": a.id, "severity": a.severity, "status": a.status})
+    rows = []
+    for lv in levels:
+        extra = by_ing.get(lv["id"])
+        if lv["status"] == "ok" and not lv["is_critical"] and not extra:
+            continue
+        extra = extra or {"alerts": [], "expiry": []}
+        sev = "critical" if any(x["severity"] == "critical" for x in extra["alerts"]) or lv["status"] == "out" else "warning"
+        rows.append({"id": lv["id"], "name": lv["name"], "unit": lv["unit"], "usable": lv["usable"],
+                     "reorder_level": lv["reorder_level"], "min_stock": lv["min_stock"], "status": lv["status"],
+                     "is_critical": lv["is_critical"], "forecast": extra.get("forecast"),
+                     "expiry": sorted(extra["expiry"], key=lambda e: e["date"]), "reported": extra.get("reported", False),
+                     "severity": sev, "alert_ids": [x["id"] for x in extra["alerts"]],
+                     "all_acknowledged": bool(extra["alerts"]) and all(x["status"] == "acknowledged" for x in extra["alerts"])})
+    order = {"out": 0, "low": 1, "ok": 2}
+    return sorted(rows, key=lambda r: (r["severity"] != "critical", order[r["status"]], r["name"]))
+
+
+def recent_activity(outlet_id: int, limit: int = 10) -> list[dict]:
+    """The latest stored events, newest first: audit log entries, forecast runs (not the bulk backfill) and stock
+    movements entered by a user. Nothing is generated; each row points at a stored record. Names are looked up
+    here so the page can write a plain sentence (admin_dashboard.js)."""
+    users = {u.id: (u.full_name or u.username) for u in User.query.filter_by(outlet_id=outlet_id)}
+    items = {m.id: m.name for m in MenuItem.query.filter_by(outlet_id=outlet_id)}
+    ings = {i.id: (i.name, i.unit) for i in Ingredient.query.filter_by(outlet_id=outlet_id)}
+    out = []
+    for a in AuditLog.query.filter_by(outlet_id=outlet_id).order_by(AuditLog.id.desc()).limit(limit):
+        eid = int(a.entity_id) if a.entity_id and str(a.entity_id).isdigit() else None
+        name = None
+        if a.entity_type == "menu_item":
+            name = items.get(eid)
+        elif a.entity_type == "ingredient":
+            name = ings.get(eid, (None, None))[0]
+        out.append({"time": a.created_at.isoformat() + "Z", "kind": "audit", "action": a.action, "entity": a.entity_type,
+                    "entity_id": a.entity_id, "name": name, "detail": a.detail or {}, "user": users.get(a.user_id)})
+    for r in (ForecastRun.query.filter(ForecastRun.outlet_id == outlet_id, ForecastRun.trigger_type != "backfill",
+                                       ForecastRun.as_of_date <= today())
+              .order_by(ForecastRun.id.desc()).limit(limit)):
+        out.append({"time": r.started_at.isoformat() + "Z", "kind": "forecast_run", "action": "forecast.run",
+                    "entity": "forecast_run", "entity_id": r.id, "name": None, "user": users.get(r.created_by),
+                    "detail": {"from": r.as_of_date.isoformat(),
+                               "to": (r.as_of_date + timedelta(days=r.horizon_days - 1)).isoformat(),
+                               "days": r.horizon_days, "items": r.items_forecast, "status": r.status,
+                               "trigger": r.trigger_type, "model": r.model_version.version_label if r.model_version else None}})
+    for m in (StockMovement.query.filter(StockMovement.outlet_id == outlet_id, StockMovement.created_by.isnot(None))
+              .order_by(StockMovement.id.desc()).limit(limit)):
+        name, unit = ings.get(m.ingredient_id, (None, None))
+        out.append({"time": m.created_at.isoformat() + "Z", "kind": "stock", "action": f"stock.{m.movement_type}",
+                    "entity": "ingredient", "entity_id": m.ingredient_id, "name": name, "user": users.get(m.created_by),
+                    "detail": {"quantity": float(m.quantity), "unit": unit, "reason": m.reason}})
+    out.sort(key=lambda e: e["time"], reverse=True)
+    return out[:limit]
 
 
 def _forecast_days(fmap: dict, day: date) -> list[dict]:

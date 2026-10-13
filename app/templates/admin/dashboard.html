@@ -48,10 +48,10 @@
         <template v-if="forecastDays">
           <div role="img" aria-label="Bar chart of predicted portions per day for the next 7 days"><sr-bar-chart :labels="forecastLabels" :datasets="forecastData" y-title="Predicted portions" :height="220" title="" all-labels></sr-bar-chart></div>
           <div class="dash-fc-foot">
-            <div class="dash-fc-total"><strong>[[ ui.num(d.forecast_next7_total, 0) ]]</strong><span>predicted portions over [[ forecastDays ]] day[[ forecastDays === 1 ? '' : 's' ]]</span></div>
+            <div class="dash-fc-total"><strong>[[ ui.num(d.forecast_next7_total, 1) ]]</strong><span>predicted portions: the sum of the [[ forecastDays ]] daily value[[ forecastDays === 1 ? '' : 's' ]] in the chart</span></div>
             <div class="dash-fc-model" v-if="d.active_model">
               <span>Model: [[ algoName(d.active_model.algorithm) ]] ([[ d.active_model.label ]])</span>
-              <span v-if="perf">Test error: [[ ui.num(perf.model, 1) ]] portions per item per day (simple baseline: [[ ui.num(perf.baseline, 1) ]])</span>
+              <span v-if="perf">Test error (hold-out [[ ui.date(perf.from) ]] to [[ ui.date(perf.to) ]]): MAE [[ ui.num(perf.model, 1) ]] portions per item per day<template v-if="perf.wape != null">, WAPE [[ ui.num(perf.wape, 1) ]]%</template>; simple baseline MAE [[ ui.num(perf.baseline, 1) ]]</span>
               <span v-if="d.last_run">Last forecast run: [[ ui.dateTime(d.last_run.started_at) ]]<template v-if="d.last_run.status !== 'ok'"> ([[ d.last_run.status ]])</template></span>
             </div>
           </div>
@@ -76,58 +76,92 @@
     </div>
 
     <div class="row g-3 mb-3">
-      <!-- 4 Inventory alerts: current usable stock against each ingredient's reorder level -->
+      <!-- 4 Inventory alerts: one row per ingredient; what is true now, what the forecast says, and expiry -->
       <section class="col-12 col-xl-7" aria-labelledby="inv-h"><div class="card h-100"><div class="card-body">
         <div class="card-head">
-          <div><h2 id="inv-h" class="h6">Inventory alerts</h2><p class="card-sub">Usable (not expired) stock right now, compared with each ingredient's reorder level</p></div>
+          <div><h2 id="inv-h" class="h6">Inventory alerts</h2><p class="card-sub"><strong>Now</strong>: usable (not expired) stock against the reorder level. <strong>Forecast</strong>: first day the 7-day plan needs more than that.</p></div>
           <a href="/admin/inventory">Inventory</a>
         </div>
         <div class="stock-counts">
           <span class="sr-badge sr-badge-danger">[[ d.stock.out ]] out of stock</span>
           <span class="sr-badge sr-badge-warning">[[ d.stock.low ]] low</span>
-          <span class="sr-badge sr-badge-success">[[ d.stock.ingredients - d.stock.out - d.stock.low ]] in stock</span>
+          <span class="sr-badge sr-badge-info">[[ forecastShortCount ]] short in the forecast</span>
         </div>
-        <div v-if="d.stock.rows.length" class="table-responsive stock-table">
+        <div v-if="d.inventory_alerts.length" class="table-responsive stock-table">
           <table class="table table-sm align-middle">
-            <thead><tr><th scope="col">Ingredient</th><th scope="col" class="text-end">Usable stock</th><th scope="col" class="text-end d-none d-sm-table-cell">Reorder level</th><th scope="col">Status</th></tr></thead>
-            <tbody><tr v-for="r in stockShown" :key="r.id">
-              <td class="fw-semibold">[[ r.name ]]</td>
-              <td class="text-end">[[ ui.qty(r.usable, r.unit) ]]<small class="d-sm-none d-block text-muted">reorder at [[ ui.qty(r.reorder_level, r.unit) ]]</small></td>
-              <td class="text-end text-muted d-none d-sm-table-cell">[[ ui.qty(r.reorder_level, r.unit) ]]</td>
-              <td><sr-status-badge :status="r.status"></sr-status-badge><span v-if="r.status === 'low' && r.is_critical" class="crit-note">below minimum</span></td>
+            <thead><tr><th scope="col">Ingredient</th><th scope="col">Now</th><th scope="col">Forecast</th><th scope="col" class="d-none d-md-table-cell">Expiry</th></tr></thead>
+            <tbody><tr v-for="r in invShown" :key="r.id">
+              <td><span class="fw-semibold">[[ r.name ]]</span><small v-if="r.reported" class="d-block crit-note">reported short by the kitchen</small><small v-if="r.all_acknowledged" class="d-block text-muted">acknowledged</small><small v-if="r.expiry.length" class="d-block d-md-none" :class="r.expiry[0].expired ? 'crit-note m-0' : 'text-muted'">[[ ui.qty(r.expiry[0].qty, r.unit) ]] [[ r.expiry[0].expired ? 'expired' : 'expires' ]] [[ ui.date(r.expiry[0].date) ]]</small></td>
+              <td class="text-nowrap"><sr-status-badge :status="r.status"></sr-status-badge>
+                <small class="d-block text-muted">[[ ui.qty(r.usable, r.unit) ]] of [[ ui.qty(r.reorder_level, r.unit) ]]</small>
+                <span v-if="r.status !== 'out' && r.is_critical" class="crit-note">below minimum</span></td>
+              <td><template v-if="r.forecast"><span class="fc-short">Short [[ ui.qty(r.forecast.short_by, r.unit) ]]</span><small class="d-block text-muted">from [[ ui.date(r.forecast.date) ]]</small></template><span v-else class="text-muted small">Enough for 7 days</span></td>
+              <td class="d-none d-md-table-cell small"><template v-if="r.expiry.length"><div v-for="e in r.expiry.slice(0, 2)" :key="e.batch_no" :class="e.expired ? 'crit-note m-0' : ''">[[ ui.qty(e.qty, r.unit) ]] [[ e.expired ? 'expired' : 'expires' ]] [[ ui.date(e.date) ]]</div></template><span v-else class="text-muted">-</span></td>
             </tr></tbody>
           </table>
         </div>
-        <sr-empty v-else message="Every ingredient is above its reorder level." icon="check"></sr-empty>
-        <button v-if="d.stock.rows.length > 6" class="btn btn-sm btn-link alert-more" type="button" :aria-expanded="allStock ? 'true' : 'false'" @click="allStock = !allStock">[[ allStock ? 'Show fewer' : 'Show all ' + d.stock.rows.length ]]</button>
+        <sr-empty v-else message="Every ingredient is above its reorder level, with enough stock for the 7-day plan." icon="check"></sr-empty>
+        <button v-if="d.inventory_alerts.length > 6" class="btn btn-sm btn-link alert-more" type="button" :aria-expanded="allStock ? 'true' : 'false'" @click="allStock = !allStock">[[ allStock ? 'Show fewer' : 'Show all ' + d.inventory_alerts.length + ' ingredients' ]]</button>
       </div></div></section>
 
-      <!-- Open alerts of every type (the bell in the top bar links here) -->
-      <section class="col-12 col-xl-5" aria-labelledby="al-h"><div class="card h-100" id="alerts"><div class="card-body">
-        <div class="card-head"><h2 id="al-h" class="h6">Open alerts</h2>
-          <span class="count-chips"><span class="chip chip-critical">[[ d.alert_counts.critical ]] critical</span><span class="chip chip-warning">[[ d.alert_counts.warning ]] warning</span><span v-if="d.alert_counts.info" class="chip chip-info">[[ d.alert_counts.info ]] info</span></span></div>
-        <sr-alert-list :alerts="alerts" :limit="4" @acknowledge="ack"></sr-alert-list>
+      <!-- Upcoming confirmed pre-orders: committed demand that the prep plan already counts -->
+      <section class="col-12 col-xl-5" aria-labelledby="po-h"><div class="card h-100"><div class="card-body">
+        <div class="card-head">
+          <div><h2 id="po-h" class="h6">Upcoming confirmed pre-orders</h2><p class="card-sub">[[ ui.date(d.pre_orders.from) ]] and the next 6 days. They count in the prep plan for their day.</p></div>
+          <span class="sr-badge sr-badge-success" v-if="d.pre_orders.count">[[ d.pre_orders.count ]] order[[ d.pre_orders.count === 1 ? '' : 's' ]], [[ d.pre_orders.portions ]] portions</span>
+        </div>
+        <ul v-if="d.pre_orders.rows.length" class="po-list">
+          <li v-for="p in d.pre_orders.rows.slice(0, 6)" :key="p.id">
+            <span class="po-when">[[ ui.date(p.target_date) + (p.pickup_time ? ', ' + p.pickup_time : '') ]]</span>
+            <span class="po-what"><strong>[[ p.quantity ]] x [[ p.item ]]</strong><small>#[[ p.id ]][[ p.customer_name ? ' · ' + p.customer_name : '' ]]</small></span>
+          </li>
+        </ul>
+        <p v-if="d.pre_orders.rows.length > 6" class="small text-muted mb-0">and [[ d.pre_orders.rows.length - 6 ]] more. The kitchen manages pre-orders on its Orders page.</p>
+        <div v-if="d.pre_orders.by_item.length" class="po-items">
+          <h3 class="h6">Portions by item</h3>
+          <div class="po-bar" v-for="i in d.pre_orders.by_item.slice(0, 5)" :key="i.item"><span>[[ i.item ]]</span><span class="progress progress-thin"><span class="progress-bar" :style="{ width: (i.quantity / d.pre_orders.by_item[0].quantity * 100) + '%' }"></span></span><strong>[[ i.quantity ]]</strong></div>
+        </div>
+        <sr-empty v-if="!d.pre_orders.rows.length" message="No confirmed pre-orders for the next 7 days. The kitchen records them on its Orders page." icon="bag"></sr-empty>
       </div></div></section>
     </div>
 
     <div class="row g-3">
-      <!-- 5 Quick actions: links to pages that already exist for the administrator -->
-      <section class="col-12 col-xl-7" aria-labelledby="qa-h"><div class="card h-100"><div class="card-body">
-        <h2 id="qa-h" class="h6">Quick actions</h2>
-        <nav class="quick-actions" aria-label="Quick actions">
-          <a href="/admin/models"><span class="qa-icon"><sr-icon name="trending" :size="18"></sr-icon></span><span><strong>Generate forecast</strong><small>Forecast models page, Run forecast now</small></span></a>
-          <a href="/admin/catalog"><span class="qa-icon"><sr-icon name="book" :size="18"></sr-icon></span><span><strong>Manage BOM</strong><small>Menu items and recipes (ingredients per portion)</small></span></a>
-          <a href="/admin/inventory"><span class="qa-icon"><sr-icon name="package" :size="18"></sr-icon></span><span><strong>View inventory</strong><small>Stock levels, batches, expiry and movements</small></span></a>
-          <a href="/admin/monitor"><span class="qa-icon"><sr-icon name="bars" :size="18"></sr-icon></span><span><strong>View reports</strong><small>Sales, forecast accuracy, waste and CSV export</small></span></a>
-        </nav>
-        <p class="qa-note">Kitchen production is recorded by the Food Production account, on its Prep plan and Served &amp; waste pages. The administrator sees the results here and in Reports.</p>
+      <!-- Every alert type (the bell in the top bar links here), open now or closed in the past -->
+      <section class="col-12 col-xl-5" aria-labelledby="al-h"><div class="card h-100" id="alerts"><div class="card-body">
+        <div class="card-head"><h2 id="al-h" class="h6">Alerts</h2>
+          <span class="count-chips"><span class="chip chip-critical">[[ d.alert_counts.critical ]] critical</span><span class="chip chip-warning">[[ d.alert_counts.warning ]] warning</span></span></div>
+        <div class="sr-tabs sr-tabs-sm" role="tablist">
+          <button class="sr-tab" :class="{ active: alertTab === 'open' }" role="tab" :aria-selected="alertTab === 'open'" type="button" @click="alertTab = 'open'">Open ([[ alerts.length ]])</button>
+          <button class="sr-tab" :class="{ active: alertTab === 'history' }" role="tab" :aria-selected="alertTab === 'history'" type="button" @click="showHistory">History</button>
+        </div>
+        <template v-if="alertTab === 'open'">
+          <sr-alert-list :alerts="alerts" :limit="4" @acknowledge="ack"></sr-alert-list>
+          <p class="qa-note">Acknowledge means "seen". An alert closes by itself only when the condition is fixed, for example when stock is received.</p>
+        </template>
+        <template v-else>
+          <div v-if="history === undefined" class="sk" style="height: 160px" role="status"><span class="visually-hidden">Loading</span></div>
+          <sr-empty v-else-if="!history || !history.length" :message="history ? 'No closed alerts yet.' : 'The alert history could not be loaded.'" icon="clock"></sr-empty>
+          <ul v-else class="hist-list"><li v-for="a in history.slice(0, 15)" :key="a.id"><span class="alert-msg">[[ a.message ]]</span><small>[[ closedText(a) ]]</small></li></ul>
+        </template>
       </div></div></section>
 
-      <section class="col-12 col-xl-5" aria-labelledby="ra-h"><div class="card h-100"><div class="card-body">
+      <section class="col-12 col-md-7 col-xl-4" aria-labelledby="ra-h"><div class="card h-100"><div class="card-body">
         <h2 id="ra-h" class="h6">Recent activity</h2>
-        <ul v-if="d.recent_activity.length" class="activity small"><li v-for="(a, i) in activityShown" :key="i"><span class="when">[[ ui.dateTime(a.time) ]]</span><span class="what">[[ activityText(a.action) ]]</span></li></ul>
+        <ul v-if="activity.length" class="activity small"><li v-for="(a, i) in activityShown" :key="i"><span class="when">[[ ui.dateTime(a.time) ]]<template v-if="a.user"> &middot; [[ a.user ]]</template></span><span class="what">[[ a.text ]]<template v-if="a.times > 1"> ([[ a.times ]] times)</template></span></li></ul>
         <sr-empty v-else message="No activity recorded yet." icon="activity"></sr-empty>
-        <button v-if="d.recent_activity.length > 5" class="btn btn-sm btn-link alert-more" type="button" :aria-expanded="allActivity ? 'true' : 'false'" @click="allActivity = !allActivity">[[ allActivity ? 'Show fewer' : 'Show ' + d.recent_activity.length ]]</button>
+        <button v-if="activity.length > 5" class="btn btn-sm btn-link alert-more" type="button" :aria-expanded="allActivity ? 'true' : 'false'" @click="allActivity = !allActivity">[[ allActivity ? 'Show fewer' : 'Show ' + activity.length ]]</button>
+      </div></div></section>
+
+      <!-- 5 Quick actions: links to pages that already exist for the administrator -->
+      <section class="col-12 col-md-5 col-xl-3" aria-labelledby="qa-h"><div class="card h-100"><div class="card-body">
+        <h2 id="qa-h" class="h6">Quick actions</h2>
+        <nav class="quick-actions qa-stack" aria-label="Quick actions">
+          <a href="/admin/models"><span class="qa-icon"><sr-icon name="trending" :size="18"></sr-icon></span><span><strong>Generate forecast</strong><small>Forecast models, Run forecast now</small></span></a>
+          <a href="/admin/catalog"><span class="qa-icon"><sr-icon name="book" :size="18"></sr-icon></span><span><strong>Manage BOM</strong><small>Recipes: ingredients per portion</small></span></a>
+          <a href="/admin/inventory"><span class="qa-icon"><sr-icon name="package" :size="18"></sr-icon></span><span><strong>View inventory</strong><small>Stock, batches and expiry</small></span></a>
+          <a href="/admin/monitor"><span class="qa-icon"><sr-icon name="bars" :size="18"></sr-icon></span><span><strong>View reports</strong><small>Sales, accuracy and waste</small></span></a>
+        </nav>
+        <p class="qa-note">Production, waste and pre-orders are recorded by the Food Production account.</p>
       </div></div></section>
     </div>
   </template>

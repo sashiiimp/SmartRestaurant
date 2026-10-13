@@ -216,7 +216,9 @@ def _stale(outlet_id: int) -> bool:
 def alert_dict(a: Alert) -> dict:
     return {"id": a.id, "alert_type": a.alert_type, "severity": a.severity, "entity_type": a.entity_type,
             "entity_id": a.entity_id, "target_date": a.target_date.isoformat() if a.target_date else None,
-            "message": a.message, "details": a.details, "status": a.status, "created_at": a.created_at.isoformat() + "Z"}
+            "message": a.message, "details": a.details, "status": a.status, "created_at": a.created_at.isoformat() + "Z",
+            "acknowledged_at": a.acknowledged_at.isoformat() + "Z" if a.acknowledged_at else None,
+            "closed_at": a.closed_at.isoformat() + "Z" if a.closed_at else None, "closed_reason": a.closed_reason}
 
 
 def list_alerts(outlet_id: int, role: str, status: str | None = "open", alert_type: str | None = None,

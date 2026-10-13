@@ -104,6 +104,14 @@
       <div class="card mb-3"><div class="card-body"><sr-bar-chart :labels="wasteLabels" :datasets="wasteData" y-title="LKR" title="Food waste value"></sr-bar-chart></div></div>
       <div class="row g-3 mt-1"><div class="col-12 col-md-6"><h3 class="h6">Top 5 wasted items</h3><table class="table table-sm"><thead><tr><th>Item</th><th class="text-end">Portions</th><th class="text-end">Value</th></tr></thead><tbody><tr v-for="i in waste.food.top_items" :key="i.item"><td>[[ i.item ]]</td><td class="text-end">[[ i.quantity ]]</td><td class="text-end">[[ ui.money(i.value) ]]</td></tr></tbody></table></div>
         <div class="col-12 col-md-6"><h3 class="h6">By reason</h3><table class="table table-sm"><tbody><tr v-for="r in waste.food.by_reason" :key="r.reason"><td>[[ r.reason ]]</td><td class="text-end">[[ r.quantity ]]</td></tr></tbody></table></div></div>
+      <h2 class="h6 mt-3">Waste by menu item</h2>
+      <p class="small text-muted mb-2">Waste rate = wasted / prepared x 100. Planned counts only days where the kitchen accepted or overrode a plan. Suggestions are advice; they never change the forecast.</p>
+      <sr-empty v-if="!waste.food.by_item.length" message="No production, sales or waste recorded in this period."></sr-empty>
+      <div v-else class="table-responsive mb-3"><table class="table table-sm align-middle">
+        <thead><tr><th>Item</th><th class="text-end">Planned</th><th class="text-end">Prepared</th><th class="text-end">Sold</th><th class="text-end">Wasted</th><th class="text-end">Waste rate</th><th>Suggestion</th></tr></thead>
+        <tbody><tr v-for="r in waste.food.by_item" :key="r.item">
+          <td class="fw-semibold">[[ r.item ]]</td><td class="text-end">[[ r.planned === null ? '-' : ui.num(r.planned, 0) ]]</td><td class="text-end">[[ ui.num(r.prepared, 0) ]]</td><td class="text-end">[[ ui.num(r.sold, 0) ]]</td><td class="text-end">[[ ui.num(r.wasted, 0) ]]</td>
+          <td class="text-end" :class="r.suggestion ? 'text-warning-emphasis fw-semibold' : ''">[[ r.waste_pct === null ? '-' : ui.num(r.waste_pct, 1) + '%' ]]</td><td class="small">[[ r.suggestion || '' ]]</td></tr></tbody></table></div>
       <h2 class="h6 mt-3">Ingredient wastage (stock)</h2>
       <sr-empty v-if="!waste.ingredient.by_ingredient.length" message="No ingredient wastage recorded in this period."></sr-empty>
       <table v-else class="table table-sm" style="max-width: 40rem"><thead><tr><th>Ingredient</th><th class="text-end">Quantity</th><th class="text-end">Cost</th></tr></thead><tbody><tr v-for="i in waste.ingredient.by_ingredient" :key="i.ingredient"><td>[[ i.ingredient ]]</td><td class="text-end">[[ ui.qty(i.quantity, i.unit) ]]</td><td class="text-end">[[ ui.money(i.value) ]]</td></tr></tbody></table>

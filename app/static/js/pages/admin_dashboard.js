@@ -1,17 +1,59 @@
-// Plain-English names for audit log actions ("promotion.create" -> "Promotion created").
-const ACT_NOUN = { history: 'Sales history', sales: 'Sales', model: 'Forecast model', stock_request: 'Stock request', purchase_order: 'Purchase order',
-  menu: 'Menu item', user: 'User', settings: 'Settings', restaurant: 'Restaurant details', holidays: 'Holidays', weather: 'Weather data', stock: 'Stock',
-  recipe: 'Recipe', preorder: 'Pre-order', order: 'Order', promotion: 'Promotion', ingredient: 'Ingredient', supplier: 'Supplier' };
-const ACT_VERB = { create: 'created', update: 'updated', activate: 'activated', train: 'trained', import: 'imported', bulk_load: 'loaded', cancel: 'cancelled',
-  receive: 'received', send: 'sent', adjust: 'adjusted', approve: 'approved', reject: 'rejected', issue: 'issued', deactivate: 'deactivated',
-  password_reset: 'password reset', role_change: 'role changed' };
-
 // Compact chart axis labels ("Tue 13" for a week, "13 Oct" for a month); the card subtitle gives the full dates.
 const shortDate = (iso, weekday) => new Date(iso + 'T00:00:00Z').toLocaleDateString('en-GB', weekday
   ? { weekday: 'short', day: 'numeric', timeZone: 'UTC' } : { day: 'numeric', month: 'short', timeZone: 'UTC' });
 
+// One plain sentence per stored event (dashboard_service.recent_activity). Unknown actions fall back to their name.
+const DAY = (iso) => iso ? ui.date(iso) : '';
+const ACTIVITY = {
+  'forecast.run': (e, x) => x.status === 'ok' || x.status === 'partial'
+    ? 'Forecast generated for ' + x.days + ' days (' + DAY(x.from) + ' to ' + DAY(x.to) + '), ' + x.items + ' menu items' + (x.status === 'partial' ? ', partly' : '')
+    : 'Forecast run ' + x.status + ' for ' + DAY(x.from),
+  'recommendation.accept': (e, x) => 'Prep plan accepted for ' + e.name + ': ' + x.final + ' portions on ' + DAY(x.date),
+  'recommendation.override': (e, x) => 'Prep plan changed for ' + e.name + ': ' + x.final + ' portions on ' + DAY(x.date) + ' (system suggested ' + x.recommended + ')',
+  'prep.start': (e, x) => 'Preparation started for ' + e.name + ' (' + DAY(x.date) + ')',
+  'prep.done': (e, x) => 'Preparation finished for ' + e.name + ': ' + x.prepared + ' portions',
+  'prep.reopen': (e) => 'Preparation reopened for ' + e.name,
+  'prepared.record': (e, x) => 'Food preparation recorded for ' + (x.item || e.name) + ': ' + x.quantity + ' portions',
+  'waste.record': (e, x) => 'Food waste recorded for ' + (x.item || e.name) + ': ' + x.quantity + ' portions (' + String(x.reason || '').replace(/_/g, ' ') + ')',
+  'sales.served': (e, x) => 'Served portions recorded for ' + DAY(x.date) + ' (' + x.lines + ' items)',
+  'preorder.create': (e, x) => 'Pre-order #' + e.entity_id + ' created: ' + x.quantity + ' x ' + x.item + ' for ' + DAY(x.date),
+  'preorder.confirm': (e, x) => 'Pre-order #' + e.entity_id + ' confirmed: ' + x.quantity + ' x ' + x.item,
+  'preorder.complete': (e, x) => 'Pre-order #' + e.entity_id + ' completed (handed over)',
+  'preorder.cancel': (e) => 'Pre-order #' + e.entity_id + ' cancelled',
+  'preorder.hold': (e) => 'Pre-order #' + e.entity_id + ' put back on hold',
+  'preorder.update': (e) => 'Pre-order #' + e.entity_id + ' updated',
+  'stock.stock_in': (e, x) => 'Stock received: ' + ui.qty(x.quantity, x.unit) + ' of ' + e.name,
+  'stock.stock_out': (e, x) => 'Stock issued: ' + ui.qty(-x.quantity, x.unit) + ' of ' + e.name,
+  'stock.wastage': (e, x) => 'Ingredient wastage recorded: ' + ui.qty(-x.quantity, x.unit) + ' of ' + e.name,
+  'stock.adjustment': (e, x) => 'Stock corrected for ' + e.name + ' (' + (x.quantity > 0 ? '+' : '') + ui.qty(x.quantity, x.unit) + ')',
+  'stock.adjust': (e) => 'Stock corrected for ' + e.name,
+  'shortage.report': (e) => 'Kitchen reported a shortage of ' + e.name,
+  'model.train': () => 'Forecast model trained', 'model.activate': () => 'Forecast model activated',
+  'recipe.update': (e) => 'Recipe (BOM) updated for ' + e.name, 'menu.create': (e) => 'Menu item added: ' + e.name,
+  'menu.update': (e) => 'Menu item updated: ' + e.name, 'menu.availability': (e) => 'Availability changed for ' + e.name,
+  'ingredient.create': (e) => 'Ingredient added: ' + e.name, 'ingredient.update': (e) => 'Ingredient updated: ' + e.name,
+  'sales.import': () => 'Sales history imported', 'history.bulk_load': () => 'Kitchen history loaded',
+  'holidays.import': () => 'Holiday calendar imported', 'weather.import': () => 'Weather data imported',
+  'promotion.create': () => 'Promotion created', 'settings.update': () => 'Settings changed', 'restaurant.update': () => 'Restaurant details updated',
+  'purchase_order.create': () => 'Purchase order created', 'purchase_order.send': () => 'Purchase order sent',
+  'purchase_order.receive': () => 'Purchase order received', 'purchase_order.cancel': () => 'Purchase order cancelled',
+  'stock_request.create': () => 'Kitchen stock request created', 'stock_request.approve': () => 'Kitchen stock request approved',
+  'stock_request.issue': () => 'Kitchen stock request issued', 'stock_request.reject': () => 'Kitchen stock request rejected',
+  'stock_request.cancel': () => 'Kitchen stock request cancelled', 'order.create': () => 'Daily order recorded', 'order.update': () => 'Daily order updated',
+  'food_usage.record': (e) => 'Staff meal or sample recorded for ' + e.name, 'food_usage.clear': (e) => 'Food use entry removed for ' + e.name,
+  'usage.record': (e) => 'Ingredient use recorded for ' + e.name, 'usage.clear': (e) => 'Ingredient use entry removed for ' + e.name,
+  'supplier.create': () => 'Supplier added', 'supplier.update': () => 'Supplier updated',
+  'user.create': () => 'User account created', 'user.password_reset': () => 'User password reset', 'user.role_change': () => 'User role changed',
+  'user.activate': () => 'User account activated', 'user.deactivate': () => 'User account deactivated', 'user.rename': () => 'User renamed',
+};
+function describe(raw) {
+  const e = { ...raw, name: raw.name || 'an item' }, f = ACTIVITY[e.action];
+  try { if (f) return f(e, e.detail || {}); } catch (err) { /* missing detail on an older entry: fall back below */ }
+  return String(e.action).replace(/[._]/g, ' ').replace(/^./, c => c.toUpperCase());
+}
+
 SR.createApp({
-  data() { return { range: 7, d: null, alerts: [], trend: undefined, perf: null, allActivity: false, allStock: false, loading: true, error: null, ui }; },
+  data() { return { range: 7, d: null, alerts: [], history: undefined, alertTab: 'open', trend: undefined, perf: null, allActivity: false, allStock: false, loading: true, error: null, ui }; },
   async mounted() { await this.load(); this.loadPerf(); },
   computed: {
     synthetic() { return this.d && /synthetic|demo|simulated/i.test(this.d.data_source || ''); },
@@ -22,7 +64,8 @@ SR.createApp({
       return w.pct === null ? 'nothing prepared in this period' : ui.num(w.wasted, 0) + ' of ' + ui.num(w.prepared, 0) + ' prepared (limit ' + ui.num(this.d.waste_threshold_pct, 1) + '%)';
     },
     stockHint() { const s = this.d.stock; return s.out + ' out of stock, ' + s.low + ' low, of ' + s.ingredients; },
-    stockShown() { return this.allStock ? this.d.stock.rows : this.d.stock.rows.slice(0, 6); },
+    invShown() { return this.allStock ? this.d.inventory_alerts : this.d.inventory_alerts.slice(0, 6); },
+    forecastShortCount() { return this.d.inventory_alerts.filter(r => r.forecast).length; },
     forecastDays() { return this.d.forecast_next7.filter(f => f.qty !== null).length; },
     forecastLabels() { return this.d.forecast_next7.map(f => shortDate(f.date, true)); },
     // Predictions are drawn in the info blue, recorded history in the green accent, so the two are never confused.
@@ -49,14 +92,25 @@ SR.createApp({
       return [{ label: 'Portions sold (recorded)', data: this.trendSeries.sold },
               { label: 'Portions wasted (recorded)', data: this.trendSeries.wasted, borderColor: '#d97706', backgroundColor: '#d97706' }];
     },
-    activityShown() { return this.d ? this.d.recent_activity.slice(0, this.allActivity ? 10 : 5) : []; },
+    // Consecutive identical events (same action, record and details) are shown once with a count, never dropped.
+    activity() {
+      const out = [];
+      for (const e of (this.d ? this.d.recent_activity : [])) {
+        const key = e.action + '|' + e.entity_id + '|' + JSON.stringify(e.detail) + '|' + e.user;
+        const last = out[out.length - 1];
+        if (last && last.key === key) { last.times += 1; continue; }
+        out.push({ ...e, key, times: 1, text: describe(e) });
+      }
+      return out;
+    },
+    activityShown() { return this.activity.slice(0, this.allActivity ? 10 : 5); },
   },
   methods: {
     setRange(n) { if (this.range !== n) { this.range = n; this.load(); } },
     async load() {
       this.loading = true; this.error = null;
       try { this.d = (await api.get('/dashboards/admin', { range: this.range })).data; } catch (e) { this.d = null; this.error = ui.errorText(e); } finally { this.loading = false; }
-      this.trend = undefined; this.allStock = false;
+      this.trend = undefined; this.allStock = false; this.history = undefined; this.alertTab = 'open';
       if (this.d) { await this.loadAlerts(); this.loadTrend(); }
     },
     // Loaded after the dashboard (never in parallel) so the alert check runs once.
@@ -76,14 +130,20 @@ SR.createApp({
         const active = rows.find(m => m.status === 'active');
         const cmp = active && active.metrics ? active.metrics.comparison : [];
         const model = cmp.find(c => c.model === active.algorithm), base = cmp.find(c => c.model === 'naive_lag7');
-        if (model && base && base.mae) this.perf = { model: model.mae, baseline: base.mae, from: active.holdout.start, to: active.holdout.end };
+        if (model && base && base.mae) this.perf = { model: model.mae, baseline: base.mae, wape: model.wape, from: active.holdout.start, to: active.holdout.end };
       } catch (e) { this.perf = null; }
     },
-    algoName(a) { return { xgboost: 'XGBoost', random_forest: 'Random forest', naive_lag7: 'Same day last week', seasonal_mean4: '4-week average' }[a] || a; },
-    activityText(action) {
-      const [noun, verb] = String(action).split('.');
-      return (ACT_NOUN[noun] || noun.replace(/_/g, ' ')) + ' ' + (ACT_VERB[verb] || (verb || '').replace(/_/g, ' '));
+    async showHistory() {
+      this.alertTab = 'history';
+      if (this.history !== undefined) return;
+      try { this.history = (await api.get('/alerts', { status: 'closed' })).data.sort((x, y) => (y.closed_at || '').localeCompare(x.closed_at || '')); }
+      catch (e) { this.history = null; }
     },
+    closedText(a) {
+      const why = { cleared: 'condition no longer true', restocked: 'restocked' }[a.closed_reason] || a.closed_reason || 'closed';
+      return 'Opened ' + ui.dateTime(a.created_at) + ' · closed ' + ui.dateTime(a.closed_at) + ' (' + why + ')';
+    },
+    algoName(a) { return { xgboost: 'XGBoost', random_forest: 'Random forest', naive_lag7: 'Same day last week', seasonal_mean4: '4-week average' }[a] || a; },
     async ack(a) { try { await api.post('/alerts/' + a.id + '/acknowledge'); await this.load(); } catch (e) { ui.toast(ui.errorText(e), 'danger'); } },
   },
 }).mount('#app');

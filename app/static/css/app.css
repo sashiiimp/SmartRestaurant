@@ -703,3 +703,27 @@ body[data-role="admin"] .topbar::after { display: none; }
   .admin-dash .stat-tile .card-body { padding: .85rem .9rem .9rem; }
   .admin-dash .stat-icon { display: none; }
 }
+/* dashboard (13 Oct 2026, second pass): pre-order list, alert history, forecast shortfall, stacked quick actions */
+.po-list, .hist-list { list-style: none; margin: 0; padding: 0; display: grid; }
+.po-list li { display: grid; grid-template-columns: 7.5rem minmax(0, 1fr); gap: .75rem; align-items: baseline; padding: .5rem 0; border-bottom: 1px solid var(--border); }
+.po-list li:first-child { padding-top: 0; }
+.po-list li:last-child { border-bottom: 0; }
+.po-when { font-size: .8rem; color: var(--text-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.po-what strong { font-weight: 600; font-size: .9rem; }
+.po-what small { display: block; color: var(--muted); font-size: .76rem; }
+.hist-list li { padding: .5rem 0; border-bottom: 1px solid var(--border); display: grid; gap: .1rem; }
+.hist-list li:last-child { border-bottom: 0; }
+.hist-list .alert-msg { font-weight: 500; font-size: .86rem; }
+.hist-list small { color: var(--muted); font-size: .74rem; }
+.fc-short { font-weight: 600; color: var(--info); white-space: nowrap; }
+.sr-tabs-sm { margin-bottom: .75rem; }
+.sr-tabs-sm .sr-tab { padding: .3rem .75rem; font-size: .82rem; }
+.quick-actions.qa-stack { grid-template-columns: 1fr; gap: .45rem; }
+.qa-stack a { padding: .55rem .7rem; }
+.qa-stack .qa-icon { width: 30px; height: 30px; }
+.po-items { margin-top: 1rem; padding-top: .85rem; border-top: 1px solid var(--border); }
+.po-bar { display: grid; grid-template-columns: minmax(0, 9rem) 1fr 2.5rem; gap: .6rem; align-items: center; font-size: .84rem; }
+.po-bar + .po-bar { margin-top: .45rem; }
+.po-bar > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.po-bar strong { text-align: right; font-variant-numeric: tabular-nums; }
+.po-bar .progress-bar { background: var(--accent); }

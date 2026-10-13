@@ -105,3 +105,59 @@ def test_admin_dashboard_api(as_role, world):
     data = resp.get_json()["data"]
     assert data["waste_rate"]["pct"] == 16.7 and len(data["forecast_next7"]) == 7 and data["stock"]["out"] == 2
     assert client.get("/api/v1/dashboards/admin?range=14").status_code == 422
+
+
+def test_forecast_total_is_the_sum_of_the_displayed_days(world):
+    r = dash.admin_dashboard(1, 7)
+    assert r["forecast_next7_total"] == sum(f["qty"] for f in r["forecast_next7"] if f["qty"] is not None) == 27.0
+
+
+def test_inventory_alerts_put_now_forecast_and_expiry_on_one_row(world):
+    rows = dash.admin_dashboard(1, 7)["inventory_alerts"]
+    by = {r["name"]: r for r in rows}
+    # Bun (15 of 10) is fine and has no alert, so it is not listed
+    assert set(by) == {"Lettuce", "Sauce", "Cheese", "Chicken"}
+    assert [r["name"] for r in rows][:2] == ["Lettuce", "Sauce"]          # critical and out of stock first
+    assert by["Sauce"]["status"] == "out" and by["Sauce"]["expiry"] == [
+        {"batch_no": by["Sauce"]["expiry"][0]["batch_no"], "qty": 4.0, "date": "2026-09-23", "expired": True}]
+    assert (by["Cheese"]["status"], by["Cheese"]["is_critical"], by["Cheese"]["severity"]) == ("low", True, "critical")
+    assert (by["Chicken"]["status"], by["Chicken"]["severity"]) == ("low", "warning")
+    assert all(r["forecast"] is None for r in rows)                       # no recipes, so no projected shortfall
+    assert all(r["alert_ids"] for r in rows)                              # every row is backed by stored alerts
+
+
+def test_upcoming_pre_orders_on_the_dashboard(world):
+    from app.services import kitchen_service as kit
+    kit.create_pre_order(1, {"menu_item_id": world["burger"].id, "target_date": "2026-09-27", "quantity": 12,
+                             "customer_name": "Ruwan", "pickup_time": "13:00", "status": "confirmed"})
+    kit.create_pre_order(1, {"menu_item_id": world["fries"].id, "target_date": "2026-09-26", "quantity": 4,
+                             "customer_name": "Ama", "pickup_time": "10:00"})               # pending: not shown
+    p = dash.admin_dashboard(1, 7)["pre_orders"]
+    assert (p["count"], p["portions"], [r["customer_name"] for r in p["rows"]]) == (1, 12, ["Ruwan"])
+
+
+def test_recent_activity_uses_stored_events_only(world):
+    from app.models import StockMovement
+    from app.services import kitchen_service as kit
+    from tests.factories import make_user
+    cook = make_user(role="kitchen", username="cook")
+    kit.create_pre_order(1, {"menu_item_id": world["burger"].id, "target_date": "2026-09-27", "quantity": 12,
+                             "customer_name": "Ruwan", "pickup_time": "13:00"}, actor_id=cook.id)
+    acts = dash.recent_activity(1)
+    kinds = {a["action"]: a for a in acts}
+    assert kinds["preorder.create"]["detail"]["item"] == "Burger" and kinds["preorder.create"]["user"] == cook.full_name
+    assert kinds["forecast.run"]["detail"] == {"from": "2026-09-25", "to": "2026-10-01", "days": 7, "items": 0,
+                                               "status": "ok", "trigger": "cli", "model": None}
+    assert StockMovement.query.count() >= 1 and not any(a["kind"] == "stock" for a in acts)   # fixture stock has no user
+    assert [a["time"] for a in acts] == sorted((a["time"] for a in acts), reverse=True)
+
+
+def test_waste_by_item_rate_and_suggestion(world):
+    rows = {r["item"]: r for r in dash.waste_report(1, date(2026, 9, 18), date(2026, 9, 24))["food"]["by_item"]}
+    b, f = rows["Burger"], rows["Fries"]
+    # Burger: prepared 40 + 45 = 85, sold 30 + 40 (+99 on 17 Sep, outside) = 70, wasted 10 + 5 = 15 -> 17.6 % > 15 %
+    assert (b["prepared"], b["sold"], b["wasted"], b["waste_pct"], b["days_prepared"], b["planned"]) == (85, 70, 15, 17.6, 2, None)
+    assert b["suggestion"].startswith("About 7.5 portions a day were wasted")
+    # Fries: 25 + 10 = 35 prepared, 5 wasted -> 14.3 %, below the limit, so no suggestion
+    assert (f["prepared"], f["wasted"], f["waste_pct"], f["suggestion"]) == (35, 5, 14.3, None)
+    assert list(rows) == ["Burger", "Fries"]                              # highest waste rate first
