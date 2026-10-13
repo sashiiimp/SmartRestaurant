@@ -12,7 +12,7 @@ from playwright.sync_api import sync_playwright
 ENV = dotenv_values(os.path.join(os.path.dirname(__file__), "..", "..", ".env"))
 PASSWORD = ENV.get("SEED_PASSWORD")
 BASE = "http://127.0.0.1:5055"
-SHOTS = "/tmp/claude-0/shots"
+SHOTS = os.path.join(os.path.dirname(__file__), "..", "..", "instance", "ui_shots")  # git-ignored; --shots DIR overrides
 problems = []
 
 

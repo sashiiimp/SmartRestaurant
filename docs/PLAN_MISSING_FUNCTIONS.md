@@ -1,6 +1,6 @@
 # Development plan: functions still missing from the proposal
 
-**Status: proposed, not approved. No code has been written.** Per `CLAUDE.md` and `PLAN.md` section 10, approval must be followed by an edit to `PLAN.md` (tiers, hours, ladder) *before* any code. Everything below is stay-in-scope: no POS or payments, no automatic supplier ordering or supplier integration, no accounting, no staff scheduling, no multi-branch. A purchase order is an internal record; "send" only marks it as sent by hand.
+**Status: proposed, not approved. No code has been written.** Per `docs/DEVELOPMENT.md` and `PLAN.md` section 10, approval must be followed by an edit to `PLAN.md` (tiers, hours, ladder) *before* any code. Everything below is stay-in-scope: no POS or payments, no automatic supplier ordering or supplier integration, no accounting, no staff scheduling, no multi-branch. A purchase order is an internal record; "send" only marks it as sent by hand.
 
 Basis: audit of 21 Sep 2026 against `docs/proposal.pdf`. Deadline Mon 28 Sep; `PLAN.md` freezes features on Sun 27 at noon.
 
