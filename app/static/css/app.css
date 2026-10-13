@@ -727,3 +727,4 @@ body[data-role="admin"] .topbar::after { display: none; }
 .po-bar > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .po-bar strong { text-align: right; font-variant-numeric: tabular-nums; }
 .po-bar .progress-bar { background: var(--accent); }
+.stock-table td.small div { white-space: nowrap; }

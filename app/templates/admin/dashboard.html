@@ -77,7 +77,7 @@
 
     <div class="row g-3 mb-3">
       <!-- 4 Inventory alerts: one row per ingredient; what is true now, what the forecast says, and expiry -->
-      <section class="col-12 col-xl-7" aria-labelledby="inv-h"><div class="card h-100"><div class="card-body">
+      <section class="col-12 col-xl-8" aria-labelledby="inv-h"><div class="card h-100"><div class="card-body">
         <div class="card-head">
           <div><h2 id="inv-h" class="h6">Inventory alerts</h2><p class="card-sub"><strong>Now</strong>: usable (not expired) stock against the reorder level. <strong>Forecast</strong>: first day the 7-day plan needs more than that.</p></div>
           <a href="/admin/inventory">Inventory</a>
@@ -91,12 +91,12 @@
           <table class="table table-sm align-middle">
             <thead><tr><th scope="col">Ingredient</th><th scope="col">Now</th><th scope="col">Forecast</th><th scope="col" class="d-none d-md-table-cell">Expiry</th></tr></thead>
             <tbody><tr v-for="r in invShown" :key="r.id">
-              <td><span class="fw-semibold">[[ r.name ]]</span><small v-if="r.reported" class="d-block crit-note">reported short by the kitchen</small><small v-if="r.all_acknowledged" class="d-block text-muted">acknowledged</small><small v-if="r.expiry.length" class="d-block d-md-none" :class="r.expiry[0].expired ? 'crit-note m-0' : 'text-muted'">[[ ui.qty(r.expiry[0].qty, r.unit) ]] [[ r.expiry[0].expired ? 'expired' : 'expires' ]] [[ ui.date(r.expiry[0].date) ]]</small></td>
+              <td><span class="fw-semibold">[[ r.name ]]</span><small v-if="r.reported" class="d-block crit-note">reported short by the kitchen</small><small v-if="r.all_acknowledged" class="d-block text-muted">acknowledged</small><small v-if="r.expiry.length" class="d-block d-md-none" :class="r.expiry[0].expired ? 'crit-note m-0' : 'text-muted'">[[ ui.qty(r.expiry[0].qty, r.unit) ]] [[ r.expiry[0].expired ? 'expired' : 'expires' ]] [[ shortDate(r.expiry[0].date) ]]</small></td>
               <td class="text-nowrap"><sr-status-badge :status="r.status"></sr-status-badge>
                 <small class="d-block text-muted">[[ ui.qty(r.usable, r.unit) ]] of [[ ui.qty(r.reorder_level, r.unit) ]]</small>
                 <span v-if="r.status !== 'out' && r.is_critical" class="crit-note">below minimum</span></td>
               <td><template v-if="r.forecast"><span class="fc-short">Short [[ ui.qty(r.forecast.short_by, r.unit) ]]</span><small class="d-block text-muted">from [[ ui.date(r.forecast.date) ]]</small></template><span v-else class="text-muted small">Enough for 7 days</span></td>
-              <td class="d-none d-md-table-cell small"><template v-if="r.expiry.length"><div v-for="e in r.expiry.slice(0, 2)" :key="e.batch_no" :class="e.expired ? 'crit-note m-0' : ''">[[ ui.qty(e.qty, r.unit) ]] [[ e.expired ? 'expired' : 'expires' ]] [[ ui.date(e.date) ]]</div></template><span v-else class="text-muted">-</span></td>
+              <td class="d-none d-md-table-cell small"><template v-if="r.expiry.length"><div v-for="e in r.expiry.slice(0, 2)" :key="e.batch_no" :class="e.expired ? 'crit-note m-0' : ''">[[ ui.qty(e.qty, r.unit) ]] [[ e.expired ? 'expired' : 'expires' ]] [[ shortDate(e.date) ]]</div></template><span v-else class="text-muted">-</span></td>
             </tr></tbody>
           </table>
         </div>
@@ -105,11 +105,11 @@
       </div></div></section>
 
       <!-- Upcoming confirmed pre-orders: committed demand that the prep plan already counts -->
-      <section class="col-12 col-xl-5" aria-labelledby="po-h"><div class="card h-100"><div class="card-body">
+      <section class="col-12 col-xl-4" aria-labelledby="po-h"><div class="card h-100"><div class="card-body">
         <div class="card-head">
           <div><h2 id="po-h" class="h6">Upcoming confirmed pre-orders</h2><p class="card-sub">[[ ui.date(d.pre_orders.from) ]] and the next 6 days. They count in the prep plan for their day.</p></div>
-          <span class="sr-badge sr-badge-success" v-if="d.pre_orders.count">[[ d.pre_orders.count ]] order[[ d.pre_orders.count === 1 ? '' : 's' ]], [[ d.pre_orders.portions ]] portions</span>
         </div>
+        <div class="stock-counts" v-if="d.pre_orders.count"><span class="sr-badge sr-badge-success">[[ d.pre_orders.count ]] order[[ d.pre_orders.count === 1 ? '' : 's' ]], [[ d.pre_orders.portions ]] portions</span></div>
         <ul v-if="d.pre_orders.rows.length" class="po-list">
           <li v-for="p in d.pre_orders.rows.slice(0, 6)" :key="p.id">
             <span class="po-when">[[ ui.date(p.target_date) + (p.pickup_time ? ', ' + p.pickup_time : '') ]]</span>

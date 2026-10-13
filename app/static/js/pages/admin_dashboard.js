@@ -106,6 +106,7 @@ SR.createApp({
     activityShown() { return this.activity.slice(0, this.allActivity ? 10 : 5); },
   },
   methods: {
+    shortDate(iso) { return shortDate(iso, false); },
     setRange(n) { if (this.range !== n) { this.range = n; this.load(); } },
     async load() {
       this.loading = true; this.error = null;
