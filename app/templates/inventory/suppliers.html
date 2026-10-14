@@ -1,9 +1,9 @@
-{% extends "base.html" %}
+{% extends "hub.html" %}
 {% block title %}Suppliers - SmartRestaurant{% endblock %}
-{% block content %}
+{% block panel %}
 <div id="app" v-cloak>
   <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-    <h1 class="h4 m-0">Suppliers</h1>
+    <h2 class="h5 m-0">Suppliers</h2>
     <button class="btn btn-primary" type="button" @click="add">Add supplier</button>
   </div>
   <p class="text-muted small">Supplier details are internal records used for purchasing. A deactivated supplier keeps its history but cannot be chosen for new ingredients or purchase orders.</p>

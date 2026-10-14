@@ -13,9 +13,9 @@
 </head>
 {% set auth = current_user.is_authenticated %}
 {% set role_labels = {'admin': 'Administrator', 'kitchen': 'Food Production', 'inventory': 'Inventory & Procurement'} %}
-{% set nav_icons = {'/admin': 'home', '/admin/monitor': 'activity', '/admin/inventory': 'package', '/admin/models': 'layers', '/admin/data': 'database', '/admin/catalog': 'book', '/admin/users': 'users', '/admin/settings': 'sliders',
-                    '/kitchen': 'home', '/kitchen/prep': 'clipboard', '/kitchen/forecast': 'trending', '/kitchen/orders': 'bag', '/kitchen/requirements': 'package', '/kitchen/stock-requests': 'inbox', '/kitchen/record': 'trash',
-                    '/inventory': 'home', '/inventory/stock': 'package', '/inventory/movements': 'swap', '/inventory/forecast': 'bars', '/inventory/reorder': 'refresh', '/inventory/purchase-orders': 'clipboard', '/inventory/requests': 'inbox', '/inventory/suppliers': 'users'} %}
+{% set nav_icons = {'/admin': 'home', '/admin/monitor': 'activity', '/admin/models': 'trending', '/admin/catalog': 'book', '/admin/users': 'users',
+                    '/kitchen': 'home', '/kitchen/prep': 'clipboard', '/kitchen/record': 'trash', '/kitchen/requirements': 'package', '/kitchen/orders': 'bag',
+                    '/inventory': 'home', '/inventory/requests': 'inbox', '/inventory/stock': 'package', '/inventory/reorder': 'refresh'} %}
 <body data-role="{{ current_user.role if auth else 'guest' }}">
 {% if auth %}
 {% set page = namespace(label='') %}

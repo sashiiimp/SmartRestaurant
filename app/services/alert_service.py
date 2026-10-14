@@ -213,6 +213,11 @@ def _stale(outlet_id: int) -> bool:
     return (utcnow() - datetime.fromisoformat(row.value)).total_seconds() > REFRESH_SECONDS
 
 
+def visibility() -> list[dict]:
+    """Which roles see each alert type: the rule list_alerts applies, listed for the Role access tab."""
+    return [{"alert_type": t, "roles": sorted(VISIBLE_TO[t])} for t in ALERT_TYPES]
+
+
 def alert_dict(a: Alert) -> dict:
     return {"id": a.id, "alert_type": a.alert_type, "severity": a.severity, "entity_type": a.entity_type,
             "entity_id": a.entity_id, "target_date": a.target_date.isoformat() if a.target_date else None,

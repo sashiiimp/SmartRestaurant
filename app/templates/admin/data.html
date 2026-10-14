@@ -1,8 +1,8 @@
-{% extends "base.html" %}
+{% extends "hub.html" %}
 {% block title %}Data - SmartRestaurant{% endblock %}
-{% block content %}
+{% block panel %}
 <div id="app" v-cloak>
-  <h1 class="h4 mb-3">Sales and contextual data</h1>
+  <h2 class="h5 mb-3">Sales and contextual data</h2>
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
   <ul class="nav nav-tabs mb-3"><li class="nav-item" v-for="t in [['sales','Sales import'],['promos','Promotions'],['holidays','Holidays'],['weather','Weather']]" :key="t[0]">
     <button class="nav-link" :class="{ active: tab === t[0] }" @click="tab = t[0]">[[ t[1] ]]</button></li></ul>

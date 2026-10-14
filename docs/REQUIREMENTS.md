@@ -105,6 +105,7 @@ Format: story, priority, traces, acceptance criteria (AC).
 *Covers: Role & Access Management.*
 - Admin assigns exactly one of the three roles to each user. A role change takes effect on the next request.
 - Role changes are written to an audit/activity log with who and when.
+- *(14 Oct 2026)* Administration > **Role access** shows, read-only, which role can open each page and which roles receive each alert type, taken from the rules the server applies.
 
 ### A4 Menu management (P1), FR2
 *Covers: Menu Management.*

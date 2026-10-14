@@ -34,7 +34,7 @@
         <div class="col-6 col-xl-3"><sr-stat-tile label="Portions sold" icon="bag" :value="ui.num(d.sales.quantity, 0)" :hint="ui.money(d.sales.revenue) + ' revenue'" href="/admin/monitor"></sr-stat-tile></div>
         <div class="col-6 col-xl-3"><sr-stat-tile label="Portions wasted" icon="trash" tone="neutral" :value="ui.num(d.waste.quantity, 0)" :hint="ui.money(d.waste.value) + ' at selling price'" href="/admin/monitor"></sr-stat-tile></div>
         <div class="col-6 col-xl-3"><sr-stat-tile label="Food waste rate" icon="activity" :tone="wasteTone" :value="d.waste_rate.pct === null ? 'No data' : ui.num(d.waste_rate.pct, 1) + '%'" :hint="wasteHint" href="/admin/monitor"></sr-stat-tile></div>
-        <div class="col-6 col-xl-3"><sr-stat-tile label="Low stock ingredients" icon="package" :tone="d.stock.out ? 'danger' : (d.stock.low ? 'warning' : 'success')" :value="d.low_stock_count" :hint="stockHint" href="/admin/inventory"></sr-stat-tile></div>
+        <div class="col-6 col-xl-3"><sr-stat-tile label="Low stock ingredients" icon="package" :tone="d.stock.out ? 'danger' : (d.stock.low ? 'warning' : 'success')" :value="d.low_stock_count" :hint="stockHint" href="/admin/monitor?tab=stock"></sr-stat-tile></div>
       </div>
     </section>
 
@@ -58,7 +58,7 @@
           <p v-if="forecastDays < 7" class="dash-note note-partial mt-2 mb-0" role="note"><sr-icon name="warning" :size="16"></sr-icon><span>No forecast yet for [[ missingForecastText ]]. <a href="/admin/models">Run a forecast</a> to fill in the missing days.</span></p>
           <p v-else-if="partialItems" class="dash-note note-partial mt-2 mb-0" role="note"><sr-icon name="warning" :size="16"></sr-icon><span>Some days cover fewer than [[ d.menu_items_active ]] menu items, so their totals are partial.</span></p>
         </template>
-        <sr-empty v-else message="There is no forecast for the next 7 days. Run one on the Forecast models page." icon="trending"></sr-empty>
+        <sr-empty v-else message="There is no forecast for the next 7 days. Run one under Forecasting." icon="trending"></sr-empty>
       </div></div></section>
 
       <!-- 3 Sales and waste trends: recorded history for the reporting period -->
@@ -80,7 +80,7 @@
       <section class="col-12 col-xl-8" aria-labelledby="inv-h"><div class="card h-100"><div class="card-body">
         <div class="card-head">
           <div><h2 id="inv-h" class="h6">Inventory alerts</h2><p class="card-sub"><strong>Now</strong>: usable (not expired) stock against the reorder level. <strong>Forecast</strong>: first day the 7-day plan needs more than that.</p></div>
-          <a href="/admin/inventory">Inventory</a>
+          <a href="/admin/monitor?tab=stock">Inventory</a>
         </div>
         <div class="stock-counts">
           <span class="sr-badge sr-badge-danger">[[ d.stock.out ]] out of stock</span>
@@ -158,7 +158,7 @@
         <nav class="quick-actions qa-stack" aria-label="Quick actions">
           <a href="/admin/models"><span class="qa-icon"><sr-icon name="trending" :size="18"></sr-icon></span><span><strong>Generate forecast</strong><small>Forecast models, Run forecast now</small></span></a>
           <a href="/admin/catalog"><span class="qa-icon"><sr-icon name="book" :size="18"></sr-icon></span><span><strong>Manage BOM</strong><small>Recipes: ingredients per portion</small></span></a>
-          <a href="/admin/inventory"><span class="qa-icon"><sr-icon name="package" :size="18"></sr-icon></span><span><strong>View inventory</strong><small>Stock, batches and expiry</small></span></a>
+          <a href="/admin/monitor?tab=stock"><span class="qa-icon"><sr-icon name="package" :size="18"></sr-icon></span><span><strong>View inventory</strong><small>Stock, batches and expiry</small></span></a>
           <a href="/admin/monitor"><span class="qa-icon"><sr-icon name="bars" :size="18"></sr-icon></span><span><strong>View reports</strong><small>Sales, accuracy and waste</small></span></a>
         </nav>
         <p class="qa-note">Production, waste and pre-orders are recorded by the Food Production account.</p>

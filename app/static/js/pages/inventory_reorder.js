@@ -27,7 +27,7 @@ SR.createApp({
         this.message = (made.length ? made.length + ' order(s) were created before this problem. ' : '') + ui.errorText(e) + Object.values(e.fields || {}).join('; ');
         this.busy = false; return;
       }
-      window.location = '/inventory/purchase-orders' + (made.length === 1 ? '?open=' + made[0].id : '');
+      window.location = '/inventory/reorder?tab=orders' + (made.length === 1 ? '&open=' + made[0].id : '');
     },
   },
 }).mount('#app');

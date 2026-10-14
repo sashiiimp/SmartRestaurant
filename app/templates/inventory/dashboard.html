@@ -5,7 +5,7 @@
   <div class="dash-head">
     <div><h1 class="h4 m-0">Inventory</h1><p class="dash-sub">[[ ui.date(today) ]]</p></div>
     <div class="dash-actions">
-      <a class="btn btn-primary btn-lg-touch" href="/inventory/movements"><sr-icon name="swap" :size="16"></sr-icon> Record stock</a>
+      <a class="btn btn-primary btn-lg-touch" href="/inventory/stock?tab=record"><sr-icon name="swap" :size="16"></sr-icon> Record stock</a>
       <a class="btn btn-outline-primary btn-lg-touch" href="/inventory/reorder"><sr-icon name="refresh" :size="16"></sr-icon> Reorder</a>
     </div>
   </div>
@@ -15,7 +15,7 @@
     <div class="row g-3 mb-3">
       <div class="col-6 col-lg-3"><sr-stat-tile label="Low stock" icon="warning" :value="d.counts.low" :hint="d.counts.ok + ' of ' + stockTotal + ' ingredients OK'" :tone="d.counts.low ? 'warning' : 'success'" href="/inventory/stock"></sr-stat-tile></div>
       <div class="col-6 col-lg-3"><sr-stat-tile label="Out of stock" icon="alert" :value="d.counts.out" :tone="d.counts.out ? 'danger' : 'success'" href="/inventory/stock"></sr-stat-tile></div>
-      <div class="col-6 col-lg-3"><sr-stat-tile label="Expiring in 3 days" icon="clock" :value="d.expiring.length >= 10 ? '10+' : d.expiring.length" :hint="expiredCount ? expiredCount + ' already expired' : 'batches'" :tone="expiredCount ? 'danger' : (d.expiring.length ? 'warning' : 'success')" href="/inventory/movements"></sr-stat-tile></div>
+      <div class="col-6 col-lg-3"><sr-stat-tile label="Expiring in 3 days" icon="clock" :value="d.expiring.length >= 10 ? '10+' : d.expiring.length" :hint="expiredCount ? expiredCount + ' already expired' : 'batches'" :tone="expiredCount ? 'danger' : (d.expiring.length ? 'warning' : 'success')" href="/inventory/stock?tab=record"></sr-stat-tile></div>
       <div class="col-6 col-lg-3"><sr-stat-tile label="Kitchen requests" icon="inbox" :value="d.pending_requests" hint="waiting for a decision" :tone="d.pending_requests ? 'warning' : 'success'" href="/inventory/requests"></sr-stat-tile></div>
     </div>
     <div class="row g-3">
@@ -27,7 +27,7 @@
             <tbody><tr v-for="r in d.reorder" :key="r.ingredient_id"><td class="fw-semibold">[[ r.name ]]</td><td class="text-end">[[ ui.qty(r.suggested_qty, r.unit) ]]</td><td>[[ r.supplier ]] <span class="text-muted small">· arrives in [[ r.lead_time_days ]] [[ r.lead_time_days === 1 ? 'day' : 'days' ]]</span></td></tr></tbody></table></div>
         </div></div>
         <div class="card"><div class="card-body">
-          <div class="card-head"><h2 class="h6">Stock-out risk, next 7 days</h2><a href="/inventory/forecast">Ingredient demand</a></div>
+          <div class="card-head"><h2 class="h6">Stock-out risk, next 7 days</h2><a href="/inventory/reorder?tab=demand">Ingredient demand</a></div>
           <sr-empty v-if="!risks.length" message="Usable stock covers the next 7 days of forecast demand." icon="check"></sr-empty>
           <div v-else>
             <div v-for="r in risks" :key="r.name" class="risk-row">
@@ -39,12 +39,12 @@
           </div>
         </div></div>
         <div class="card mt-3"><div class="card-body">
-          <div class="card-head"><h2 class="h6">Expiring soon</h2><a href="/inventory/movements">Batches</a></div>
+          <div class="card-head"><h2 class="h6">Expiring soon</h2><a href="/inventory/stock?tab=record">Batches</a></div>
           <sr-empty v-if="!d.expiring.length" message="No batches expire in the next 3 days." icon="check"></sr-empty>
           <ul v-else class="exp-list"><li v-for="b in d.expiring.slice(0, 5)" :key="b.id" :class="{ expired: b.expired }">
             <span><strong>[[ b.ingredient ]]</strong> <small class="text-muted">[[ ui.qty(b.qty_remaining, b.unit) ]] · [[ b.batch_no ]]</small></span>
             <span :class="b.expired ? 'sr-badge sr-badge-danger' : 'exp-date'">[[ b.expired ? 'Expired ' + ui.date(b.expiry_date) : ui.date(b.expiry_date) ]]</span></li></ul>
-          <a v-if="d.expiring.length > 5" class="small fw-semibold" href="/inventory/movements">See all [[ d.expiring.length >= 10 ? '10+' : d.expiring.length ]] batches</a>
+          <a v-if="d.expiring.length > 5" class="small fw-semibold" href="/inventory/stock?tab=record">See all [[ d.expiring.length >= 10 ? '10+' : d.expiring.length ]] batches</a>
         </div></div>
       </div>
       <div class="col-12 col-xl-5">

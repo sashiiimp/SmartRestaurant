@@ -4,7 +4,7 @@
 <div id="app" v-cloak>
   <h1 class="h4 mb-3">Sales, forecasts, inventory and waste</h1>
   <ul class="nav nav-tabs mb-3 flex-wrap"><li class="nav-item" v-for="t in tabs" :key="t[0]"><button class="nav-link" :class="{ active: tab === t[0] }" @click="setTab(t[0])">[[ t[1] ]]</button></li></ul>
-  <div class="card mb-3"><div class="card-body py-3">
+  <div class="card mb-3" v-if="!snapshot"><div class="card-body py-3">
     <div class="row g-2 align-items-end" v-if="tab === 'demand'">
       <div class="col-6 col-md-3"><label class="form-label" for="d-start">First day of the 7-day window</label><input id="d-start" type="date" class="form-control" v-model="demandStart" @change="load"></div>
       <div class="col-12 col-md-6 small text-muted">Forecast portions per menu item for 7 days, from the latest forecast run that is not later than today.</div>
@@ -24,7 +24,7 @@
   <template v-else>
     <div v-if="tab === 'demand'">
       <div v-if="demand.meta.active_model" class="text-muted small mb-2">Model: [[ demand.meta.active_model ]]<span v-if="demand.meta.last_run"> &middot; last run [[ ui.date(demand.meta.last_run.as_of) ]] ([[ demand.meta.last_run.status ]])</span></div>
-      <div v-else class="alert alert-warning">No active model yet. Train and activate one on the Models page.</div>
+      <div v-else class="alert alert-warning">No active model yet. Train and activate one under Forecasting.</div>
       <div v-if="demand.meta.missing_dates && demand.meta.missing_dates.length && demand.rows.length" class="alert alert-info py-2 small">No forecast yet for: [[ demand.meta.missing_dates.map(ui.date).join(', ') ]]<span v-if="demand.meta.last_forecast_date"> (last available date: [[ ui.date(demand.meta.last_forecast_date) ]])</span>.</div>
       <sr-empty v-if="!demand.rows.length" message="No forecast for this period."></sr-empty>
       <template v-else>
@@ -64,6 +64,47 @@
       </div>
       </template>
     </div>
+    <div v-if="tab === 'stock'">
+      <p class="text-muted small">Stock now. The figures come from the same calculations as the Inventory &amp; Procurement dashboard.</p>
+      <div class="row g-3 mb-3">
+        <div class="col-6 col-md-3"><sr-stat-tile label="Ingredients" icon="package" :value="levels.length"></sr-stat-tile></div>
+        <div class="col-6 col-md-3"><sr-stat-tile label="Stock OK" icon="check" tone="success" :value="counts.ok"></sr-stat-tile></div>
+        <div class="col-6 col-md-3"><sr-stat-tile label="Low" icon="warning" :tone="counts.low ? 'warning' : ''" :value="counts.low"></sr-stat-tile></div>
+        <div class="col-6 col-md-3"><sr-stat-tile label="Out of stock" icon="alert" :tone="counts.out ? 'danger' : ''" :value="counts.out"></sr-stat-tile></div>
+      </div>
+      <div class="d-flex justify-content-end mb-2"><a class="btn btn-outline-secondary btn-sm" href="/api/v1/reports/stock-levels?format=csv">Download stock levels (CSV)</a></div>
+      <div class="table-responsive"><table class="table table-sm align-middle">
+        <thead><tr><th>Ingredient</th><th class="text-end">Usable</th><th class="text-end">On hand</th><th class="text-end">Min</th><th class="text-end">Reorder at</th><th>Status</th><th>Last movement</th></tr></thead>
+        <tbody><tr v-for="r in levels" :key="r.id" :class="r.is_critical ? 'table-danger' : (r.status === 'low' ? 'table-warning' : '')">
+          <td>[[ r.name ]]</td><td class="text-end">[[ ui.qty(r.usable, r.unit) ]]</td>
+          <td class="text-end"><span :class="r.on_hand !== r.usable ? 'text-danger' : ''" :title="r.on_hand !== r.usable ? 'Includes expired stock' : ''">[[ ui.qty(r.on_hand, r.unit) ]]</span></td>
+          <td class="text-end">[[ ui.num(r.min_stock, 3) ]]</td><td class="text-end">[[ ui.num(r.reorder_level, 3) ]]</td>
+          <td><sr-status-badge :status="r.is_critical && r.status !== 'out' ? 'critical' : r.status"></sr-status-badge></td><td>[[ ui.date(r.last_movement_date) ]]</td></tr></tbody></table></div>
+      <div class="small text-muted">Usable excludes expired stock. When On hand is higher, the difference is expired stock that still needs a wastage record.</div>
+    </div>
+
+    <div v-if="tab === 'ingredients' && ingDemand">
+      <p class="text-muted small">Forecast portions x recipes, using the recommended (or accepted) preparation quantities, for the next 7 days.</p>
+      <sr-empty v-if="!ingDemand.ingredients.length" message="No ingredient forecast yet. The forecast may not have been run."></sr-empty>
+      <div v-else class="table-responsive"><table class="table table-sm align-middle">
+        <thead><tr><th>Ingredient</th><th class="text-end">Usable now</th><th v-for="d in ingDays" :key="d" class="text-end">[[ ui.date(d) ]]</th><th class="text-end">7-day need</th><th class="text-end">Days of cover</th><th>Runs short</th></tr></thead>
+        <tbody><tr v-for="r in ingDemand.ingredients" :key="r.ingredient_id" :class="r.first_shortfall_date ? 'table-warning' : ''">
+          <td>[[ r.name ]]</td><td class="text-end">[[ ui.qty(r.usable_stock, r.unit) ]]</td><td v-for="(n, i) in r.daily" :key="i" class="text-end">[[ ui.num(n, 1) ]]</td>
+          <td class="text-end">[[ ui.qty(r.total_need, r.unit) ]]</td><td class="text-end">[[ r.days_of_cover === null ? '-' : (r.days_of_cover > 99 ? '>99' : r.days_of_cover) ]]</td>
+          <td>[[ r.first_shortfall_date ? ui.date(r.first_shortfall_date) : '' ]]</td></tr></tbody></table></div>
+      <div v-if="ingDemand.unknown_items.length" class="alert alert-warning">Unknown demand (no recipe): [[ ingDemand.unknown_items.map(i => i.name).join(', ') ]]</div>
+    </div>
+
+    <div v-if="tab === 'batches'">
+      <sr-empty v-if="!batches.length" message="No stock batches."></sr-empty>
+      <div v-else class="table-responsive"><table class="table table-sm align-middle">
+        <thead><tr><th>Ingredient</th><th>Batch</th><th>Received</th><th class="text-end">Remaining</th><th>Expiry</th><th class="text-end">Days to expiry</th></tr></thead>
+        <tbody><tr v-for="b in batches" :key="b.id" :class="b.expired ? 'table-danger' : (b.days_to_expiry !== null && b.days_to_expiry <= 3 ? 'table-warning' : '')">
+          <td>[[ b.ingredient ]]</td><td>[[ b.batch_no ]]</td><td>[[ ui.date(b.received_date) ]]</td><td class="text-end">[[ ui.qty(b.qty_remaining, b.unit) ]]</td>
+          <td>[[ b.expiry_date ? ui.date(b.expiry_date) : 'none' ]] <span v-if="b.expired" class="badge text-bg-danger">expired</span></td><td class="text-end">[[ b.days_to_expiry === null ? '' : b.days_to_expiry ]]</td></tr></tbody></table></div>
+      <div class="small text-muted">Batches with stock remaining, earliest expiry first.</div>
+    </div>
+
     <div v-if="tab === 'inventory' && trend">
       <div class="row g-3 mb-3"><div class="col-6 col-md-3"><sr-stat-tile label="Opening stock" icon="package" :value="ui.qty(trend.opening, trend.unit)"></sr-stat-tile></div><div class="col-6 col-md-3"><sr-stat-tile label="Closing stock" icon="package" tone="info" :value="ui.qty(trend.closing, trend.unit)"></sr-stat-tile></div></div>
       <div class="card mb-3"><div class="card-body"><sr-line-chart :labels="trend.rows.map(r => ui.date(r.date))" :datasets="trendData" :y-title="'Closing stock (' + trend.unit + ')'" title="Closing stock"></sr-line-chart></div></div>

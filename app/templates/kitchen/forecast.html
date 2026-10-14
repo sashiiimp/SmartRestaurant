@@ -1,9 +1,9 @@
-{% extends "base.html" %}
+{% extends "hub.html" %}
 {% block title %}Demand forecast - SmartRestaurant{% endblock %}
-{% block content %}
+{% block panel %}
 <div id="app" v-cloak>
   <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-    <h1 class="h4 m-0">7-day demand forecast</h1>
+    <h2 class="h5 m-0">7-day demand forecast</h2>
     <sr-date-nav v-model="start" @change="load"></sr-date-nav>
   </div>
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
@@ -13,7 +13,7 @@
   </div>
   <div v-else-if="!loading" class="alert alert-warning">No forecast yet. Ask the administrator to train a model and run a forecast.</div>
   <div v-if="meta.beyond_holiday_calendar && rows.length" class="alert alert-warning py-2 small" role="note">
-    The holiday calendar <span v-if="meta.holiday_calendar_ends">ends on [[ ui.date(meta.holiday_calendar_ends) ]]</span><span v-else>is empty</span>: holidays and Poya days after that are not known to the forecast. An administrator can import the next calendar (Data page).
+    The holiday calendar <span v-if="meta.holiday_calendar_ends">ends on [[ ui.date(meta.holiday_calendar_ends) ]]</span><span v-else>is empty</span>: holidays and Poya days after that are not known to the forecast. An administrator can import the next calendar (Forecasting, Import data).
   </div>
   <div v-if="meta.missing_dates && meta.missing_dates.length && rows.length" class="alert alert-info py-2 small">
     No forecast yet for: [[ meta.missing_dates.map(ui.date).join(', ') ]]<span v-if="meta.last_forecast_date"> (last available date: [[ ui.date(meta.last_forecast_date) ]])</span>.

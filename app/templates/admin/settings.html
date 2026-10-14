@@ -1,8 +1,8 @@
-{% extends "base.html" %}
+{% extends "hub.html" %}
 {% block title %}Settings - SmartRestaurant{% endblock %}
-{% block content %}
+{% block panel %}
 <div id="app" v-cloak>
-  <h1 class="h4 mb-3">Settings and alert configuration</h1>
+  <h2 class="h5 mb-3">Settings and alert configuration</h2>
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
   <sr-loading v-if="loading"></sr-loading>
   <template v-else-if="s">

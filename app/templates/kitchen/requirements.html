@@ -1,9 +1,9 @@
-{% extends "base.html" %}
+{% extends "hub.html" %}
 {% block title %}Ingredient requirements - SmartRestaurant{% endblock %}
-{% block content %}
+{% block panel %}
 <div id="app" v-cloak>
   <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-    <h1 class="h4 m-0">Ingredient requirements</h1><sr-date-nav v-model="date" @change="load"></sr-date-nav>
+    <h2 class="h5 m-0">Ingredient requirements</h2><sr-date-nav v-model="date" @change="load"></sr-date-nav>
   </div>
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
   <sr-loading v-if="loading"></sr-loading>
@@ -15,7 +15,7 @@
       <tbody><tr v-for="i in r.ingredients" :key="i.ingredient_id" :class="i.status === 'short' ? 'table-danger' : ''">
         <td>[[ i.name ]]</td><td class="text-end">[[ ui.qty(i.required, i.unit) ]]</td><td class="text-end">[[ ui.qty(i.usable_stock, i.unit) ]]</td>
         <td><sr-status-badge :status="i.status"></sr-status-badge></td><td class="text-end">[[ i.short_by ? ui.qty(i.short_by, i.unit) : '' ]]</td>
-        <td class="text-nowrap text-end"><a v-if="i.status === 'short'" class="btn btn-sm btn-outline-primary me-1" :href="'/kitchen/stock-requests?ingredient=' + i.ingredient_id + '&qty=' + i.short_by">Request stock</a>
+        <td class="text-nowrap text-end"><a v-if="i.status === 'short'" class="btn btn-sm btn-outline-primary me-1" :href="'/kitchen/requirements?tab=requests&ingredient=' + i.ingredient_id + '&qty=' + i.short_by">Request stock</a>
           <button class="btn btn-sm" :class="i.status === 'short' ? 'btn-outline-danger' : 'btn-outline-secondary'" type="button" @click="report(i)">Report shortage</button></td></tr></tbody></table></div>
     <div class="small text-muted">Request stock asks the inventory section for the missing quantity. Report shortage tells the Inventory &amp; Procurement Manager that you found less than the system says.</div>
     <div v-if="r.cannot_compute.length" class="alert alert-warning">

@@ -1,5 +1,7 @@
 from flask import Blueprint, render_template
 
+from app.services import alert_service
+from app.utils.navigation import redirect_to_tab, render_hub, role_access
 from app.utils.security import role_guard
 
 bp = Blueprint("admin", __name__, url_prefix="/admin")
@@ -14,7 +16,8 @@ def dashboard():
 
 @bp.route("/users")
 def users():
-    return render_template("admin/users.html")
+    """Administration: Users, Settings & alerts, Role access."""
+    return render_hub("/admin/users", role_access=role_access(), alert_access=alert_service.visibility())
 
 
 @bp.route("/catalog")
@@ -22,14 +25,10 @@ def catalog():
     return render_template("admin/catalog.html")
 
 
-@bp.route("/data")
-def data():
-    return render_template("admin/data.html")
-
-
 @bp.route("/models")
 def models():
-    return render_template("admin/models.html")
+    """Forecasting: Models & runs, Import data."""
+    return render_hub("/admin/models")
 
 
 @bp.route("/monitor")
@@ -37,11 +36,16 @@ def monitor():
     return render_template("admin/monitor.html")
 
 
+@bp.route("/data")
+def data():
+    return redirect_to_tab("/admin/data")
+
+
 @bp.route("/settings")
 def settings():
-    return render_template("admin/settings.html")
+    return redirect_to_tab("/admin/settings")
 
 
 @bp.route("/inventory")
 def inventory():
-    return render_template("admin/inventory.html")
+    return redirect_to_tab("/admin/inventory")

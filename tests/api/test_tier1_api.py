@@ -34,10 +34,10 @@ def test_supplier_writes_are_inventory_only(app, users):
 def test_suppliers_page_is_inventory_only(app, users):
     from tests.conftest import login
     inv = app.test_client(); login(inv, users["inventory"].username)
-    assert inv.get("/inventory/suppliers").status_code == 200
+    assert inv.get("/inventory/reorder?tab=suppliers").status_code == 200    # Suppliers is a tab of Purchasing
     for role in ("admin", "kitchen"):
         c = app.test_client(); login(c, users[role].username)
-        assert c.get("/inventory/suppliers").status_code == 403
+        assert c.get("/inventory/reorder?tab=suppliers").status_code == 403
 
 
 def test_adjustment_over_http_and_roles(as_role, app, users):
@@ -138,8 +138,8 @@ def test_availability_over_http_and_audit(as_role, app, users):
 
 def test_new_tier1_pages_are_role_restricted(app, users):
     from tests.conftest import login
-    pages = {"admin": ["/admin/inventory"], "kitchen": ["/kitchen/orders"],
-             "inventory": ["/inventory/suppliers", "/inventory/purchase-orders"]}
+    pages = {"admin": ["/admin/monitor?tab=stock"], "kitchen": ["/kitchen/orders"],
+             "inventory": ["/inventory/reorder?tab=suppliers", "/inventory/reorder?tab=orders"]}
     for owner, urls in pages.items():
         for role in ("admin", "kitchen", "inventory"):
             c = app.test_client(); login(c, users[role].username)

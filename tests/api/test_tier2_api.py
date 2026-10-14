@@ -74,7 +74,7 @@ def test_shortage_report_over_http_and_roles(app, users):
 
 
 def test_tier2_pages_are_role_restricted(app, users):
-    pages = {"kitchen": ["/kitchen/stock-requests"], "inventory": ["/inventory/requests"]}
+    pages = {"kitchen": ["/kitchen/requirements?tab=requests"], "inventory": ["/inventory/requests"]}
     for owner, urls in pages.items():
         for role in ("admin", "kitchen", "inventory"):
             c = as_user(app, users, role)
@@ -140,7 +140,7 @@ def test_restaurant_information(app, users):
     assert bad.status_code == 422 and set(bad.get_json()["error"]["fields"]) == {"name", "address"}
     partial = admin.put("/api/v1/restaurant", json={"contact": "011 999"}).get_json()["data"]
     assert partial["contact"] == "011 999" and partial["name"] == "Lanka Bites"      # other fields are kept
-    page = admin.get("/admin/settings").get_data(as_text=True)
+    page = admin.get("/admin/users?tab=settings").get_data(as_text=True)
     assert "Lanka Bites" in page                                                     # shown in the sidebar
     for role in ("inventory", "kitchen"):
         c = as_user(app, users, role)

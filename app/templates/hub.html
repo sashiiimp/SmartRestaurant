@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{# A merged page: the page name and its tabs, then the current tab (the page template that extends this one). Each tab
+   is a normal link (?tab=), so a tab can be bookmarked and the browser Back button works. #}
+{% block content %}
+{% set page = namespace(label='') %}
+{% for label, href in nav_links(current_user.role) %}{% if href == hub.path %}{% set page.label = label %}{% endif %}{% endfor %}
+<div class="hub-head">
+  <h1 class="h4 mb-2">{{ page.label }}</h1>
+  <nav class="hub-tabs" aria-label="{{ page.label }} sections">
+    {% for t in hub.tabs %}
+    <a class="hub-tab {{ 'active' if t.key == hub.tab else '' }}" href="{{ hub.path }}?tab={{ t.key }}" {% if t.key == hub.tab %}aria-current="page"{% endif %}>{{ t.label }}</a>
+    {% endfor %}
+  </nav>
+</div>
+{% block panel %}{% endblock %}
+{% endblock %}

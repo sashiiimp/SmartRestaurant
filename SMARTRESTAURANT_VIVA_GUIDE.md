@@ -241,7 +241,7 @@ Every arrow is a function call within one Flask process. There are no background
 
 ## 12. Live demonstration script (about 10 minutes)
 
-Before the demo, check that the daily forecast ran today: Forecast models → Forecast runs should show today's date. If not, press **Run forecast now** once.
+Before the demo, check that the daily forecast ran today: Forecasting → Models & runs → Forecast runs should show today's date. If not, press **Run forecast now** once.
 
 1. **Login** as admin. Point at the role in the sidebar and the "Synthetic demo data" label.
 2. **Dashboard:**
@@ -253,17 +253,17 @@ Before the demo, check that the daily forecast ran today: Forecast models → Fo
 5. Log out and log in as **kitchen**. Open **Orders → Pre-orders**:
    - add a pre-order for today (customer, item Chicken Burger, quantity larger than the forecast, pickup time) as *Confirmed*;
    - open **Details**: creator, "Counts in the prep plan".
-6. **Prep plan** for today, Chicken Burger:
+6. **Plan & prepare → Prep plan** for today, Chicken Burger:
    - Forecast stays the same, Recommended rose to cover the pre-order;
    - open "How was this worked out?" and explain max(forecast × 1.1, pre-orders) and why we don't add them;
    - press **Accept**.
-7. **Ingredient needs:** chicken and bun requirements went up. Compare them with usable stock.
+7. **Ingredients → Needs & shortages:** chicken and bun requirements went up. Compare them with usable stock.
 8. Back on **Orders**, press **Complete** on the pre-order. The prep plan stays the same (completed still counts) and no sale is recorded.
 9. **Served & waste:** record a few wasted portions with a reason.
 10. Log in as **admin** again:
     - the dashboard's upcoming pre-orders card and the activity lines ("Pre-order #… created / completed", "Food waste recorded…");
     - **Reports → Waste** shows the per-item waste rate table.
-11. **Forecast models:** the model comparison table (XGBoost vs Random Forest vs baselines) and the hold-out period.
+11. **Forecasting → Models & runs:** the model comparison table (XGBoost vs Random Forest vs baselines) and the hold-out period.
 
 The demo writes to the live demo database. Run it on the deployed demo only as rehearsed, and expect the new rows to stay unless the demo is reset.
 

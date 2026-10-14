@@ -1,0 +1,34 @@
+{% extends "hub.html" %}
+{% block title %}Role access - SmartRestaurant{% endblock %}
+{% block panel %}
+{% set roles = [('admin', 'Administrator'), ('kitchen', 'Food Production'), ('inventory', 'Inventory & Procurement')] %}
+<h2 class="h5 mb-1">Role access</h2>
+<p class="text-muted small">Every user has one of three fixed roles; change a user's role on the <a href="/admin/users?tab=users">Users</a> tab. This table is read from the access rules the server applies, and the server checks the role again on every page and every data request, so a hidden menu link is never the only protection.</p>
+<div class="card mb-3"><div class="card-body">
+  <h3 class="h6">Pages each role can open</h3>
+  <div class="table-responsive"><table class="table table-sm align-middle role-table">
+    <thead><tr><th>Page</th><th>Tabs</th>{% for key, label in roles %}<th class="text-center">{{ label }}</th>{% endfor %}</tr></thead>
+    <tbody>
+    {% for r in role_access %}
+      <tr><td class="text-nowrap">{{ r.page }}</td><td class="small text-muted">{{ r.tabs|join(', ') }}</td>
+      {% for key, label in roles %}
+        <td class="text-center">{% if r.roles[key] %}<span class="role-yes" aria-hidden="true">&#10003;</span><span class="visually-hidden">{{ label }} can open {{ r.page }}</span>{% else %}<span class="text-muted" aria-hidden="true">-</span><span class="visually-hidden">no access</span>{% endif %}</td>
+      {% endfor %}</tr>
+    {% endfor %}
+    </tbody></table></div>
+</div></div>
+<div class="card mb-3"><div class="card-body">
+  <h3 class="h6">Alerts each role receives</h3>
+  <div class="table-responsive"><table class="table table-sm align-middle role-table">
+    <thead><tr><th>Alert type</th>{% for key, label in roles %}<th class="text-center">{{ label }}</th>{% endfor %}</tr></thead>
+    <tbody>
+    {% for a in alert_access %}
+      <tr><td class="text-capitalize">{{ a.alert_type.replace('_', ' ') }}</td>
+      {% for key, label in roles %}
+        <td class="text-center">{% if key in a.roles %}<span class="role-yes" aria-hidden="true">&#10003;</span><span class="visually-hidden">{{ label }} receives it</span>{% else %}<span class="text-muted" aria-hidden="true">-</span><span class="visually-hidden">not shown</span>{% endif %}</td>
+      {% endfor %}</tr>
+    {% endfor %}
+    </tbody></table></div>
+  <p class="small text-muted mb-0">Alert types can be switched on or off on the <a href="/admin/users?tab=settings">Settings &amp; alerts</a> tab.</p>
+</div></div>
+{% endblock %}

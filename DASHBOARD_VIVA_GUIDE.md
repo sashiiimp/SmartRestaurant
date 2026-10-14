@@ -51,7 +51,7 @@ The reporting period is **the last 7 or 30 days, ending yesterday**. If today is
 | **Sales and waste trend** | Day-by-day history | `sales_records` and `food_waste`, via the Reports endpoints | Quantity per day. Every date in the period is on the axis. A day with no sales records is a gap. Waste on a day with sales but no waste records counts as 0. |
 | **Inventory alerts table** | Which ingredients are low or out | Same as the Low stock tile | Out-of-stock ingredients come first, then low ones, ordered by usable ÷ reorder level (most urgent first). The first 6 are shown, with "Show all" for the rest. |
 | **Open alerts** | Everything the alert check found | `alerts` | Produced by `alert_service` (low/critical stock, projected stock-out, expiry, waste risk, forecast failure, manual shortage). Most severe first. **Acknowledge** marks an alert as seen. The bell in the top bar links here (`/admin#alerts`). |
-| **Quick actions** | Shortcuts | none (links only) | Generate forecast → `/admin/models` (button "Run forecast now"); Manage BOM → `/admin/catalog`; View inventory → `/admin/inventory`; View reports → `/admin/monitor`. |
+| **Quick actions** | Shortcuts | none (links only) | Generate forecast → `/admin/models` (button "Run forecast now"); Manage BOM → `/admin/catalog`; View inventory → `/admin/monitor?tab=stock` (Reports, Stock levels); View reports → `/admin/monitor`. |
 | **Recent activity** | Audit trail | `audit_logs` | The last 10 actions (5 shown), turned into plain English. |
 | **Notes at the top** | Honesty about the data | `settings.data_source_label`, `sales_records` | The synthetic-data note shows when the data source label says synthetic/demo. The partial-period note shows when fewer days than the period length have sales records. |
 

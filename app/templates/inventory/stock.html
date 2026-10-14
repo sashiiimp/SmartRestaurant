@@ -1,9 +1,9 @@
-{% extends "base.html" %}
+{% extends "hub.html" %}
 {% block title %}Stock levels - SmartRestaurant{% endblock %}
-{% block content %}
+{% block panel %}
 <div id="app" v-cloak>
   <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-    <h1 class="h4 m-0">Stock levels</h1>
+    <h2 class="h5 m-0">Stock levels</h2>
     <button class="btn btn-primary" type="button" @click="add">Add ingredient</button>
   </div>
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>

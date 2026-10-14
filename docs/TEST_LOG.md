@@ -376,3 +376,17 @@ about two runs out of three. Fixed by comparing **movement ids** instead of time
 stock-movement id for that ingredient in its `details` (`last_movement_id`, kept on a repeat report), and a restock is
 a positive movement with a higher id; alerts created before the fix fall back to the time comparison. Two new tests
 force equal timestamps in both directions (both fail on the old code). No schema change.
+
+## 19. Merged pages: 23 menu pages to 14 (14 Oct 2026, branch `nav-consolidation` on `system-integration`, staging only, not deployed)
+
+| Check | Result |
+|---|---|
+| Backup first | `/root/smartrest/backups/before_nav_consolidation_*`: bundle of every branch, worktree files, HEAD `a8cb275` |
+| Fast suite (`pytest -m "not mysql"`) | **420 passed**, 2 skipped (395 before; new `tests/api/test_navigation.py`; four older page tests now open the tab address instead of the old page) |
+| RBAC and architecture tests | green; every redirecting old address is still refused (403) to the other roles |
+| Role access table | every row compared with a real request per role: 200 exactly where the table shows a tick, 403 elsewhere |
+| Browser walkthrough (`tests/ui/smoke.py`, fresh copy of the staging demo database per engine, temporary server on 127.0.0.1) | Chromium and Firefox: kitchen, inventory, admin and responsive (360, 768, 1280 px, every page and tab) all ok. WebKit: first run reported two requests cancelled while leaving Served & waste (an unchanged page; seen before), the repeat run was clean |
+| Found and fixed during the walkthrough | the Role access table scrolled the whole page sideways at 360 px (the screen-reader labels were positioned outside the scrolling table); fixed in CSS |
+
+The walkthrough's old "Chicken is short today" check depended on the demo date; it now follows a shortage link when
+one exists and otherwise opens the same pre-filled Stock requests address directly.

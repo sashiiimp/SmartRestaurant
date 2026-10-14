@@ -41,6 +41,8 @@ Vue.createApp({ delimiters: ['[[', ']]'], data() { return { rows: [], loading: t
 
 ## 3. Navigation and pages
 
+Since 14 Oct 2026 several of the pages below are tabs of one merged page, and their old addresses redirect to that tab; see section 11.
+
 Login redirects by role (C1). Menus are role-specific and **also** enforced server-side (C2). The alert bell shows the count of open alerts visible to the role and opens a dropdown of the latest five.
 
 Tier here is the tier of the page; the service behind it may be built earlier.
@@ -201,10 +203,36 @@ Display-only layer on top of the vendored Bootstrap; no data, API, route or busi
 
 Display-only change after a UI audit; no API, service, model, ML or database change.
 
-- **Menus are grouped** under short headings, with plain names (URLs unchanged). Administrator: *Overview* (Dashboard, Reports, Inventory overview), *Forecasting* (Forecast models, Import data), *Setup* (Menu & recipes, Users, Settings). Food Production: *Today* (Dashboard, Demand forecast, Prep plan, Served & waste), *Ingredients* (Ingredient needs, Stock requests), *Orders* (Orders & pre-orders). Inventory & Procurement: *Stock* (Dashboard, Stock levels, Record stock, Kitchen requests), *Purchasing* (Ingredient demand, Reorder, Purchase orders, Suppliers). Defined in `utils/navigation.py`.
+- **Menus are grouped** under short headings, with plain names (URLs unchanged; the menu itself was shortened again on 14 Oct 2026, section 11). Administrator: *Overview* (Dashboard, Reports, Inventory overview), *Forecasting* (Forecast models, Import data), *Setup* (Menu & recipes, Users, Settings). Food Production: *Today* (Dashboard, Demand forecast, Prep plan, Served & waste), *Ingredients* (Ingredient needs, Stock requests), *Orders* (Orders & pre-orders). Inventory & Procurement: *Stock* (Dashboard, Stock levels, Record stock, Kitchen requests), *Purchasing* (Ingredient demand, Reorder, Purchase orders, Suppliers). Defined in `utils/navigation.py`.
 - **Dashboards** follow one order: summary tiles, the main work, then "Needs attention". Repeated numbers were removed (alerts doughnut, stock doughnut, kitchen bar chart, open-alerts tile on inventory). Alert lists load the full role list from `/alerts` after the dashboard call (never in parallel, so the alert check runs once) and show 5 (kitchen 3) with *Show all*; `sr-alert-list` takes an optional `limit`.
 - **Admin "Forecast performance"** reads the active model's hold-out MAE and the `naive_lag7` baseline from `/model-versions`.
 - **"Check alerts now"** moved from the admin dashboard to Settings > Alert types (same `POST /alerts/run`).
 - **Prep plan:** the buffer, weather note and model are shown once in the page header; each card shows forecast and recommended, and the calculation opens under *How was this worked out?*. All actions are unchanged.
 - **Served & waste:** four tabs (Served, Waste, Other use, Daily balance with ingredient usage); `#waste` etc. open a tab directly. All forms are unchanged.
 
+## 11. Merged pages (14 Oct 2026)
+
+Related pages became tabs of one page, so the menus have 14 entries instead of 23. No function was removed, and no API,
+service rule, model, ML or database change was needed (the one service addition is `alert_service.visibility()`, a
+read-only list of the existing alert rule).
+
+| Role | Menu (heading: pages) | Tabs of a merged page |
+|---|---|---|
+| Administrator | *Overview*: Dashboard, Reports, Forecasting. *Setup*: Menu & recipes, Administration | **Reports** (`/admin/monitor`) gained Stock levels, Ingredient demand and Batches and expiry from the old Inventory overview (its Recent movements tab was already covered by Stock movements). **Forecasting** (`/admin/models`): Models & runs, Import data. **Administration** (`/admin/users`): Users, Settings & alerts, Role access |
+| Food Production | *Today*: Dashboard, Plan & prepare, Served & waste. *Supplies & orders*: Ingredients, Orders & pre-orders | **Plan & prepare** (`/kitchen/prep`): Prep plan, 7-day forecast. **Ingredients** (`/kitchen/requirements`): Needs & shortages, Stock requests |
+| Inventory & Procurement | *Today*: Dashboard, Kitchen requests. *Stock & buying*: Stock, Purchasing | **Stock** (`/inventory/stock`): Stock levels, Record stock. **Purchasing** (`/inventory/reorder`): Reorder, Ingredient demand, Purchase orders, Suppliers |
+
+- **How it works.** `utils/navigation.py` holds the menus (`NAV_GROUPS`), the merged pages (`HUBS`: tab key, label and
+  the existing page template) and the old addresses (`REDIRECTS`). A merged page keeps the URL of its first tab and
+  takes `?tab=`; the controller renders that tab's template, which extends `hub.html` (page name and the tab strip).
+  Tabs are plain links, so a tab can be bookmarked and Back works. A missing or unknown `?tab=` opens the first tab.
+  Reports switches its tabs inside the page as before and now also reads `?tab=` and keeps it in the address.
+- **Old addresses keep working.** `/admin/data`, `/admin/settings`, `/admin/inventory`, `/kitchen/forecast`,
+  `/kitchen/stock-requests`, `/inventory/movements`, `/inventory/forecast`, `/inventory/purchase-orders` and
+  `/inventory/suppliers` redirect (302) to their tab and keep their other query arguments (`?open=`, `?ingredient=&qty=`).
+  The role guard runs before the redirect, so another role still gets 403.
+- **Role access tab** (Administration): which role can open each menu page (read from the blueprint guard the server
+  applies, not from the menu) and which roles receive each alert type (the same rule `GET /alerts` uses). Roles stay
+  fixed (A8); the role of a user is changed on the Users tab.
+- **Look.** The tab strip of a merged page is a segmented control (CSS section 13) so it is not confused with the
+  underlined tabs inside a section (Reports, Import data, Orders, Served & waste). Each tab's own heading is now an `h2`.

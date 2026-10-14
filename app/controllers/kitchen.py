@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template
 
+from app.utils.navigation import redirect_to_tab, render_hub
 from app.utils.security import role_guard
 
 bp = Blueprint("kitchen", __name__, url_prefix="/kitchen")
@@ -12,14 +13,10 @@ def dashboard():
     return render_template("kitchen/dashboard.html")
 
 
-@bp.route("/forecast")
-def forecast():
-    return render_template("kitchen/forecast.html")
-
-
 @bp.route("/prep")
 def prep():
-    return render_template("kitchen/prep.html")
+    """Plan & prepare: Prep plan, 7-day forecast."""
+    return render_hub("/kitchen/prep")
 
 
 @bp.route("/record")
@@ -29,7 +26,8 @@ def record():
 
 @bp.route("/requirements")
 def requirements():
-    return render_template("kitchen/requirements.html")
+    """Ingredients: Needs & shortages, Stock requests."""
+    return render_hub("/kitchen/requirements")
 
 
 @bp.route("/orders")
@@ -37,6 +35,11 @@ def orders():
     return render_template("kitchen/orders.html")
 
 
+@bp.route("/forecast")
+def forecast():
+    return redirect_to_tab("/kitchen/forecast")
+
+
 @bp.route("/stock-requests")
 def stock_requests():
-    return render_template("kitchen/stock_requests.html")
+    return redirect_to_tab("/kitchen/stock-requests")

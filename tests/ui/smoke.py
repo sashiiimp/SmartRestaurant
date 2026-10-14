@@ -46,8 +46,11 @@ def kitchen(browser):
     page = ctx.new_page()
     login(page, "kitchen1")
     assert page.url.endswith("/kitchen"), page.url
-    visit(page, "/kitchen/forecast", "k_forecast")
+    visit(page, "/kitchen/prep?tab=forecast", "k_forecast")
     assert page.locator("table tbody tr").count() >= 10, "forecast table empty"
+    page.locator(".hub-tab", has_text="Prep plan").click()   # tabs of a merged page are plain links
+    page.wait_for_selector(".card-item", timeout=8000)
+    assert "tab=prep" in page.url, page.url
     visit(page, "/kitchen/prep", "k_prep", wait=".card-item")
     n = page.locator(".card-item").count()
     print("prep cards:", n)
@@ -84,7 +87,14 @@ def kitchen(browser):
     visit(page, "/kitchen", "k_dashboard", wait=".stat-tile")
     assert page.locator(".stat-tile").count() == 3
     visit(page, "/kitchen/requirements", "k_requirements", wait="table")
-    assert "Chicken" in page.locator("tr.table-danger").first.inner_text(), "chicken should be short today"
+    if page.locator("tr.table-danger").count():                          # a shortage depends on the demo date
+        page.locator("tr.table-danger").first.get_by_role("link", name="Request stock").click()
+    else:
+        page.goto(BASE + "/kitchen/requirements?tab=requests&ingredient=1&qty=2.5")   # the address that link opens
+    page.wait_for_selector("text=New stock request", timeout=8000)      # Stock requests tab with the form filled in
+    assert "tab=requests" in page.url and page.locator("input[inputmode=decimal]").first.input_value() != "", page.url
+    page.goto(BASE + "/kitchen/stock-requests")                          # old address
+    assert "/kitchen/requirements?tab=requests" in page.url, page.url
     r = page.goto(BASE + "/admin")
     assert r.status == 403, r.status
     ctx.close()
@@ -103,7 +113,7 @@ def inventory(browser):
     page.get_by_role("button", name="Save", exact=True).click()
     page.wait_for_selector("text=is required", timeout=4000)
     page.get_by_role("button", name="Cancel").click()
-    visit(page, "/inventory/movements", "i_movements", wait="#m-ing")
+    visit(page, "/inventory/stock?tab=record", "i_movements", wait="#m-ing")
     page.select_option("#m-ing", label="Chicken (kg)")
     page.fill("#m-qty", "100")
     page.get_by_role("button", name="Save", exact=True).click()
@@ -118,8 +128,12 @@ def inventory(browser):
     page.fill("#m-qty", "5")
     page.get_by_role("button", name="Save", exact=True).click()
     page.wait_for_selector("text=Saved", timeout=5000)
-    visit(page, "/inventory/forecast", "i_forecast", wait="table tbody tr")
+    visit(page, "/inventory/reorder?tab=demand", "i_forecast", wait="table tbody tr")
     visit(page, "/inventory/reorder", "i_reorder", wait="table, .text-center")
+    visit(page, "/inventory/reorder?tab=orders", "i_purchase_orders", wait="h2")
+    visit(page, "/inventory/reorder?tab=suppliers", "i_suppliers", wait="table tbody tr")
+    page.goto(BASE + "/inventory/purchase-orders")                       # old address
+    assert "/inventory/reorder?tab=orders" in page.url, page.url
     r = page.goto(BASE + "/kitchen")
     assert r.status == 403, r.status
     ctx.close()
@@ -142,6 +156,12 @@ def admin(browser):
     page.screenshot(path=os.path.join(SHOTS, "a_monitor_forecast.png"), full_page=True)
     page.get_by_role("button", name="Waste", exact=True).click()
     page.wait_for_selector("text=Prepared-food waste", timeout=8000)
+    page.get_by_role("button", name="Ingredient demand").click()        # tabs taken over from Inventory overview
+    page.wait_for_selector("text=Days of cover", timeout=8000)
+    page.get_by_role("button", name="Batches and expiry").click()
+    page.wait_for_selector("text=Days to expiry", timeout=8000)
+    visit(page, "/admin/inventory", "a_inventory", wait="text=Stock OK")   # old address opens Reports, Stock levels
+    assert "/admin/monitor?tab=stock" in page.url, page.url
     visit(page, "/admin/models", "a_models", wait=".card")
     page.get_by_role("button", name="Train new model").click()
     page.wait_for_selector("text=Trained v", timeout=90000)
@@ -149,7 +169,7 @@ def admin(browser):
     page.wait_for_selector("text=is now active", timeout=8000)
     page.get_by_role("button", name="Run forecast now").click()
     page.wait_for_selector("text=Forecast run ok", timeout=15000)
-    visit(page, "/admin/data", "a_data", wait="input[type=file]")
+    visit(page, "/admin/models?tab=data", "a_data", wait="input[type=file]")
     today = datetime.date.today().isoformat()
     with tempfile.NamedTemporaryFile("w", suffix=".csv", delete=False) as f:
         f.write(f"date,item,quantity\n{today},Lime Juice,55\n{today},Lime Juise,5\n")
@@ -174,15 +194,21 @@ def admin(browser):
     page.wait_for_selector("tr:has-text('tempk') >> text=Deactivated", timeout=5000)
     page.locator("tr", has_text="admin").first.get_by_role("button", name="Deactivate").click()
     page.wait_for_selector("text=last active administrator", timeout=5000)
+    visit(page, "/admin/users?tab=settings", "a_settings", wait="text=Thresholds")
+    visit(page, "/admin/users?tab=roles", "a_roles", wait=".role-table")
+    assert page.locator(".role-yes").count() == 14 + 14, "one tick per page and one per alert recipient"
     r = page.goto(BASE + "/kitchen")
     assert r.status == 403, r.status
     ctx.close()
 
 
 PAGES = {
-    "kitchen1": ["/kitchen", "/kitchen/prep", "/kitchen/forecast", "/kitchen/record", "/kitchen/requirements"],
-    "inventory1": ["/inventory", "/inventory/stock", "/inventory/movements", "/inventory/forecast", "/inventory/reorder"],
-    "admin": ["/admin", "/admin/monitor", "/admin/models", "/admin/data", "/admin/catalog", "/admin/users", "/admin/settings"],
+    "kitchen1": ["/kitchen", "/kitchen/prep", "/kitchen/prep?tab=forecast", "/kitchen/record", "/kitchen/requirements",
+                 "/kitchen/requirements?tab=requests", "/kitchen/orders"],
+    "inventory1": ["/inventory", "/inventory/stock", "/inventory/stock?tab=record", "/inventory/requests", "/inventory/reorder",
+                   "/inventory/reorder?tab=demand", "/inventory/reorder?tab=orders", "/inventory/reorder?tab=suppliers"],
+    "admin": ["/admin", "/admin/monitor", "/admin/monitor?tab=stock", "/admin/models", "/admin/models?tab=data", "/admin/catalog",
+              "/admin/users", "/admin/users?tab=settings", "/admin/users?tab=roles"],
 }
 
 

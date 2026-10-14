@@ -1,9 +1,9 @@
-{% extends "base.html" %}
+{% extends "hub.html" %}
 {% block title %}Purchase orders - SmartRestaurant{% endblock %}
-{% block content %}
+{% block panel %}
 <div id="app" v-cloak>
   <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-    <h1 class="h4 m-0">Purchase orders</h1>
+    <h2 class="h5 m-0">Purchase orders</h2>
     <div class="d-flex gap-2 align-items-center">
       <label for="po-status" class="form-label m-0 small">Show</label>
       <select id="po-status" class="form-select form-select-sm" style="max-width: 15rem" v-model="status" @change="load">
@@ -11,7 +11,7 @@
       <button class="btn btn-primary" type="button" @click="startNew">New purchase order</button>
     </div>
   </div>
-  <p class="text-muted small">Orders are internal records. "Sent" is marked by hand; nothing is transmitted to the supplier. Receiving stock creates the batches and stock-in records and lowers "on order" on the Reorder page.</p>
+  <p class="text-muted small">Orders are internal records. "Sent" is marked by hand; nothing is transmitted to the supplier. Receiving stock creates the batches and stock-in records and lowers "on order" on the Reorder tab.</p>
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
 
   <div v-if="form" class="card mb-3"><div class="card-body">
@@ -69,7 +69,7 @@
   </div></div>
 
   <sr-loading v-if="loading"></sr-loading>
-  <sr-empty v-else-if="!rows.length" message="No purchase orders yet. Create one here, or from the Reorder page." icon="clipboard"></sr-empty>
+  <sr-empty v-else-if="!rows.length" message="No purchase orders yet. Create one here, or from the Reorder tab." icon="clipboard"></sr-empty>
   <div v-else class="table-responsive"><table class="table table-sm align-middle">
     <thead><tr><th>Order</th><th>Supplier</th><th>Status</th><th>Ordered</th><th>Expected</th><th class="text-end">Lines</th><th class="text-end">Still to arrive</th><th></th></tr></thead>
     <tbody><tr v-for="r in rows" :key="r.id" :class="po && po.id === r.id ? 'table-active' : ''">

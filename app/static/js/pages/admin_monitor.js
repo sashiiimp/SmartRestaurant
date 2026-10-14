@@ -3,9 +3,10 @@ SR.createApp({
     const end = ui.addDays(ui.todayIso(), -1);
     return {
       tab: 'sales', from: ui.addDays(end, -27), to: end, groupBy: 'day', itemId: '', ingId: '', mtype: '', demandStart: ui.todayIso(),
-      tabs: [['sales', 'Sales and revenue'], ['demand', 'Demand forecast'], ['forecast', 'Forecast accuracy'], ['analytics', 'Analytics'], ['inventory', 'Inventory'], ['movements', 'Stock movements'], ['waste', 'Waste']],
+      tabs: [['sales', 'Sales and revenue'], ['demand', 'Demand forecast'], ['forecast', 'Forecast accuracy'], ['analytics', 'Analytics'], ['waste', 'Waste'],
+             ['stock', 'Stock levels'], ['ingredients', 'Ingredient demand'], ['batches', 'Batches and expiry'], ['inventory', 'Stock trend'], ['movements', 'Stock movements']],
       shortGroup: { 'Public holiday': 'Public', 'Poya day': 'Poya', 'School holiday': 'School', 'Ordinary day': 'Ordinary', 'Promotion running': 'Promotion', 'No promotion': 'No promo' },
-      items: [], ingredients: [], sales: null, acc: null, waste: null, usage: null, trend: null, moves: null, an: null, demand: { rows: [], meta: {} },
+      items: [], ingredients: [], levels: [], counts: { ok: 0, low: 0, out: 0 }, ingDemand: null, batches: [], sales: null, acc: null, waste: null, usage: null, trend: null, moves: null, an: null, demand: { rows: [], meta: {} },
       loading: false, error: null, ui,
     };
   },
@@ -15,9 +16,14 @@ SR.createApp({
       this.ingredients = (await api.get('/ingredients', { active: true })).data;
       if (this.ingredients.length) this.ingId = this.ingredients[0].id;
     } catch (e) { this.error = ui.errorText(e); }
-    await this.load();
+    // ?tab= opens a tab directly (the old Inventory overview address sends admins to ?tab=stock)
+    const start = new URLSearchParams(location.search).get('tab');
+    if (start && this.tabs.some(t => t[0] === start)) this.setTab(start); else await this.load();
   },
   computed: {
+    // tabs that show stock as it is now, so the date filters do not apply
+    snapshot() { return ['stock', 'ingredients', 'batches'].includes(this.tab); },
+    ingDays() { return this.ingDemand ? Array.from({ length: this.ingDemand.days }, (_, i) => ui.addDays(this.ingDemand.from, i)) : []; },
     csvUrl() {
       const range = '&from=' + this.from + '&to=' + this.to;
       if (this.tab === 'forecast') return '/api/v1/forecasts/accuracy?format=csv' + range + (this.itemId ? '&item_id=' + this.itemId : '');
@@ -58,6 +64,9 @@ SR.createApp({
         if (this.tab === 'sales') this.sales = (await api.get('/reports/sales', { ...p, group_by: this.groupBy })).data;
         else if (this.tab === 'demand') { const r = await api.get('/forecasts', { from: this.demandStart, to: ui.addDays(this.demandStart, 6) }); this.demand = { rows: r.data, meta: r.meta }; }
         else if (this.tab === 'forecast') this.acc = (await api.get('/forecasts/accuracy', { ...p, item_id: this.itemId })).data;
+        else if (this.tab === 'stock') { const r = await api.get('/stock/levels'); this.levels = r.data; this.counts = r.meta.counts; }
+        else if (this.tab === 'ingredients') this.ingDemand = (await api.get('/recommendations/ingredient-forecast', { from: ui.todayIso(), days: 7 })).data;
+        else if (this.tab === 'batches') this.batches = (await api.get('/stock/batches')).data;
         else if (this.tab === 'analytics') this.an = (await api.get('/reports/analytics', p)).data;
         else if (this.tab === 'inventory') this.trend = this.ingId ? (await api.get('/reports/inventory-trend', { ...p, ingredient_id: this.ingId })).data : null;
         else if (this.tab === 'movements') { const r = await api.get('/reports/movements', { ...p, ingredient_id: this.ingId, type: this.mtype }); this.moves = { data: r.data, meta: r.meta }; }
@@ -69,6 +78,7 @@ SR.createApp({
     },
     setTab(t) {
       this.tab = t;
+      try { history.replaceState(null, '', '?tab=' + t); } catch (e) { /* the tab still works without the address */ }
       // stock movements are recorded up to today, so these two tabs include today by default
       if ((t === 'inventory' || t === 'movements') && this.to < ui.todayIso()) this.to = ui.todayIso();
       if (t === 'movements') this.ingId = '';
