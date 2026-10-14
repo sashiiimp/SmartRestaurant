@@ -19,6 +19,12 @@ SR.createApp({
     await this.load();
   },
   computed: {
+    // column totals for the Served tab (display only; the saved figures come from the daily summary)
+    totals() {
+      const n = v => (v === '' || v === null || v === undefined || isNaN(Number(v)) ? 0 : Number(v));
+      return { prepared: this.items.reduce((t, i) => t + n(i.prepared), 0), wasted: this.items.reduce((t, i) => t + n(i.wasted), 0),
+               served: this.items.reduce((t, i) => t + n(this.served[i.menu_item_id]), 0) };
+    },
     otherIngredients() { const shown = new Set(this.usage ? this.usage.rows.map(r => r.ingredient_id) : []); return this.allIngredients.filter(g => !shown.has(g.id)); },
   },
   methods: {

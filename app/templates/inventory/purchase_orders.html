@@ -70,6 +70,13 @@
 
   <sr-loading v-if="loading"></sr-loading>
   <sr-empty v-else-if="!rows.length" message="No purchase orders yet. Create one here, or from the Reorder tab." icon="clipboard"></sr-empty>
+  <ul v-else-if="phone" class="m-list">
+    <li v-for="r in rows" :key="r.id" :class="po && po.id === r.id ? 'is-open' : ''">
+      <div class="m-row"><div class="m-main"><strong>[[ r.po_number ]]</strong><small>[[ r.supplier ]] · ordered [[ ui.date(r.order_date) ]]<template v-if="r.expected_date"> · expected [[ ui.date(r.expected_date) ]]</template></small>
+        <small>[[ r.outstanding_lines ]] of [[ r.line_count ]] lines still to arrive</small></div>
+        <div class="m-key"><sr-status-badge :status="r.status"></sr-status-badge><button class="btn btn-sm btn-outline-secondary mt-1" type="button" @click="open(r.id)">Open</button></div></div>
+    </li>
+  </ul>
   <div v-else class="table-responsive"><table class="table table-sm align-middle">
     <thead><tr><th>Order</th><th>Supplier</th><th>Status</th><th>Ordered</th><th>Expected</th><th class="text-end">Lines</th><th class="text-end">Still to arrive</th><th></th></tr></thead>
     <tbody><tr v-for="r in rows" :key="r.id" :class="po && po.id === r.id ? 'table-active' : ''">

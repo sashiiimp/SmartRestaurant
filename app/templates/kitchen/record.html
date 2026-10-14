@@ -17,16 +17,17 @@
     <div v-show="tab === 'served'" class="tab-panel" role="tabpanel" id="panel-served" aria-labelledby="tab-served">
       <div class="card"><div class="card-body">
         <h2 class="h6">Portions served or sold</h2>
-        <p class="text-muted small">Enter the day's total per item. Leave blank to skip an item.</p>
-        <div class="row g-2 align-items-center mb-2 border-bottom pb-2 small text-muted d-none d-sm-flex">
-          <div class="col-5">Item</div><div class="col-2 text-end">Prepared</div><div class="col-2 text-end">Waste</div><div class="col-3">Served</div></div>
-        <div class="row g-2 align-items-center mb-2" v-for="i in items" :key="i.menu_item_id">
-          <div class="col-12 col-sm-5"><label :for="'s' + i.menu_item_id" class="form-label m-0">[[ i.name ]]</label>
-            <span v-if="i.flags.includes('served_exceeds_prepared')" class="badge text-bg-warning ms-1">served above prepared</span></div>
-          <div class="col-4 col-sm-2 text-sm-end small"><span class="d-sm-none text-muted">Prepared </span>[[ i.prepared ]]</div>
-          <div class="col-4 col-sm-2 text-sm-end small"><span class="d-sm-none text-muted">Waste </span>[[ i.wasted ]]</div>
-          <div class="col-4 col-sm-3"><input :id="'s' + i.menu_item_id" class="form-control" inputmode="numeric" v-model="served[i.menu_item_id]"></div>
-        </div>
+        <p class="text-muted small">Enter the day's total served or sold per item. Leave blank to skip an item. Prepared and waste are shown for reference; <a href="#balance" @click.prevent="setTab('balance')">Daily balance</a> shows how each item adds up.</p>
+        <div class="table-responsive served-table"><table class="table table-sm align-middle mb-0">
+          <thead><tr><th scope="col">Item</th><th scope="col" class="text-end">Prepared</th><th scope="col" class="text-end">Waste</th><th scope="col" class="col-served">Served or sold</th></tr></thead>
+          <tbody><tr v-for="i in items" :key="i.menu_item_id">
+            <td><label :for="'s' + i.menu_item_id" class="form-label m-0 fw-semibold">[[ i.name ]]</label>
+              <span v-if="i.flags.includes('served_exceeds_prepared')" class="badge text-bg-warning ms-1">served above prepared</span></td>
+            <td class="text-end">[[ i.prepared ]]</td><td class="text-end">[[ i.wasted ]]</td>
+            <td class="col-served"><input :id="'s' + i.menu_item_id" class="form-control" inputmode="numeric" placeholder="-" v-model="served[i.menu_item_id]"></td>
+          </tr></tbody>
+          <tfoot><tr><td>Total</td><td class="text-end">[[ totals.prepared ]]</td><td class="text-end">[[ totals.wasted ]]</td><td class="col-served">[[ totals.served ]]<span class="text-muted fw-normal small"> entered</span></td></tr></tfoot>
+        </table></div>
         <sr-field-error :errors="servedErrors" name="date"></sr-field-error>
         <sr-field-error :errors="servedErrors" name="lines"></sr-field-error>
         <div v-for="(w, n) in servedMessages" :key="n" class="alert alert-warning py-2 small mt-2" role="status">[[ w ]]</div>

@@ -8,6 +8,14 @@
   <sr-loading v-if="loading"></sr-loading>
   <template v-else-if="f">
     <sr-empty v-if="!rows.length" message="No ingredient forecast yet. The forecast may not have been run."></sr-empty>
+    <ul v-else-if="phone" class="m-list">
+      <li v-for="r in rows" :key="r.ingredient_id" :class="r.first_shortfall_date ? 'is-open' : ''">
+        <div class="m-row"><div class="m-main"><strong>[[ r.name ]]</strong><small>usable now [[ ui.qty(r.usable_stock, r.unit) ]] · cover [[ r.days_of_cover === null ? '-' : (r.days_of_cover > 99 ? '>99' : r.days_of_cover) ]] days</small>
+          <small v-if="r.first_shortfall_date" class="text-danger fw-semibold">runs short [[ ui.date(r.first_shortfall_date) ]]</small></div>
+          <div class="m-key"><span>7-day need</span><strong>[[ ui.qty(r.total_need, r.unit) ]]</strong></div></div>
+        <details class="calc mt-1"><summary>Need per day</summary><dl class="kv small mb-0"><template v-for="(n, i) in r.daily" :key="i"><dt>[[ ui.date(days[i]) ]]</dt><dd>[[ ui.num(n, 1) ]]</dd></template></dl></details>
+      </li>
+    </ul>
     <div v-else class="table-responsive"><table class="table table-sm align-middle">
       <thead><tr><th>Ingredient</th><th class="text-end">Usable now</th><th v-for="d in days" :key="d" class="text-end">[[ ui.date(d) ]]</th><th class="text-end">7-day need</th><th class="text-end">Days of cover</th><th>Runs short</th></tr></thead>
       <tbody><tr v-for="r in rows" :key="r.ingredient_id" :class="r.first_shortfall_date ? 'table-warning' : ''">

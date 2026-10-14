@@ -807,3 +807,20 @@ a.step:hover { border-color: rgba(var(--accent-rgb), .45); background: var(--acc
   .nav-tabs { flex-wrap: nowrap !important; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; }
   .nav-tabs .nav-link { white-space: nowrap; padding: .55rem .8rem; }
 }
+/* served & waste: entry table */
+.served-table .col-served { width: 9.5rem; }
+.served-table .col-served .form-control { max-width: 8.5rem; }
+.served-table tfoot td { font-weight: 650; }
+@media (max-width: 575.98px) { .served-table .col-served { width: 6.5rem; } .served-table .col-served .form-control { max-width: 6rem; } }
+/* phone card lists (purchasing): one card per row, the key figure or status on the right, actions underneath */
+.m-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .55rem; }
+.m-list > li { padding: .7rem .8rem; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-sm); }
+.m-list > li.is-open { border-color: var(--accent); }
+.m-list > li.is-muted { opacity: .7; }
+.m-row { display: flex; gap: .65rem; align-items: flex-start; }
+.m-main { flex: 1 1 auto; min-width: 0; }
+.m-main strong { display: block; font-weight: 650; }
+.m-main small { display: block; color: var(--text-2); font-size: .78rem; line-height: 1.35; }
+.m-key { flex: none; display: flex; flex-direction: column; align-items: flex-end; text-align: right; }
+.m-key span:not(.sr-badge) { font-size: .7rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 650; }
+.m-key strong { font-size: 1.15rem; font-weight: 750; color: var(--accent-strong); font-variant-numeric: tabular-nums; white-space: nowrap; }

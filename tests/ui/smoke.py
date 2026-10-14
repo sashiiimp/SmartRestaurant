@@ -10,7 +10,10 @@ from dotenv import dotenv_values
 from playwright.sync_api import sync_playwright
 
 ENV = dotenv_values(os.path.join(os.path.dirname(__file__), "..", "..", ".env"))
-PASSWORD = ENV.get("SEED_PASSWORD")
+PASSWORD = os.environ.get("SMOKE_PASSWORD") or ENV.get("SEED_PASSWORD")
+# The seeded demo accounts; SMOKE_USERS="kitchen1=kitchen,inventory1=inventory" maps them to other usernames
+# (used for the deployment rehearsal on a copy of the production data, whose accounts are named differently).
+USERS = dict(p.split("=", 1) for p in os.environ.get("SMOKE_USERS", "").split(",") if "=" in p)
 BASE = "http://127.0.0.1:5055"
 SHOTS = os.path.join(os.path.dirname(__file__), "..", "..", "instance", "ui_shots")  # git-ignored; --shots DIR overrides
 problems = []
@@ -18,19 +21,41 @@ problems = []
 
 def login(page, username):
     page.goto(BASE + "/login")
-    page.fill("#username", username)
+    page.fill("#username", USERS.get(username, username))
     page.fill("#password", PASSWORD)
+    seen = []
+    note = lambda r: seen.append(f"{r.status} {r.request.method} {r.url.replace(BASE, '')}")  # noqa: E731
+    page.on("response", note)
     page.click("button[type=submit]")
+    # wait until the browser has really left /login: WebKit can report "network idle" before the redirect starts
+    try:
+        page.wait_for_url(lambda u: "/login" not in u, timeout=15000, wait_until="commit")
+    except Exception:
+        if SHOTS:
+            os.makedirs(SHOTS, exist_ok=True)
+            page.screenshot(path=os.path.join(SHOTS, f"login_failed_{username}.png"))
+        raise AssertionError(f"login as {username} stayed on {page.url}; responses: {seen[-5:]}")
+    finally:
+        page.remove_listener("response", note)
     page.wait_for_load_state("networkidle")
+
+
+# WebKit reports a fetch that the browser cancelled because the page was left ("... due to access control checks") as a
+# page error, even though the page code catches it; Chromium and Firefox stay silent. Those are not application errors.
+CANCELLED = "due to access control checks"
 
 
 def visit(page, path, shot, wait=".card, table, .alert, h1", width=None):
     errors = []
-    page.on("pageerror", lambda e: errors.append(f"pageerror: {e}"))
-    page.on("console", lambda m: errors.append(f"console.{m.type}: {m.text}") if m.type in ("error",) else None)
+    on_error = lambda e: errors.append(f"pageerror: {e}") if CANCELLED not in str(e) else None  # noqa: E731
+    on_console = lambda m: errors.append(f"console.{m.type}: {m.text}") if m.type == "error" and CANCELLED not in m.text else None  # noqa: E731
+    page.on("pageerror", on_error)
+    page.on("console", on_console)
     resp = page.goto(BASE + path)
     page.wait_for_load_state("networkidle")
     page.wait_for_selector(wait, timeout=8000)
+    page.remove_listener("pageerror", on_error)   # errors after this belong to the next page, not this one
+    page.remove_listener("console", on_console)
     if resp.status != 200:
         problems.append(f"{path}: HTTP {resp.status}")
     for e in errors:
@@ -149,6 +174,17 @@ def inventory(browser):
     assert "/inventory/reorder?tab=orders" in page.url, page.url
     r = page.goto(BASE + "/kitchen")
     assert r.status == 403, r.status
+    ctx.close()
+    # phones: purchasing lists are cards with the key figure and the actions in view (no sideways table)
+    ctx = browser.new_context(viewport={"width": 390, "height": 844})
+    page = ctx.new_page()
+    login(page, "inventory1")
+    visit(page, "/inventory/reorder", "i_reorder_phone", wait=".m-list, .sr-empty")
+    if page.locator(".m-list li").count():
+        assert page.locator(".m-list li .m-key strong").first.is_visible(), "suggested quantity visible on a phone"
+    visit(page, "/inventory/reorder?tab=suppliers", "i_suppliers_phone", wait=".m-list")
+    assert page.locator(".m-list li").first.get_by_role("button", name="Edit").is_visible()
+    visit(page, "/inventory/reorder?tab=demand", "i_demand_phone", wait=".m-list, .sr-empty")
     ctx.close()
 
 

@@ -1,13 +1,16 @@
+// phones get card lists instead of wide tables (only one is rendered)
+const PHONE = '(max-width: 575.98px)';
 SR.createApp({
   data() {
     return { rows: [], suppliers: [], ingredients: [], status: '', loading: true, error: null, form: null, errors: {}, saving: false,
-             po: null, recv: null, recvErrors: {}, busy: false, ui };
+             po: null, recv: null, recvErrors: {}, busy: false, phone: window.matchMedia(PHONE).matches, ui };
   },
   computed: {
     canReceive() { return this.po && ['draft', 'sent', 'partially_received'].includes(this.po.status) && this.po.lines.some(l => l.qty_outstanding > 0); },
     canCancel() { return this.po && ['draft', 'sent'].includes(this.po.status) && this.po.lines.every(l => l.qty_received === 0); },
   },
   async mounted() {
+    window.matchMedia(PHONE).addEventListener('change', e => { this.phone = e.matches; });
     try {
       this.suppliers = (await api.get('/suppliers', { active: true })).data;
       this.ingredients = (await api.get('/ingredients', { active: true })).data;

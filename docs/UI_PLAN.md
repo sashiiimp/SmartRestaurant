@@ -264,3 +264,12 @@ responses are identical between the base build and this one on copies of the sam
   every tab.
 - **Phones**: the Role access tables become a stacked list below 576 px.
 
+
+## 13. Release check fixes (14 Oct 2026, branch `release-check`)
+
+- **Served & waste, Served tab**: a real table (Item, Prepared, Waste, Served or sold) with a totals row and a link to
+  Daily balance; the old grid let the Waste and Served headings run together.
+- **Purchasing on phones** (below 576 px): Reorder, Ingredient demand, Purchase orders and Suppliers become card lists,
+  so the suggested quantity, 7-day need, status and Edit / Open actions are in view without a sideways table; the
+  working stays under "How was this worked out?" / "Need per day". Wider screens keep the tables. Only one view is
+  rendered, so the checkboxes and ids stay unique.

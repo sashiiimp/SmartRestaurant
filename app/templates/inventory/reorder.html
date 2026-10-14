@@ -13,6 +13,18 @@
   <div v-if="noForecast.length" class="alert alert-warning py-2" role="note">Demand is missing for days without a forecast, so these quantities may be too low: [[ noForecast.map(i => i.name + ' (' + i.days + (i.days === 1 ? ' day)' : ' days)')).join(', ') ]]</div>
   <sr-loading v-if="loading"></sr-loading>
   <sr-empty v-else-if="!rows.length" message="Nothing needs reordering right now."></sr-empty>
+  <!-- phones: one card per ingredient, the suggested quantity first; same checkboxes and button as the table -->
+  <ul v-else-if="phone" class="m-list">
+    <li v-for="r in rows" :key="r.ingredient_id">
+      <div class="m-row"><input type="checkbox" class="form-check-input mt-1" :aria-label="'Select ' + r.name" :disabled="!r.supplier_id" :value="r.ingredient_id" v-model="selected">
+        <div class="m-main"><strong>[[ r.name ]]</strong><small>[[ r.supplier || 'no supplier' ]] · [[ r.lead_time_days ]] d lead time</small></div>
+        <div class="m-key"><span>Suggested</span><strong>[[ ui.qty(r.suggested_qty, r.unit) ]]</strong></div></div>
+      <details class="calc mt-1"><summary>How was this worked out?</summary><dl class="kv small mb-0">
+        <dt>Need over lead time</dt><dd>[[ ui.num(r.need_over_lead_time, 2) ]]</dd><dt>+ Safety stock</dt><dd>[[ ui.num(r.safety_stock, 2) ]]</dd>
+        <dt>- Usable stock</dt><dd>[[ ui.num(r.usable_stock, 2) ]]</dd><dt>- On order</dt><dd>[[ ui.num(r.on_order, 2) ]]</dd>
+        <dt>= Raw</dt><dd>[[ ui.num(r.raw_qty, 2) ]]</dd><dt>Pack size</dt><dd>[[ ui.num(r.pack_size, 2) ]]</dd></dl></details>
+    </li>
+  </ul>
   <div v-else class="table-responsive"><table class="table table-sm align-middle table-wrap-head">
     <thead><tr><th style="width: 2rem"><input type="checkbox" class="form-check-input" aria-label="Select all" :checked="allSelected" @change="toggleAll($event.target.checked)"></th><th>Ingredient</th><th>Supplier</th><th class="text-end">Lead time</th><th class="text-end">Need over lead time</th><th class="text-end">+ Safety stock</th><th class="text-end">- Usable stock</th><th class="text-end">- On order</th><th class="text-end">= Raw</th><th class="text-end">Pack</th><th class="text-end col-key">Suggested order</th></tr></thead>
     <tbody><tr v-for="r in rows" :key="r.ingredient_id"><td><input type="checkbox" class="form-check-input" :aria-label="'Select ' + r.name" :disabled="!r.supplier_id" :value="r.ingredient_id" v-model="selected"></td><td>[[ r.name ]]</td><td class="text-nowrap">[[ r.supplier || 'not set' ]]</td><td class="text-end">[[ r.lead_time_days ]] d</td>

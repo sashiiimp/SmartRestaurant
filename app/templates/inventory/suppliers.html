@@ -22,6 +22,16 @@
   </div></div>
   <sr-loading v-if="loading"></sr-loading>
   <sr-empty v-else-if="!rows.length" message="No suppliers yet." icon="users"></sr-empty>
+  <ul v-else-if="phone" class="m-list">
+    <li v-for="r in rows" :key="r.id" :class="r.is_active ? '' : 'is-muted'">
+      <div class="m-row"><div class="m-main"><strong>[[ r.name ]]</strong>
+        <small>[[ [r.contact_person, r.phone, r.email].filter(Boolean).join(' · ') || 'no contact details' ]]</small>
+        <small>[[ r.lead_time_days ]] d lead time<template v-if="r.notes"> · [[ r.notes ]]</template></small></div>
+        <div class="m-key"><span class="sr-badge" :class="r.is_active ? 'sr-badge-success' : ''">[[ r.is_active ? 'Active' : 'Inactive' ]]</span></div></div>
+      <div class="d-flex gap-2 mt-2"><button class="btn btn-sm btn-outline-secondary" type="button" @click="edit(r)">Edit</button>
+        <button class="btn btn-sm" :class="r.is_active ? 'btn-outline-danger' : 'btn-outline-success'" type="button" @click="toggle(r)">[[ r.is_active ? 'Deactivate' : 'Activate' ]]</button></div>
+    </li>
+  </ul>
   <div v-else class="table-responsive"><table class="table table-sm align-middle">
     <thead><tr><th>Name</th><th>Contact</th><th>Phone</th><th>Email</th><th class="text-end">Lead time</th><th>Notes</th><th>Status</th><th></th></tr></thead>
     <tbody><tr v-for="r in rows" :key="r.id" :class="r.is_active ? '' : 'text-muted'">

@@ -1,7 +1,9 @@
+// phones get card lists instead of wide tables (only one is rendered)
+const PHONE = '(max-width: 575.98px)';
 const BLANK = { id: null, name: '', contact_person: '', phone: '', email: '', lead_time_days: 2, notes: '' };
 SR.createApp({
-  data() { return { rows: [], loading: true, error: null, form: null, errors: {}, saving: false, ui }; },
-  async mounted() { await this.load(); },
+  data() { return { rows: [], loading: true, error: null, form: null, errors: {}, saving: false, phone: window.matchMedia(PHONE).matches, ui }; },
+  async mounted() { window.matchMedia(PHONE).addEventListener('change', e => { this.phone = e.matches; }); await this.load(); },
   methods: {
     async load() {
       this.loading = true; this.error = null;

@@ -289,3 +289,15 @@ There is no pilot restaurant and no QA team. The builder runs each script on a c
 ## 11. Explicitly not done
 
 Load testing beyond section 6, penetration testing, accessibility audit with a screen reader, pilot-restaurant UAT, SUS scoring (the usability kit exists; sessions not yet run), and validation of forecast accuracy on real *Sri Lankan* restaurant data. (Browser automation has since been added, and the forecasting method was validated offline on external real datasets; see `ML_EVALUATION_REAL_DATA.md` on the staging branch.) These go in the report's limitations section.
+
+## End-to-end decision chain (E2E-1, 14 Oct 2026)
+
+`tests/integration/test_end_to_end_workflow.py` drives the whole chain through the API with all three roles on
+controlled data: sales import (check, then save) -> forecast accuracy (MAE, WAPE, MAPE, bias) -> 7-day forecast with a
+missing day -> confirmed and pending pre-orders -> prep plan (no double counting: 58 pre-ordered and 47.3 forecast give
+60, not 108) -> accept / override with reason -> BOM requirements with an expired batch excluded -> stock request
+approved and issued FEFO -> inventory wastage of the expired batch -> prepared / served / waste / other use -> waste
+report value -> admin dashboard sales, revenue, waste rate and forecast total -> 7-day ingredient demand -> reorder ->
+purchase order sent and received -> stock consistency -> movement report -> completed pre-order. Every expected value
+is worked out by hand in the test's comments. It passes on SQLite and on MySQL 8.4.
+
