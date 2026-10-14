@@ -429,3 +429,13 @@ one exists and otherwise opens the same pre-filled Stock requests address direct
 | Browsers (fresh copy of the staging demo database per run, gunicorn `--timeout 120`) | Chromium **pass**, Firefox **pass**, WebKit **pass in 3 consecutive full runs**; the walkthrough now checks the 6-step strip on each dashboard, its links (5 of 6 for the administrator) and the figure read from the prep plan |
 | Harness races fixed | the override check waited for a label that is always shown, then read the field error before the server answered (now waits for the error); headless WebKit sometimes drops the login click without sending the form (seen twice in 3 runs; the walkthrough now reloads and tries once more, and prints that it did) |
 | Screens | 41 pages, no page scrolls sideways at 1366 or 390 px: `SmartRestaurant_Viva_Polish_Screens.pdf` |
+
+## 23. Minimal pass: less wording, compact workflow (14 Oct 2026, branch `ui-minimal` on `viva-polish`, staging only, not deployed)
+
+| Check | Result |
+|---|---|
+| Scope | templates, page scripts (labels and captions only), `components.js` (workflow strip markup), CSS; no service, ML, model, API, migration, permission or navigation change |
+| Fast suite | **432 passed**, 16 skipped (14 MySQL-only, 2 timing); one label assertion updated (quick actions no longer have sub-text) |
+| Browsers (fresh copy of the staging demo database per run) | Firefox **pass**, WebKit **pass** (kitchen, inventory, admin, responsive 360 / 768 / 1280 px); Chromium kitchen, admin, responsive **pass**, inventory **not completed** |
+| Chromium on this VPS | headless Chromium 153 aborts in its compositor (`trap int3` in the kernel log) after about seven logged-in page loads per browser process, also with the previous commit `c3627b2` that passed earlier the same day and with GPU and threaded compositing off; static pages are not affected. The server was swapping (5.3 of 10 GB used by the live databases). Treated as an environment limit, not an application defect; screenshots were taken with a fresh Chromium every 3 pages |
+| Screens | 41 pages plus 3 before/after dashboard pages, no page scrolls sideways at 1366 or 390 px: `SmartRestaurant_Minimal_UI_Screens.pdf` |

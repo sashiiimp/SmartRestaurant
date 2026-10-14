@@ -3,12 +3,12 @@
 {% block panel %}
 <div id="app" v-cloak>
   <h2 class="h5 mb-1">Settings and alert configuration</h2>
-  <p class="page-intro">The limits the recommendations and alerts use, such as the preparation safety buffer and the food waste limit, and which alert types are switched on.</p>
+  <p class="page-intro">Limits used by the recommendations and alerts, and which alert types are on.</p>
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
   <sr-loading v-if="loading"></sr-loading>
   <template v-else-if="s">
     <div class="card mb-3"><div class="card-body"><h2 class="h6">Restaurant information</h2>
-      <p class="text-muted small">Shown to every user in the sidebar. The time zone is fixed to Asia/Colombo.</p>
+      <p class="text-muted small">Shown in the sidebar. Time zone: Asia/Colombo.</p>
       <div class="row g-3">
         <div class="col-12 col-md-6"><label class="form-label" for="r-name">Restaurant name</label><input id="r-name" class="form-control" maxlength="120" v-model="r.name"><sr-field-error :errors="rErrors" name="name"></sr-field-error></div>
         <div class="col-12 col-md-6"><label class="form-label" for="r-contact">Contact</label><input id="r-contact" class="form-control" maxlength="120" v-model="r.contact"><sr-field-error :errors="rErrors" name="contact"></sr-field-error></div>
@@ -23,10 +23,10 @@
         <input :id="v.key" class="form-control" inputmode="decimal" v-model.number="v.value"><div class="form-text">[[ v.min ]] to [[ v.max ]]</div><sr-field-error :errors="errors" :name="v.key"></sr-field-error></div>
       <div class="col-12 col-md-6 col-xl-4"><label class="form-label" for="dsl">Data source banner (empty hides it)</label><input id="dsl" class="form-control" maxlength="60" v-model="s.data_source_label"><sr-field-error :errors="errors" name="data_source_label"></sr-field-error></div>
     </div></div></div>
-    <div class="card mb-3"><div class="card-body"><h2 class="h6">Alert types</h2><p class="text-muted small">Turning a type off stops new alerts of that kind. Existing alerts are left as they are.</p>
+    <div class="card mb-3"><div class="card-body"><h2 class="h6">Alert types</h2><p class="text-muted small">Off stops new alerts of that type; existing ones stay.</p>
       <div class="form-check form-switch" v-for="a in s.alerts" :key="a.key"><input class="form-check-input" type="checkbox" role="switch" :id="a.key" v-model="a.enabled"><label class="form-check-label" :for="a.key">[[ a.type.replace(/_/g, ' ') ]]</label></div>
       <div class="d-flex flex-wrap align-items-center gap-2 border-top mt-3 pt-3"><button class="btn btn-sm btn-outline-primary" type="button" :disabled="running" @click="runAlerts"><span v-if="running" class="spinner-border spinner-border-sm me-1"></span>Check alerts now</button>
-        <span class="text-muted small">Alerts are also checked automatically when a dashboard opens (at most once a minute).</span></div></div></div>
+        <span class="text-muted small">Also checked when a dashboard opens (at most once a minute).</span></div></div></div>
     <button class="btn btn-primary" :disabled="saving" @click="save">Save settings</button>
   </template>
 </div>

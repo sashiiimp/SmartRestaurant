@@ -3,12 +3,12 @@
 {% block content %}
 <div id="app" v-cloak>
   <h1 class="h4 mb-1">Orders &amp; pre-orders</h1>
-  <p class="page-intro">Pre-orders are customer orders for a later day; confirmed ones are already part of that day's prep plan. Daily orders are the orders taken today.</p>
+  <p class="page-intro">Confirmed pre-orders count in their day's prep plan. Daily orders are today's record.</p>
   <div class="sr-tabs" role="tablist" aria-label="Order type"><button v-for="t in [['pre', 'Pre-orders'], ['daily', 'Daily orders']]" :key="t[0]" class="sr-tab" :class="{ active: tab === t[0] }" type="button" role="tab" :aria-selected="tab === t[0] ? 'true' : 'false'" @click="tab = t[0]">[[ t[1] ]]</button></div>
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
   <div v-if="tab === 'pre'">
   <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
-    <p class="text-muted small m-0">Customer pre-orders for a day and pickup time. <strong>Confirmed</strong> and <strong>completed</strong> pre-orders count in the preparation plan for their day; pending and cancelled ones do not.</p>
+    <p class="text-muted small m-0"><strong>Confirmed</strong> and <strong>completed</strong> pre-orders count in the prep plan; pending and cancelled do not.</p>
     <button class="btn btn-primary" type="button" @click="startNew">Add pre-order</button>
   </div>
   <div v-if="notice" class="alert alert-warning py-2" role="status">[[ notice ]] <a href="/kitchen/prep">Open the prep plan</a></div>
@@ -71,7 +71,7 @@
 
   <div v-if="tab === 'daily'">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
-      <p class="text-muted small m-0">The day's food orders as an internal record: what was ordered, and whether it is still open. It does not change the forecast or the preparation quantity. Orders for a future day are entered as pre-orders.</p>
+      <p class="text-muted small m-0">An internal record; it does not change the forecast or prep quantity. Future days are pre-orders.</p>
       <div class="d-flex gap-2 align-items-center"><sr-date-nav v-model="orderDate" @change="loadOrders"></sr-date-nav></div>
     </div>
     <div v-if="orderDate <= today" class="card mb-3"><div class="card-body">

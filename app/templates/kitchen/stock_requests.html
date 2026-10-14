@@ -6,7 +6,7 @@
     <h2 class="h5 m-0">Stock requests</h2>
     <button class="btn btn-primary" type="button" @click="startNew">New request</button>
   </div>
-  <p class="text-muted small">Ask the inventory section for ingredients. You can cancel a request while it is still pending; a rejected request shows the reason.</p>
+  <p class="text-muted small">Pending requests can be cancelled; rejected ones show the reason.</p>
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
 
   <div v-if="form" class="card mb-3"><div class="card-body">

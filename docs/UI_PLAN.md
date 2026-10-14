@@ -289,3 +289,16 @@ Presentation only. No service, ML, model, migration, API or permission change; t
 - **Admin chart**: recorded sales (line, last 7 days) and the 7-day ML forecast (bars) on one axis.
 - **Reports & Analytics**: each group names the workflow step it covers. Short intros on Users and Settings.
 
+
+## 15. Minimal pass: less wording, compact workflow (14 Oct 2026, branch `ui-minimal`)
+
+Presentation only. No service, ML, model, migration, API, permission or navigation change.
+
+- **Workflow strip** is one row of six on desktop (three below 1200 px, two on phones): number, title, figure and a
+  short caption. The role that does a step moved to the step's tooltip; other roles' steps stay muted.
+- **Repeated text removed**: the admin purpose paragraph and the synthetic-data note (the top-bar pill already says
+  it), dashboard subtitles that restated the workflow, card subtitles that restated the heading, report group notes,
+  quick-action descriptions, the login role strip.
+- **Shortened, not removed**: every page intro (one line), formulas (prep quantity, reorder suggestion, waste rate,
+  daily balance), alert behaviour, CSV formats, model metrics, the accuracy method note. Warnings and empty states keep
+  their meaning; the partial-sales warning stays on the admin dashboard.

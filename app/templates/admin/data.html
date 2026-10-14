@@ -4,16 +4,15 @@
 {% include "admin/_forecast_steps.html" %}
 <div id="app" v-cloak>
   <h2 class="h5 mb-1">Historical data</h2>
-  <p class="page-intro">The data the forecasting model learns from: past sales per menu item, and the context that changes demand (promotions, holidays and Poya days, weather). Import files are checked before anything is saved.</p>
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
   <ul class="nav nav-tabs mb-3"><li class="nav-item" v-for="t in [['sales','Sales history'],['promos','Promotions'],['holidays','Holidays'],['weather','Weather']]" :key="t[0]">
     <button class="nav-link" type="button" :class="{ active: tab === t[0] }" :aria-current="tab === t[0] ? 'true' : null" @click="tab = t[0]">[[ t[1] ]]</button></li></ul>
-  <div v-if="tab === 'sales'" class="card"><div class="card-body"><p class="text-muted">CSV with columns <code>date, item, quantity</code> and optionally <code>unit_price</code>. Rows are checked first; nothing is saved until you confirm. Unknown item names are reported, never created.</p>
+  <div v-if="tab === 'sales'" class="card"><div class="card-body"><p class="text-muted">CSV: <code>date, item, quantity</code>, optional <code>unit_price</code>. Checked first; nothing is saved until you confirm. Unknown items are reported, never created.</p>
     <sr-csv-import endpoint="/sales/import" label="Sales CSV"></sr-csv-import></div></div>
-  <div v-if="tab === 'holidays'" class="card"><div class="card-body"><p class="text-muted">CSV with columns <code>date, name, type</code> (type: public, poya, school, other).</p><sr-csv-import endpoint="/holidays/import" label="Holidays CSV"></sr-csv-import></div></div>
-  <div v-if="tab === 'weather'" class="card"><div class="card-body"><p class="text-muted">CSV with columns <code>date, rain_mm</code> and optionally <code>temp_c</code>. Weather entered for a future date is used by the forecast instead of the seasonal average.</p><sr-csv-import endpoint="/weather/import" label="Weather CSV"></sr-csv-import></div></div>
+  <div v-if="tab === 'holidays'" class="card"><div class="card-body"><p class="text-muted">CSV: <code>date, name, type</code> (public, poya, school, other).</p><sr-csv-import endpoint="/holidays/import" label="Holidays CSV"></sr-csv-import></div></div>
+  <div v-if="tab === 'weather'" class="card"><div class="card-body"><p class="text-muted">CSV: <code>date, rain_mm</code>, optional <code>temp_c</code>. Future dates replace the seasonal average in the forecast.</p><sr-csv-import endpoint="/weather/import" label="Weather CSV"></sr-csv-import></div></div>
   <div v-if="tab === 'promos'">
-    <div class="d-flex justify-content-between mb-2"><p class="text-muted m-0">Promotions raise the forecast for the items they cover. Enter them before running the forecast.</p><button class="btn btn-primary" @click="add">Add promotion</button></div>
+    <div class="d-flex justify-content-between mb-2"><p class="text-muted m-0">Promotions raise the forecast for their items; enter them before the run.</p><button class="btn btn-primary" @click="add">Add promotion</button></div>
     <div v-if="form" class="card mb-3"><div class="card-body"><div class="row g-2">
       <div class="col-12 col-md-4"><label class="form-label" for="p-name">Name</label><input id="p-name" class="form-control" v-model="form.name"><sr-field-error :errors="errors" name="name"></sr-field-error></div>
       <div class="col-6 col-md-2"><label class="form-label" for="p-start">Start</label><input id="p-start" type="date" class="form-control" v-model="form.start_date"><sr-field-error :errors="errors" name="start_date"></sr-field-error></div>

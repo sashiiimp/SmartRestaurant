@@ -9,15 +9,15 @@ SR.createApp({
       const d = this.d, c = d.counts, exp = this.expiredCount, soon = d.expiring.length;
       const r = this.reorder ? this.reorder.length : null;
       return [
-        { title: 'Historical sales', value: 'Administrator', mine: false, href: null, caption: 'past sales per menu item, the basis of the forecast', owner: 'Admin imports · kitchen records' },
-        { title: 'ML demand forecast', value: 'Every day', mine: false, href: null, caption: 'predicts portions per menu item for the next 7 days', owner: 'ML model' },
-        { title: 'Preparation recommendations', value: 'Kitchen', mine: false, href: null, caption: 'how much to prepare; drives the ingredient need', owner: 'Kitchen accepts or overrides' },
+        { title: 'Historical sales', value: 'Admin', mine: false, href: null, caption: '', owner: 'Admin imports · kitchen records' },
+        { title: 'ML demand forecast', value: 'Daily', mine: false, href: null, caption: 'next 7 days', owner: 'ML model' },
+        { title: 'Preparation recommendations', value: 'Kitchen', mine: false, href: null, caption: '', owner: 'Kitchen accepts or overrides' },
         { title: 'BOM & ingredient requirements', value: this.risks.length ? this.risks.length + ' at risk' : 'All covered', mine: true, href: '/inventory/reorder?tab=demand',
-          tone: this.risks.length ? 'danger' : 'success', caption: '7-day need (forecast x recipes) against usable stock', owner: 'Inventory reviews' },
+          tone: this.risks.length ? 'danger' : 'success', caption: '7-day need', owner: 'Inventory reviews' },
         { title: 'Inventory decisions', value: r === null ? (this.reorder === false ? '-' : 'loading') : (r ? r + ' to reorder' : 'Nothing to order'), mine: true, href: '/inventory/reorder',
-          tone: c.out ? 'danger' : (c.low ? 'warning' : 'success'), caption: (c.low + c.out) + ' of ' + this.stockTotal + ' ingredients low or out · ' + d.pending_requests + ' kitchen request' + (d.pending_requests === 1 ? '' : 's'), owner: 'Inventory orders and issues' },
+          tone: c.out ? 'danger' : (c.low ? 'warning' : 'success'), caption: (c.low + c.out) + ' low or out · ' + d.pending_requests + ' request' + (d.pending_requests === 1 ? '' : 's'), owner: 'Inventory orders and issues' },
         { title: 'Food waste monitoring', value: exp ? exp + (soon >= 10 ? '+' : '') + ' expired' : (soon ? soon + ' expiring' : 'None expiring'), mine: true, href: '/inventory/stock?tab=record',
-          tone: exp ? 'danger' : (soon ? 'warning' : 'success'), caption: 'record expired or damaged stock as inventory wastage', owner: 'Inventory records' },
+          tone: exp ? 'danger' : (soon ? 'warning' : 'success'), caption: 'stock wastage', owner: 'Inventory records' },
       ];
     },
     risks() { return this.d ? this.d.need_vs_stock.filter(r => Number(r.need) > Number(r.usable)) : []; },

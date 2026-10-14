@@ -137,7 +137,7 @@ def test_reports_title_and_dashboard_labels(as_role):
     client = as_role("admin")
     assert "Reports &amp; Analytics" in client.get("/admin/monitor").get_data(as_text=True)
     dash = client.get("/admin").get_data(as_text=True)
-    assert "Forecast models" not in dash and "Forecasting, Run forecast now" in dash
+    assert "Forecast models" not in dash and 'href="/admin/models?tab=runs"><span class="qa-icon">' in dash and "Generate forecast" in dash
     js = client.get("/static/js/pages/admin_monitor.js").get_data(as_text=True)
     for group in ("'Sales'", "'Forecasting'", "'Inventory'", "'Waste & Analytics'"):
         assert group in js

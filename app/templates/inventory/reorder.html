@@ -3,11 +3,11 @@
 {% block panel %}
 <div id="app" v-cloak>
   <h2 class="h5 mb-1">Reorder suggestions</h2>
-  <p class="page-intro">Suggested = need over the supplier lead time + safety stock (minimum stock) - usable stock - already on order, rounded up to the pack size (and at least the minimum order quantity).</p>
+  <p class="page-intro">Suggested = need over the lead time + safety (minimum) stock - usable stock - on order, rounded up to the pack size (at least the minimum order).</p>
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
   <div v-if="rows.length" class="d-flex flex-wrap align-items-center gap-2 mb-2">
     <button class="btn btn-primary" type="button" :disabled="!selected.length || busy" @click="createOrders">Create purchase order<span v-if="supplierCount > 1">s ([[ supplierCount ]] suppliers)</span></button>
-    <span class="small text-muted">Tick the ingredients to order. One draft order is created per supplier, using the suggested quantities. Ingredients without a supplier cannot be ordered here.</span>
+    <span class="small text-muted">Tick ingredients to order: one draft order per supplier. Ingredients need a supplier.</span>
   </div>
   <div v-if="message" class="alert alert-danger py-2" role="alert">[[ message ]]</div>
   <div v-if="noForecast.length" class="alert alert-warning py-2" role="note">Demand is missing for days without a forecast, so these quantities may be too low: [[ noForecast.map(i => i.name + ' (' + i.days + (i.days === 1 ? ' day)' : ' days)')).join(', ') ]]</div>

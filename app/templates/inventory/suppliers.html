@@ -6,7 +6,7 @@
     <h2 class="h5 m-0">Suppliers</h2>
     <button class="btn btn-primary" type="button" @click="add">Add supplier</button>
   </div>
-  <p class="page-intro">Supplier details are internal records used for purchasing. A deactivated supplier keeps its history but cannot be chosen for new ingredients or purchase orders.</p>
+  <p class="page-intro">Deactivated suppliers keep their history but cannot be chosen for new orders.</p>
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
   <div v-if="form" class="card mb-3"><div class="card-body">
     <h2 class="h6">[[ form.id ? 'Edit supplier' : 'New supplier' ]]</h2>

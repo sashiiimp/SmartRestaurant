@@ -56,7 +56,6 @@ SR.createApp({
   data() { return { range: 7, d: null, alerts: [], history: undefined, alertTab: 'open', trend: undefined, perf: null, prep: null, req: null, reorder: null, allActivity: false, allStock: false, loading: true, error: null, ui }; },
   async mounted() { await this.load(); this.loadPerf(); },
   computed: {
-    synthetic() { return this.d && /synthetic|demo|simulated/i.test(this.d.data_source || ''); },
     // Food waste rate tile: amber above the waste-risk limit from Settings (the same limit the waste-risk alert uses).
     wasteTone() { const r = this.d.waste_rate.pct; return r === null ? 'neutral' : (r > this.d.waste_threshold_pct ? 'warning' : 'success'); },
     wasteHint() {
@@ -68,20 +67,20 @@ SR.createApp({
     // Recommended actions: plain rules over figures the dashboard already has; each links to the page that handles it.
     actions() {
       const d = this.d, out = [], names = rows => rows.slice(0, 4).map(r => r.name).join(', ') + (rows.length > 4 ? ' and ' + (rows.length - 4) + ' more' : '');
-      if (!d.active_model) out.push({ key: 'model', tone: 'danger', icon: 'layers', title: 'No active forecasting model', detail: 'Train a model and activate it before forecasting.', href: '/admin/models?tab=models', link: 'ML models' });
+      if (!d.active_model) out.push({ key: 'model', tone: 'danger', icon: 'layers', title: 'No active forecasting model', detail: 'Train and activate one first.', href: '/admin/models?tab=models', link: 'ML models' });
       if (this.forecastDays < 7) out.push({ key: 'fc', tone: 'warning', icon: 'trending', title: 'Run the forecast', detail: 'No forecast yet for ' + this.missingForecastText + '.', href: '/admin/models?tab=runs', link: 'Forecasting' });
       const low = d.inventory_alerts.filter(r => r.status !== 'ok');
-      if (low.length) out.push({ key: 'low', tone: d.stock.out ? 'danger' : 'warning', icon: 'package', title: low.length + ' ingredient' + (low.length === 1 ? ' needs' : 's need') + ' reordering', detail: names(low) + '. Reordering is done by the Inventory & Procurement Manager.', href: '/admin/monitor?tab=stock', link: 'Stock levels' });
+      if (low.length) out.push({ key: 'low', tone: d.stock.out ? 'danger' : 'warning', icon: 'package', title: low.length + ' ingredient' + (low.length === 1 ? ' needs' : 's need') + ' reordering', detail: names(low) + '.', href: '/admin/monitor?tab=stock', link: 'Stock levels' });
       const short = d.inventory_alerts.filter(r => r.forecast);
-      if (short.length) out.push({ key: 'short', tone: 'info', icon: 'bars', title: short.length + ' ingredient' + (short.length === 1 ? '' : 's') + ' will run short within 7 days', detail: 'From the forecast and recipes: ' + names(short) + '.', href: '/admin/monitor?tab=ingredients', link: 'Ingredient demand' });
+      if (short.length) out.push({ key: 'short', tone: 'info', icon: 'bars', title: short.length + ' ingredient' + (short.length === 1 ? '' : 's') + ' will run short within 7 days', detail: names(short) + '.', href: '/admin/monitor?tab=ingredients', link: 'Ingredient demand' });
       const expired = d.inventory_alerts.reduce((n, r) => n + r.expiry.filter(e => e.expired).length, 0);
-      if (expired) out.push({ key: 'exp', tone: 'danger', icon: 'clock', title: expired + ' expired batch' + (expired === 1 ? '' : 'es') + ' still in stock', detail: 'They should be recorded as inventory wastage.', href: '/admin/monitor?tab=batches', link: 'Batches' });
+      if (expired) out.push({ key: 'exp', tone: 'danger', icon: 'clock', title: expired + ' expired batch' + (expired === 1 ? '' : 'es') + ' still in stock', detail: 'Record them as wastage.', href: '/admin/monitor?tab=batches', link: 'Batches' });
       const w = d.waste_rate.pct;
-      if (w !== null && w > d.waste_threshold_pct) out.push({ key: 'waste', tone: 'warning', icon: 'trash', title: 'Food waste ' + ui.num(w, 1) + '% is above the ' + ui.num(d.waste_threshold_pct, 1) + '% limit', detail: 'Check which items are wasted most.', href: '/admin/monitor?tab=waste', link: 'Waste report' });
-      if (d.items_without_recipe.length) out.push({ key: 'bom', tone: 'warning', icon: 'book', title: 'Menu items without a recipe', detail: d.items_without_recipe.join(', ') + ': their ingredient needs count as zero.', href: '/admin/catalog', link: 'Add recipes' });
-      if (d.pre_orders.count) out.push({ key: 'po', tone: 'info', icon: 'bag', title: d.pre_orders.count + ' confirmed pre-order' + (d.pre_orders.count === 1 ? '' : 's') + ', ' + d.pre_orders.portions + ' portions', detail: 'In the next 7 days. Already included in the kitchen prep plan.', href: null });
-      if (w !== null && w <= d.waste_threshold_pct) out.push({ key: 'wasteok', tone: 'success', icon: 'check', title: 'Food waste ' + ui.num(w, 1) + '% is within the ' + ui.num(d.waste_threshold_pct, 1) + '% limit', detail: 'For the reporting period.', href: '/admin/monitor?tab=waste', link: 'Waste report' });
-      if (!out.length) out.push({ key: 'ok', tone: 'success', icon: 'check', title: 'Nothing needs attention', detail: 'Stock, forecast and waste are within their limits.', href: null });
+      if (w !== null && w > d.waste_threshold_pct) out.push({ key: 'waste', tone: 'warning', icon: 'trash', title: 'Food waste ' + ui.num(w, 1) + '% is above the ' + ui.num(d.waste_threshold_pct, 1) + '% limit', detail: 'See which items are wasted most.', href: '/admin/monitor?tab=waste', link: 'Waste report' });
+      if (d.items_without_recipe.length) out.push({ key: 'bom', tone: 'warning', icon: 'book', title: 'Menu items without a recipe', detail: d.items_without_recipe.join(', ') + ' (needs count as zero).', href: '/admin/catalog', link: 'Add recipes' });
+      if (d.pre_orders.count) out.push({ key: 'po', tone: 'info', icon: 'bag', title: d.pre_orders.count + ' confirmed pre-order' + (d.pre_orders.count === 1 ? '' : 's') + ', ' + d.pre_orders.portions + ' portions', detail: 'Next 7 days, already in the prep plan.', href: null });
+      if (w !== null && w <= d.waste_threshold_pct) out.push({ key: 'wasteok', tone: 'success', icon: 'check', title: 'Food waste ' + ui.num(w, 1) + '% is within the ' + ui.num(d.waste_threshold_pct, 1) + '% limit', detail: '', href: '/admin/monitor?tab=waste', link: 'Waste report' });
+      if (!out.length) out.push({ key: 'ok', tone: 'success', icon: 'check', title: 'Nothing needs attention', detail: '', href: null });
       return out;
     },
     forecastShortCount() { return this.d.inventory_alerts.filter(r => r.forecast).length; },
@@ -132,20 +131,20 @@ SR.createApp({
       const w = d.waste_rate.pct, cov = d.coverage;
       return [
         { title: 'Historical sales', value: n(d.sales.quantity) + ' sold', mine: true, href: '/admin/monitor?tab=sales',
-          caption: ui.money(d.sales.revenue) + ' · ' + cov.days_with_sales + ' of ' + cov.days + ' days recorded', owner: 'Admin imports · kitchen records' },
+          caption: ui.money(d.sales.revenue) + ' · ' + cov.days_with_sales + '/' + cov.days + ' days', owner: 'Admin imports · kitchen records' },
         { title: 'ML demand forecast', value: this.forecastDays ? n(d.forecast_next7_total) + ' portions' : 'No forecast', mine: true, href: '/admin/models?tab=models',
           tone: this.forecastDays < 7 ? 'warning' : 'info',
-          caption: 'next 7 days' + (this.perf ? ' · ' + this.algoName(d.active_model.algorithm) + ' MAE ' + ui.num(this.perf.model, 1) + ' vs ' + ui.num(this.perf.baseline, 1) + ' baseline' : ''), owner: 'Admin trains · runs daily' },
+          caption: 'next 7 days' + (d.active_model ? ' · ' + this.algoName(d.active_model.algorithm) : ''), owner: 'Admin trains · runs daily' },
         { title: 'Preparation recommendations', value: this.prep ? n(toMake) + ' to prepare' : (this.prep === false ? '-' : wait), mine: false, href: null,
-          caption: this.prep ? 'today, forecast + ' + this.prep.buffer_pct + '% buffer in whole batches · ' + decided + ' of ' + items.length + ' decided' : 'today', owner: 'Kitchen accepts or overrides' },
+          caption: this.prep ? 'today · ' + decided + '/' + items.length + ' decided' : 'today', owner: 'Kitchen accepts or overrides' },
         { title: 'BOM & ingredient requirements', value: short === null ? (this.req === false ? '-' : wait) : (short ? short + ' short' : 'All covered'), mine: true, href: '/admin/catalog',
           tone: short ? 'danger' : (short === 0 ? 'success' : null),
-          caption: "today's plan x recipes" + (d.items_without_recipe.length ? ' · ' + d.items_without_recipe.length + ' items lack a recipe' : ''), owner: 'Admin keeps the recipes' },
+          caption: d.items_without_recipe.length ? d.items_without_recipe.length + ' without a recipe' : "today's plan", owner: 'Admin keeps the recipes' },
         { title: 'Inventory decisions', value: this.reorder ? (this.reorder.length ? this.reorder.length + ' to reorder' : 'Nothing to order') : (this.reorder === false ? '-' : wait), mine: true, href: '/admin/monitor?tab=stock',
           tone: d.stock.out ? 'danger' : (d.stock.low ? 'warning' : 'success'),
-          caption: d.stock.out + ' out of stock · ' + d.stock.low + ' low · of ' + d.stock.ingredients, owner: 'Inventory manager orders' },
+          caption: d.stock.out + ' out · ' + d.stock.low + ' low', owner: 'Inventory manager orders' },
         { title: 'Food waste monitoring', value: w === null ? 'No data' : ui.num(w, 1) + '% wasted', mine: true, href: '/admin/monitor?tab=waste', tone: this.wasteTone,
-          caption: n(d.waste.quantity) + ' portions · ' + ui.money(d.waste.value) + ' · limit ' + ui.num(d.waste_threshold_pct, 0) + '%', owner: 'Kitchen records · admin reviews' },
+          caption: 'limit ' + ui.num(d.waste_threshold_pct, 0) + '%', owner: 'Kitchen records · admin reviews' },
       ];
     },
     // Last 7 recorded days, then the 7 forecast days, on one axis: history as a line, prediction as bars.

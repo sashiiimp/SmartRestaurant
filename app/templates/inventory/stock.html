@@ -6,7 +6,7 @@
     <h2 class="h5 m-0">Stock levels</h2>
     <button class="btn btn-primary" type="button" @click="add">Add ingredient</button>
   </div>
-  <p class="page-intro">Usable stock (not expired) for every ingredient, compared with its minimum and reorder levels. Edit an ingredient to change its levels, pack size or supplier; record deliveries and usage on <a href="/inventory/stock?tab=record">Record stock</a>.</p>
+  <p class="page-intro">Usable stock (not expired) against minimum and reorder levels.</p>
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
   <div v-if="form" class="card mb-3"><div class="card-body">
     <h2 class="h6">[[ form.id ? 'Edit ingredient' : 'New ingredient' ]]</h2>
@@ -39,7 +39,7 @@
       <td>[[ ui.date(r.last_movement_date) ]]</td><td><button class="btn btn-sm btn-outline-secondary" type="button" @click="edit(r)">Edit</button></td></tr></tbody></table></div>
   <div class="card mt-3"><div class="card-body">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
-      <div><h2 class="h6 mb-0">Data check</h2><div class="small text-muted">Checks that the stored stock agrees with the recorded movements. It changes nothing.</div></div>
+      <div><h2 class="h6 mb-0">Data check</h2><div class="small text-muted">Stored stock vs recorded movements. Read-only.</div></div>
       <button class="btn btn-outline-primary" type="button" :disabled="checking" @click="runCheck">Run data check</button></div>
     <div v-if="check" class="mt-3">
       <div class="alert py-2" :class="check.consistent ? 'alert-success' : 'alert-danger'" role="status">
@@ -56,7 +56,7 @@
           <tbody><tr v-for="b in check.expired_with_stock" :key="b.id"><td>[[ b.ingredient ]]</td><td>[[ b.batch_no ]]</td><td class="text-end">[[ ui.qty(b.qty_remaining, b.unit) ]]</td><td>[[ ui.date(b.expiry_date) ]]</td></tr></tbody></table></div>
     </div>
   </div></div>
-  <div class="small text-muted mt-3">Usable excludes expired stock. When On hand is higher, the difference is expired stock that still needs a wastage record.</div>
+  <div class="small text-muted mt-3">Usable excludes expired stock; any gap to On hand is expired stock awaiting a wastage record.</div>
 </div>
 {% endblock %}
 {% block scripts %}<script src="{{ url_for('static', filename='js/pages/inventory_stock.js') }}"></script>{% endblock %}

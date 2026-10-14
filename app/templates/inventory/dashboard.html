@@ -3,7 +3,7 @@
 {% block content %}
 <div id="app" v-cloak>
   <div class="dash-head">
-    <div><h1 class="h4 m-0">Inventory</h1><p class="dash-sub">[[ ui.date(today) ]] · the forecast and the recipes say which ingredients will be needed; you keep the stock, issue it to the kitchen and reorder in time</p></div>
+    <div><h1 class="h4 m-0">Inventory</h1><p class="dash-sub">[[ ui.date(today) ]]</p></div>
     <div class="dash-actions">
       <a class="btn btn-primary btn-lg-touch" href="/inventory/stock?tab=record"><sr-icon name="swap" :size="16"></sr-icon> Record stock</a>
       <a class="btn btn-outline-primary btn-lg-touch" href="/inventory/reorder"><sr-icon name="refresh" :size="16"></sr-icon> Reorder</a>
@@ -20,11 +20,11 @@
           <div class="card-head"><h2 class="h6">Reorder now</h2><a href="/inventory/reorder">All suggestions</a></div>
           <sr-empty v-if="!d.reorder.length" message="Nothing to reorder." icon="check"></sr-empty>
           <div v-else class="table-responsive"><table class="table table-sm align-middle mb-0"><thead><tr><th>Ingredient</th><th class="text-end">Order</th><th>Supplier</th></tr></thead>
-            <tbody><tr v-for="r in d.reorder" :key="r.ingredient_id"><td class="fw-semibold">[[ r.name ]]</td><td class="text-end">[[ ui.qty(r.suggested_qty, r.unit) ]]</td><td>[[ r.supplier ]] <span class="text-muted small">· arrives in [[ r.lead_time_days ]] [[ r.lead_time_days === 1 ? 'day' : 'days' ]]</span></td></tr></tbody></table></div>
+            <tbody><tr v-for="r in d.reorder" :key="r.ingredient_id"><td class="fw-semibold">[[ r.name ]]</td><td class="text-end">[[ ui.qty(r.suggested_qty, r.unit) ]]</td><td>[[ r.supplier ]] <span class="text-muted small">· [[ r.lead_time_days ]] d lead time</span></td></tr></tbody></table></div>
         </div></div>
         <div class="card"><div class="card-body">
           <div class="card-head"><h2 class="h6">Stock-out risk, next 7 days</h2><a href="/inventory/reorder?tab=demand">Ingredient demand</a></div>
-          <sr-empty v-if="!risks.length" message="Usable stock covers the next 7 days of forecast demand." icon="check"></sr-empty>
+          <sr-empty v-if="!risks.length" message="Stock covers the next 7 days." icon="check"></sr-empty>
           <div v-else>
             <div v-for="r in risks" :key="r.name" class="risk-row">
               <div class="risk-top"><span class="fw-semibold">[[ r.name ]]</span><span class="text-muted">have [[ ui.qty(r.usable, r.unit) ]] of [[ ui.qty(r.need, r.unit) ]] needed</span></div>

@@ -3,7 +3,7 @@
 {% block panel %}
 {% set roles = [('admin', 'Administrator'), ('kitchen', 'Food Production'), ('inventory', 'Inventory & Procurement')] %}
 <h2 class="h5 mb-1">Role access</h2>
-<p class="text-muted small">Every user has one of three fixed roles; change a user's role on the <a href="/admin/users?tab=users">Users</a> tab. This table is read from the access rules the server applies, and the server checks the role again on every page and every data request, so a hidden menu link is never the only protection.</p>
+<p class="text-muted small">Read from the server's access rules, which are checked on every page and data request. Change a role on <a href="/admin/users?tab=users">Users</a>.</p>
 <div class="card mb-3"><div class="card-body">
   <h3 class="h6">Pages each role can open</h3>
   <ul class="role-list d-sm-none">
@@ -37,6 +37,6 @@
       {% endfor %}</tr>
     {% endfor %}
     </tbody></table></div>
-  <p class="small text-muted mb-0">Alert types can be switched on or off on the <a href="/admin/users?tab=settings">Settings &amp; alerts</a> tab.</p>
+  <p class="small text-muted mb-0">Switch alert types on or off in <a href="/admin/users?tab=settings">Settings &amp; alerts</a>.</p>
 </div></div>
 {% endblock %}

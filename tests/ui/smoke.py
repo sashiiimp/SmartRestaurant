@@ -123,7 +123,7 @@ def kitchen(browser):
     assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth + 1"), "horizontal scroll at 390px"
     visit(page, "/kitchen", "k_dashboard", wait=".wf-step")
     assert page.locator(".wf .wf-step").count() == 6, "kitchen workflow strip"
-    page.wait_for_selector(".wf-step:has-text('requests open'), .wf-step:has-text('No open requests')", timeout=8000)
+    page.wait_for_selector(".wf-step:has-text(' open')", timeout=8000)
     visit(page, "/kitchen/requirements", "k_requirements", wait="table")
     if page.locator("tr.table-danger").count():                          # a shortage depends on the demo date
         page.locator("tr.table-danger").first.get_by_role("link", name="Request stock").click()

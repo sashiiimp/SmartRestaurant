@@ -11,7 +11,7 @@
       <button class="btn btn-primary" type="button" @click="startNew">New purchase order</button>
     </div>
   </div>
-  <p class="page-intro">Orders are internal records. "Sent" is marked by hand; nothing is transmitted to the supplier. Receiving stock creates the batches and stock-in records and lowers "on order" on the Reorder tab.</p>
+  <p class="page-intro">Internal records; nothing is sent to the supplier. Receiving creates batches and stock-in.</p>
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
 
   <div v-if="form" class="card mb-3"><div class="card-body">
@@ -64,7 +64,7 @@
         <div class="col-12"><sr-field-error :errors="recvErrors" :name="'lines[' + n + ']'"></sr-field-error></div></div>
       <sr-field-error :errors="recvErrors" name="lines"></sr-field-error>
       <div class="d-flex gap-2"><button class="btn btn-primary" type="button" :disabled="busy" @click="receive">Record receipt</button><button class="btn btn-outline-secondary" type="button" @click="recv = null">Cancel</button></div>
-      <div class="form-text">Leave the quantity empty (or 0) for a line that has not arrived.</div>
+      <div class="form-text">Empty or 0: not arrived.</div>
     </div>
   </div></div>
 

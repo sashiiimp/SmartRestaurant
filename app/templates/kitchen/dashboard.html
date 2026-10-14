@@ -3,7 +3,7 @@
 {% block content %}
 <div id="app" v-cloak>
   <div class="dash-head">
-    <div><h1 class="h4 m-0">[[ isToday ? "Today's kitchen" : 'Kitchen' ]]</h1><p class="dash-sub">[[ ui.date(date) ]] · the forecast says how much will sell; you decide how much to prepare, check the ingredients, then record what was served and wasted</p></div>
+    <div><h1 class="h4 m-0">[[ isToday ? "Today's kitchen" : 'Kitchen' ]]</h1><p class="dash-sub">[[ ui.date(date) ]]</p></div>
     <div class="dash-actions">
       <sr-date-nav v-model="date" @change="load"></sr-date-nav>
       <a class="btn btn-primary btn-lg-touch" href="/kitchen/prep"><sr-icon name="clipboard" :size="16"></sr-icon> Plan &amp; prepare</a>
@@ -17,7 +17,7 @@
     <sr-workflow :steps="chain" label="SmartRestaurant workflow, kitchen view"></sr-workflow>
     <div class="row g-3">
       <div class="col-12 col-xl-8"><div class="card"><div class="card-body">
-        <div class="card-head"><h2 class="h6">[[ isToday ? "Today's plan" : 'Plan for ' + ui.date(date) ]]</h2><a href="/kitchen/prep">Accept or change in Plan &amp; prepare</a></div>
+        <div class="card-head"><h2 class="h6">[[ isToday ? "Today's plan" : 'Plan for ' + ui.date(date) ]]</h2><a href="/kitchen/prep">Plan &amp; prepare</a></div>
         <sr-empty v-if="!d.plan.length" message="No forecast for this date yet." icon="trending"></sr-empty>
         <div v-else class="table-responsive"><table class="table table-sm align-middle mb-0 plan-table">
           <thead><tr><th>Item</th><th class="text-end d-none d-sm-table-cell">Forecast</th><th class="text-end">To prepare</th><th class="col-prepared">Prepared</th><th class="d-none d-sm-table-cell">Status</th></tr></thead>
@@ -27,7 +27,7 @@
             <td class="text-end fw-semibold">[[ toPrepare(r) ]]</td>
             <td><div class="prep-cell"><div class="progress progress-thin" role="progressbar" :aria-label="'Prepared for ' + r.name" :aria-valuenow="r.prepared" aria-valuemin="0" :aria-valuemax="toPrepare(r)"><div class="progress-bar" :class="r.prep_status === 'done' ? 'bg-success' : ''" :style="{ width: pct(r) + '%' }"></div></div><span>[[ r.prepared ]]</span></div></td>
             <td class="d-none d-sm-table-cell"><sr-status-badge :status="r.prep_status || r.status"></sr-status-badge></td></tr></tbody></table></div>
-        <p class="table-note">"To prepare" is the quantity you accepted or set; until then it shows the recommendation: the forecast plus the safety buffer (or the confirmed pre-orders, if higher), rounded up to a whole batch.</p>
+        <p class="table-note">To prepare = forecast + safety buffer (or confirmed pre-orders, if higher), rounded up to a whole batch, until you accept or change it.</p>
       </div></div></div>
       <div class="col-12 col-xl-4">
         <div class="card mb-3"><div class="card-body">

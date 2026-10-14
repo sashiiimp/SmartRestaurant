@@ -3,16 +3,14 @@
 {% block content %}
 <div id="app" v-cloak>
   <h1 class="h4 mb-1">Reports &amp; Analytics</h1>
-  <p class="page-intro">Recorded sales, forecasts, stock and waste. Choose a group, then a report; most reports can be downloaded as CSV.</p>
   <div class="sr-tabs" role="tablist" aria-label="Report groups">
     <button v-for="g in groups" :key="g[0]" type="button" role="tab" class="sr-tab" :class="{ active: group[0] === g[0] }" :aria-selected="group[0] === g[0] ? 'true' : 'false'" @click="setTab(g[2][0])">[[ g[1] ]]</button>
   </div>
-  <p class="group-note">[[ group[3] ]]</p>
   <ul v-if="subTabs.length > 1" class="nav nav-tabs mb-3 flex-wrap" aria-label="Reports in this group"><li class="nav-item" v-for="t in subTabs" :key="t[0]"><button class="nav-link" type="button" :class="{ active: tab === t[0] }" :aria-current="tab === t[0] ? 'true' : null" @click="setTab(t[0])">[[ t[1] ]]</button></li></ul>
   <div class="card mb-3" v-if="!snapshot"><div class="card-body py-3">
     <div class="row g-2 align-items-end" v-if="tab === 'demand'">
       <div class="col-6 col-md-3"><label class="form-label" for="d-start">First day of the 7-day window</label><input id="d-start" type="date" class="form-control" v-model="demandStart" @change="load"></div>
-      <div class="col-12 col-md-6 small text-muted">Forecast portions per menu item for 7 days, from the latest forecast run that is not later than today.</div>
+      <div class="col-12 col-md-6 small text-muted">From the latest forecast run up to today.</div>
     </div>
     <div class="row g-2 align-items-end" v-else>
       <div class="col-6 col-md-2"><label class="form-label" for="m-from">From</label><input id="m-from" type="date" class="form-control" v-model="from" @change="load"></div>
@@ -40,12 +38,12 @@
             <td class="text-end fw-semibold">[[ ui.num(t.total, 0) ]]<span v-if="t.partial && demandDaysCovered === 7" title="Some days have no forecast for this item"> (partial)</span></td></tr></tbody>
           <tfoot><tr class="fw-semibold"><td>All items</td><td v-for="(v, i) in demandDayTotals" :key="i" class="text-end"><span v-if="v !== null">[[ ui.num(v, 0) ]]</span><span v-else class="text-muted">-</span></td><td class="text-end">[[ ui.num(demandGrand, 0) ]]</td></tr></tfoot></table></div>
         <div v-if="demandDaysCovered < 7" class="small text-warning-emphasis mb-1">Partial total: it covers [[ demandDaysCovered ]] of the 7 days, so it is not a full 7-day figure.</div>
-        <div class="small text-muted mb-3">Portions per day. * simple estimate (same day last week). P = Poya day. Weather is estimated from the seasonal average unless it was entered.</div>
+        <div class="small text-muted mb-3">Portions per day. * simple estimate (same day last week). P = Poya day. Weather is the seasonal average unless entered.</div>
         <div class="card"><div class="card-body"><sr-line-chart :labels="demandDates.map(ui.date)" :datasets="demandChart" y-title="Portions per day" title="Forecast, all items"></sr-line-chart></div></div>
       </template>
     </div>
     <div v-if="tab === 'analytics' && an">
-      <div class="small text-muted mb-3">Period [[ ui.date(an.from) ]] to [[ ui.date(an.to) ]] &middot; [[ an.days_with_sales ]] days with sales &middot; Data source: [[ an.data_source ]]. All figures are plain averages and ratios of the recorded data.</div>
+      <div class="small text-muted mb-3">Period [[ ui.date(an.from) ]] to [[ ui.date(an.to) ]] &middot; [[ an.days_with_sales ]] days with sales &middot; Data source: [[ an.data_source ]]. Plain averages and ratios of recorded data.</div>
       <sr-empty v-if="!an.days_with_sales" message="No sales in this period."></sr-empty>
       <template v-else>
       <div class="row g-3 mb-3">
@@ -57,7 +55,7 @@
           <sr-bar-chart all-labels :labels="an.calendar.concat(an.promotion).map(c => shortGroup[c.group] || c.group)" :datasets="[{ label: 'Average portions per day', data: an.calendar.map(c => c.average).concat(an.promotion.map(c => c.average)) }]" y-title="Portions per day" :height="240"></sr-bar-chart>
           <table class="table table-sm mt-2 mb-1"><thead><tr><th>Kind of day</th><th class="text-end">Days</th><th class="text-end">Average</th></tr></thead>
             <tbody><tr v-for="c in an.calendar.concat(an.promotion)" :key="c.group"><td>[[ c.group ]] <span v-if="c.days < an.min_days_for_comparison" class="badge text-bg-light" title="Too few days to compare reliably">few days</span></td><td class="text-end">[[ c.days ]]</td><td class="text-end">[[ c.average === null ? '' : ui.num(c.average, 1) ]]</td></tr></tbody></table>
-          <div class="small text-muted">A day can count in several groups (for example a Poya day during a promotion). The difference between groups describes the data; it does not prove that the holiday or promotion caused it.</div></div></div></div>
+          <div class="small text-muted">A day can be in several groups. Differences describe the data; they do not prove cause.</div></div></div></div>
       </div>
       <div class="row g-3">
         <div class="col-12 col-xl-6"><div class="card h-100"><div class="card-body"><h2 class="h6">Forecast error over time (WAPE, % of the day's sales)</h2>
@@ -70,7 +68,7 @@
       </template>
     </div>
     <div v-if="tab === 'stock'">
-      <p class="text-muted small">Stock now. The figures come from the same calculations as the Inventory &amp; Procurement dashboard.</p>
+      <p class="text-muted small">Stock now, same figures as the inventory dashboard.</p>
       <div class="row g-3 mb-3">
         <div class="col-6 col-md-3"><sr-stat-tile label="Ingredients" icon="package" :value="levels.length"></sr-stat-tile></div>
         <div class="col-6 col-md-3"><sr-stat-tile label="Stock OK" icon="check" tone="success" :value="counts.ok"></sr-stat-tile></div>
@@ -85,11 +83,11 @@
           <td class="text-end"><span :class="r.on_hand !== r.usable ? 'text-danger' : ''" :title="r.on_hand !== r.usable ? 'Includes expired stock' : ''">[[ ui.qty(r.on_hand, r.unit) ]]</span></td>
           <td class="text-end">[[ ui.num(r.min_stock, 3) ]]</td><td class="text-end">[[ ui.num(r.reorder_level, 3) ]]</td>
           <td><sr-status-badge :status="r.is_critical && r.status !== 'out' ? 'critical' : r.status"></sr-status-badge></td><td>[[ ui.date(r.last_movement_date) ]]</td></tr></tbody></table></div>
-      <div class="small text-muted">Usable excludes expired stock. When On hand is higher, the difference is expired stock that still needs a wastage record.</div>
+      <div class="small text-muted">Usable excludes expired stock; any gap to On hand is expired stock awaiting a wastage record.</div>
     </div>
 
     <div v-if="tab === 'ingredients' && ingDemand">
-      <p class="text-muted small">Forecast portions x recipes, using the recommended (or accepted) preparation quantities, for the next 7 days.</p>
+      <p class="text-muted small">Next 7 days: forecast portions x recipes, from the recommended (or accepted) prep quantities.</p>
       <sr-empty v-if="!ingDemand.ingredients.length" message="No ingredient forecast yet. The forecast may not have been run."></sr-empty>
       <div v-else class="table-responsive"><table class="table table-sm align-middle">
         <thead><tr><th>Ingredient</th><th class="text-end">Usable now</th><th v-for="d in ingDays" :key="d" class="text-end">[[ ui.date(d) ]]</th><th class="text-end">7-day need</th><th class="text-end">Days of cover</th><th>Runs short</th></tr></thead>
@@ -115,7 +113,7 @@
       <div class="card mb-3"><div class="card-body"><sr-line-chart :labels="trend.rows.map(r => ui.date(r.date))" :datasets="trendData" :y-title="'Closing stock (' + trend.unit + ')'" title="Closing stock"></sr-line-chart></div></div>
       <div class="table-responsive" style="max-height: 24rem; overflow: auto"><table class="table table-sm"><thead><tr><th>Date</th><th class="text-end">Stock in</th><th class="text-end">Stock out</th><th class="text-end">Wastage</th><th class="text-end">Adjustment</th><th class="text-end">Closing</th></tr></thead>
         <tbody><tr v-for="r in trend.rows" :key="r.date"><td>[[ ui.date(r.date) ]]</td><td class="text-end">[[ ui.num(r.stock_in, 3) ]]</td><td class="text-end">[[ ui.num(r.stock_out, 3) ]]</td><td class="text-end">[[ ui.num(r.wastage, 3) ]]</td><td class="text-end">[[ ui.num(r.adjustment, 3) ]]</td><td class="text-end fw-semibold">[[ ui.num(r.closing, 3) ]]</td></tr></tbody></table></div>
-      <div class="small text-muted mt-2">Rebuilt from the recorded stock movements. Stock in and adjustments up are positive; stock out, wastage and adjustments down are negative. The last closing figure equals the stock on hand.</div>
+      <div class="small text-muted mt-2">Rebuilt from stock movements; the last closing figure equals stock on hand.</div>
     </div>
     <div v-if="tab === 'movements' && moves">
       <div class="small text-muted mb-2">[[ moves.meta.total ]] movements in this period<span v-if="moves.meta.total > moves.meta.shown">; the latest [[ moves.meta.shown ]] are shown, the CSV has all of them</span>.</div>
@@ -132,7 +130,7 @@
         <tfoot><tr class="fw-semibold"><td>Total</td><td class="text-end">[[ ui.num(sales.totals.quantity, 0) ]]</td><td class="text-end">[[ ui.money(sales.totals.revenue) ]]</td></tr></tfoot></table></div></div>
         <div class="col-12 col-lg-5"><div class="card"><div class="card-body"><h2 class="h6">Top items</h2><ol><li v-for="i in sales.top_items" :key="i.item">[[ i.item ]]: [[ ui.num(i.quantity, 0) ]] ([[ ui.money(i.revenue) ]])</li></ol>
           <h2 class="h6" v-if="sales.bottom_items.length">Lowest items</h2><ol v-if="sales.bottom_items.length"><li v-for="i in sales.bottom_items" :key="i.item">[[ i.item ]]: [[ ui.num(i.quantity, 0) ]]</li></ol></div></div></div></div>
-      <div class="small text-muted mt-2">Revenue uses the price stored on each sales record. Data source: [[ sales.data_source ]].</div>
+      <div class="small text-muted mt-2">Revenue uses the price on each sales record. Source: [[ sales.data_source ]].</div>
     </div>
     <div v-if="tab === 'forecast' && acc">
       <sr-empty v-if="!acc.overall" :message="acc.note"></sr-empty>
@@ -141,7 +139,7 @@
         <div class="card mb-3"><div class="card-body"><sr-line-chart :labels="accLabels" :datasets="accData" y-title="Portions per day" title="Forecast vs actual"></sr-line-chart></div></div>
         <div class="table-responsive mt-3"><table class="table table-sm"><thead><tr><th>Item</th><th class="text-end">MAE</th><th class="text-end">RMSE</th><th class="text-end">MAPE %</th><th class="text-end">WAPE %</th><th class="text-end">Bias</th></tr></thead>
           <tbody><tr v-for="r in acc.per_item" :key="r.menu_item_id"><td>[[ r.item ]]</td><td class="text-end">[[ ui.num(r.mae, 2) ]]</td><td class="text-end">[[ ui.num(r.rmse, 2) ]]</td><td class="text-end">[[ ui.num(r.mape, 1) ]]</td><td class="text-end">[[ ui.num(r.wape, 1) ]]</td><td class="text-end">[[ ui.num(r.bias, 2) ]]</td></tr></tbody></table></div>
-        <div class="small text-muted">Only forecasts made on or before the day count. Backfilled forecasts ([[ (acc.run_types || []).join(', ') ]]) use the copy of the model fitted before the 56-day hold-out and estimated weather, so they are out-of-sample for the hold-out days; days before that were part of training. Synthetic data.</div>
+        <div class="small text-muted">Only forecasts made on or before the day count. Backfilled runs ([[ (acc.run_types || []).join(', ') ]]) use the model fitted before the 56-day hold-out, so hold-out days are out-of-sample.</div>
       </template>
     </div>
     <div v-if="tab === 'waste' && waste">
@@ -151,7 +149,7 @@
       <div class="row g-3 mt-1"><div class="col-12 col-md-6"><h3 class="h6">Top 5 wasted items</h3><table class="table table-sm"><thead><tr><th>Item</th><th class="text-end">Portions</th><th class="text-end">Value</th></tr></thead><tbody><tr v-for="i in waste.food.top_items" :key="i.item"><td>[[ i.item ]]</td><td class="text-end">[[ i.quantity ]]</td><td class="text-end">[[ ui.money(i.value) ]]</td></tr></tbody></table></div>
         <div class="col-12 col-md-6"><h3 class="h6">By reason</h3><table class="table table-sm"><tbody><tr v-for="r in waste.food.by_reason" :key="r.reason"><td>[[ r.reason ]]</td><td class="text-end">[[ r.quantity ]]</td></tr></tbody></table></div></div>
       <h2 class="h6 mt-3">Waste by menu item</h2>
-      <p class="small text-muted mb-2">Waste rate = wasted / prepared x 100. Planned counts only days where the kitchen accepted or overrode a plan. Suggestions are advice; they never change the forecast.</p>
+      <p class="small text-muted mb-2">Waste rate = wasted / prepared x 100. Planned counts only days with an accepted or overridden plan.</p>
       <sr-empty v-if="!waste.food.by_item.length" message="No production, sales or waste recorded in this period."></sr-empty>
       <div v-else class="table-responsive mb-3"><table class="table table-sm align-middle">
         <thead><tr><th>Item</th><th class="text-end">Planned</th><th class="text-end">Prepared</th><th class="text-end">Sold</th><th class="text-end">Wasted</th><th class="text-end">Waste rate</th><th>Suggestion</th></tr></thead>
@@ -169,7 +167,7 @@
         <table class="table table-sm" style="max-width: 40rem"><thead><tr><th>Item</th><th class="text-end">Staff meals</th><th class="text-end">Complimentary</th><th class="text-end">Samples</th><th class="text-end">Other</th><th class="text-end">Total</th></tr></thead>
           <tbody><tr v-for="i in usage.by_item" :key="i.item"><td>[[ i.item ]]</td><td class="text-end">[[ i.staff_meal ]]</td><td class="text-end">[[ i.complimentary ]]</td><td class="text-end">[[ i.sample ]]</td><td class="text-end">[[ i.other ]]</td><td class="text-end">[[ i.total ]]</td></tr></tbody></table>
       </template>
-      <div class="small text-muted">Food waste, ingredient wastage and other food use are separate records. Data source: [[ waste.data_source ]].</div>
+      <div class="small text-muted">Food waste, ingredient wastage and other use are separate records. Source: [[ waste.data_source ]].</div>
     </div>
   </template>
 </div>
