@@ -6,7 +6,7 @@
 /* ---- 1 tokens -------------------------------------------------------------------------------------------- */
 :root {
   --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
-  --bg: #f3f5f9; --surface: #fff; --surface-2: #f8fafc; --border: #e3e8ef; --border-strong: #cdd5e0;
+  --bg: #f5f6f7; --surface: #fff; --surface-2: #f8fafc; --border: #e4e7eb; --border-strong: #cfd4dc;
   --text: #182230; --text-2: #475467; --muted: #667085;
   --radius: 14px; --radius-sm: 10px;
   --shadow-sm: 0 1px 2px rgba(16, 24, 40, .05);
@@ -17,18 +17,13 @@
   --info: #175cd3; --info-bg: #eaf1fe; --info-line: #b9d0f8;
   --neutral: #475467; --neutral-bg: #eef1f5; --neutral-line: #d5dbe4;
   --sidebar-w: 264px; --topbar-h: 60px;
-  /* role accent: Administrator (indigo) is the default */
-  --accent: #4338ca; --accent-strong: #3730a3; --accent-soft: #eceeff; --accent-rgb: 67, 56, 202;
-  --nav-bg: #0f1a33; --nav-bg-2: #172547; --nav-text: #b4c0d6; --nav-line: rgba(255, 255, 255, .08);
+  /* one accent for every role (green); each role keeps its own colour only on the role chip and avatar (--role) */
+  --accent: #047857; --accent-strong: #065f46; --accent-soft: #e8f5ef; --accent-rgb: 4, 120, 87;
+  --role: #047857; --role-soft: #e8f5ef;
+  --nav-bg: #fff; --nav-bg-2: #fff; --nav-text: #475467; --nav-line: var(--border);
 }
-body[data-role="kitchen"] {
-  --accent: #c2410c; --accent-strong: #9a3412; --accent-soft: #fff0e4; --accent-rgb: 194, 65, 12;
-  --nav-bg: #261a13; --nav-bg-2: #34241a; --nav-text: #d6c4b6;
-}
-body[data-role="inventory"] {
-  --accent: #0f766e; --accent-strong: #115e59; --accent-soft: #e2f4f1; --accent-rgb: 15, 118, 110;
-  --nav-bg: #0b2527; --nav-bg-2: #12363a; --nav-text: #b0cdcb;
-}
+body[data-role="kitchen"] { --role: #b45309; --role-soft: #fdf1e3; }
+body[data-role="inventory"] { --role: #0e7490; --role-soft: #e3f3f7; }
 
 /* ---- 2 base ---------------------------------------------------------------------------------------------- */
 body {
@@ -233,9 +228,16 @@ input[type="file"]::file-selector-button { border: 0; background: var(--accent-s
 .nav-tabs .nav-link { border: 0; border-bottom: 2px solid transparent; border-radius: 0; margin-bottom: -1px; color: var(--muted); font-weight: 600; padding: .6rem 1rem; }
 .nav-tabs .nav-link:hover { color: var(--text); border-bottom-color: var(--border-strong); }
 .nav-tabs .nav-link.active { color: var(--accent); background: transparent; border-bottom-color: var(--accent); }
-.nav-pills { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 4px; gap: 2px; display: inline-flex; }
-.nav-pills .nav-link { border-radius: 9px; color: var(--text-2); font-weight: 600; font-size: .88rem; padding: .4rem .95rem; }
-.nav-pills .nav-link.active { background: var(--surface); color: var(--accent); box-shadow: var(--shadow); }
+/* Tabs, one standard (Oct 2026): the main sections of a page are a segmented bar (.hub-tabs, .sr-tabs, .nav-pills) with the
+   selected section filled in the accent colour; sub-sections inside one of them use the underlined .nav-tabs above. */
+.nav-pills, .sr-tabs, .hub-tabs { display: inline-flex; flex-wrap: wrap; gap: .25rem; padding: .25rem; max-width: 100%;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-sm); }
+.nav-pills .nav-link, .sr-tab, .hub-tab { border: 0; background: transparent; border-radius: 9px; padding: .45rem .95rem; color: var(--text-2);
+  font-weight: 600; font-size: .9rem; line-height: 1.35; white-space: nowrap; text-decoration: none; }
+.nav-pills .nav-link:hover, .sr-tab:hover, .hub-tab:hover { color: var(--text); background: var(--surface-2); }
+.nav-pills .nav-link.active, .sr-tab.active, .hub-tab.active { color: #fff; background: var(--accent); box-shadow: 0 1px 2px rgba(16, 24, 40, .15); }
+.sr-tab:focus-visible, .hub-tab:focus-visible, .nav-pills .nav-link:focus-visible { outline: 3px solid rgba(var(--accent-rgb), .35); outline-offset: 1px; }
+.nav-tabs + *, .sr-tabs + * { margin-top: 0; }
 .btn-group > .btn-outline-secondary.active { background: var(--accent); border-color: var(--accent); color: #fff; }
 .progress { --bs-progress-bg: var(--neutral-bg); --bs-progress-border-radius: 999px; }
 .toast { border-radius: 12px; box-shadow: var(--shadow); }
@@ -378,11 +380,7 @@ input[type="file"]::file-selector-button { border: 0; background: var(--accent-s
 .calc[open] { padding: .55rem .7rem; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; }
 .calc[open] summary { margin-bottom: .4rem; }
 /* tabs (served & waste) */
-.sr-tabs { display: flex; gap: .25rem; padding: .25rem; margin-bottom: 1rem; background: var(--neutral-bg); border-radius: 12px; overflow-x: auto; width: max-content; max-width: 100%; }
-.sr-tab { flex: none; border: 0; background: transparent; padding: .5rem .95rem; border-radius: 9px; font-weight: 600; font-size: .9rem; color: var(--text-2); white-space: nowrap; }
-.sr-tab:hover { color: var(--text); background: rgba(255, 255, 255, .6); }
-.sr-tab.active { background: var(--surface); color: var(--accent-strong); box-shadow: var(--shadow); }
-.sr-tab:focus-visible { outline: 3px solid rgba(var(--accent-rgb), .35); outline-offset: 1px; }
+.sr-tabs { margin-bottom: 1rem; }
 .tab-panel { max-width: 920px; }
 .tab-narrow { max-width: 560px; }
 @media (max-width: 575.98px) {
@@ -644,32 +642,27 @@ input[type="file"]::file-selector-button { border: 0; background: var(--accent-s
 }
 
 /* ---- 12 administrator theme and dashboard (Oct 2026) ------------------------------------------------------- */
-/* Administrator: light sidebar, neutral grey canvas, green accent. Kitchen and inventory keep their own colours. */
-body[data-role="admin"] {
-  --bg: #f5f6f7; --border: #e4e7eb; --border-strong: #cfd4dc;
-  --accent: #047857; --accent-strong: #065f46; --accent-soft: #e8f5ef; --accent-rgb: 4, 120, 87;
-  --nav-bg: #fff; --nav-bg-2: #fff; --nav-text: #475467; --nav-line: var(--border);
-}
-body[data-role="admin"] .sidebar { background: var(--surface) !important; border-right: 1px solid var(--border); }
-body[data-role="admin"] .brand, body[data-role="admin"] .brand:hover { color: var(--text); }
-body[data-role="admin"] .brand-mark { background: var(--accent); box-shadow: none; }
-body[data-role="admin"] .brand-text small { color: var(--muted); opacity: 1; }
-body[data-role="admin"] .role-chip { color: var(--accent-strong); background: var(--accent-soft); border-color: rgba(var(--accent-rgb), .18); }
-body[data-role="admin"] .role-dot { filter: none; box-shadow: 0 0 0 3px rgba(var(--accent-rgb), .16); }
-body[data-role="admin"] .side-heading { color: var(--muted); opacity: 1; }
-body[data-role="admin"] .side-link .sr-i { color: var(--muted); }
-body[data-role="admin"] .side-link:hover { background: var(--surface-2); color: var(--text); }
-body[data-role="admin"] .side-link.active { background: var(--accent-soft); color: var(--accent-strong); }
-body[data-role="admin"] .side-link.active .sr-i { color: var(--accent); }
-body[data-role="admin"] .side-link.active::before { filter: none; background: var(--accent); }
-body[data-role="admin"] .user-meta strong { color: var(--text); }
-body[data-role="admin"] .user-meta small { color: var(--muted); opacity: 1; }
-body[data-role="admin"] .avatar { background: var(--accent); border-color: var(--accent-soft); }
-body[data-role="admin"] .btn-logout { background: var(--surface); border-color: var(--border-strong); color: var(--text-2); }
-body[data-role="admin"] .btn-logout:hover { background: var(--surface-2); border-color: var(--border-strong); color: var(--text); }
-body[data-role="admin"] .sidebar .btn-close-white { filter: none; }
-body[data-role="admin"] .topbar { background: var(--surface); backdrop-filter: none; }
-body[data-role="admin"] .topbar::after { display: none; }
+/* Every role (since 14 Oct 2026): light sidebar, neutral grey canvas, green accent; the role colour marks the role chip and avatar. */
+body[data-role] .sidebar { background: var(--surface) !important; border-right: 1px solid var(--border); }
+body[data-role] .brand, body[data-role] .brand:hover { color: var(--text); }
+body[data-role] .brand-mark { background: var(--accent); box-shadow: none; color: #fff; }
+body[data-role] .brand-text small { color: var(--muted); opacity: 1; }
+body[data-role] .role-chip { color: var(--role); background: var(--role-soft); border-color: transparent; }
+body[data-role] .role-dot { filter: none; background: var(--role); box-shadow: 0 0 0 3px var(--role-soft); }
+body[data-role] .side-heading { color: var(--muted); opacity: 1; }
+body[data-role] .side-link .sr-i { color: var(--muted); }
+body[data-role] .side-link:hover { background: var(--surface-2); color: var(--text); }
+body[data-role] .side-link.active { background: var(--accent-soft); color: var(--accent-strong); }
+body[data-role] .side-link.active .sr-i { color: var(--accent); }
+body[data-role] .side-link.active::before { filter: none; background: var(--accent); }
+body[data-role] .user-meta strong { color: var(--text); }
+body[data-role] .user-meta small { color: var(--muted); opacity: 1; }
+body[data-role] .avatar { background: var(--role); border-color: var(--role-soft); }
+body[data-role] .btn-logout { background: var(--surface); border-color: var(--border-strong); color: var(--text-2); }
+body[data-role] .btn-logout:hover { background: var(--surface-2); border-color: var(--border-strong); color: var(--text); }
+body[data-role] .sidebar .btn-close-white { filter: none; }
+body[data-role] .topbar { background: var(--surface); backdrop-filter: none; }
+body[data-role] .topbar::after { display: none; }
 
 /* dashboard sections: notes, card subtitles, forecast footer, stock table, quick actions */
 .admin-dash .card-head { align-items: flex-start; }
@@ -732,15 +725,85 @@ body[data-role="admin"] .topbar::after { display: none; }
 /* ---- 13 merged pages (Oct 2026) ------------------------------------------------------------------------------ */
 /* A merged page shows its sections as a segmented control, so it does not look like the underlined tabs inside a section */
 .hub-head { margin-bottom: 1rem; }
-.hub-tabs { display: inline-flex; flex-wrap: wrap; gap: .25rem; padding: .25rem; background: var(--surface); border: 1px solid var(--border); border-radius: .6rem; max-width: 100%; }
-.hub-tab { padding: .4rem .9rem; border-radius: .45rem; color: var(--text-2); font-weight: 600; font-size: .9rem; text-decoration: none; white-space: nowrap; }
-.hub-tab:hover { color: var(--text); background: var(--surface-2); }
-.hub-tab.active { color: #fff; background: var(--accent); }
-.hub-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .role-table th { font-size: .8rem; }
 .role-yes { color: var(--accent); font-weight: 700; }
 .role-table td { position: relative; }   /* keeps the visually-hidden labels inside the scrolling table on phones */
 @media (max-width: 575.98px) {
-  .hub-tabs { display: flex; }
-  .hub-tab { flex: 1 1 auto; text-align: center; padding: .4rem .6rem; }
+  .hub-tabs, .sr-tabs:not(.sr-tabs-sm) { display: flex; }
+  .hub-tab, .sr-tabs:not(.sr-tabs-sm) .sr-tab { flex: 1 1 auto; text-align: center; padding: .4rem .6rem; }
+}
+
+/* ---- 14 final UI pass (14 Oct 2026): page intros, dashboard flow line, recommended actions, workflow steps ------- */
+.page-intro { margin: .15rem 0 1rem; max-width: 62rem; font-size: .88rem; color: var(--text-2); }
+.hub-head + #app > .page-intro:first-child { margin-top: 0; }
+.dash-section { margin: 1.4rem 0 .75rem; font-size: .78rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+.flow-line { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem .2rem; list-style: none; margin: -.35rem 0 1.1rem; padding: 0; font-size: .8rem; color: var(--text-2); }
+.flow-line li { display: inline-flex; align-items: center; gap: .2rem; padding: .18rem .6rem; border-radius: 999px; background: var(--surface); border: 1px solid var(--border); font-weight: 600; }
+.flow-line li + li::before { content: "\2192"; color: var(--muted); font-weight: 400; margin: 0 .35rem 0 -.45rem; transform: translateX(-.2rem); }
+.kpi-row .stat-tile { min-height: 100%; }
+.kpi-row .stat-hint { line-height: 1.35; }
+.fc-foot-row { grid-template-columns: minmax(0, 12rem) minmax(0, 1fr); align-items: start; }
+.rec-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .55rem; }
+.rec-list li { display: grid; grid-template-columns: 2rem minmax(0, 1fr); gap: .15rem .7rem; align-items: start; padding: .6rem .75rem; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.rec-icon { width: 2rem; height: 2rem; border-radius: 9px; display: grid; place-items: center; }
+.rec-text strong { display: block; font-size: .88rem; font-weight: 650; line-height: 1.3; }
+.rec-text small { display: block; font-size: .78rem; color: var(--text-2); line-height: 1.35; margin-top: .1rem; }
+.rec-link { grid-column: 2; font-size: .8rem; font-weight: 650; white-space: nowrap; text-decoration: none; justify-self: start; }
+.card-head .count-chips { flex-wrap: nowrap; flex: none; }
+.rec-danger .rec-icon { background: var(--danger-bg); color: var(--danger); }
+.rec-warning .rec-icon { background: var(--warning-bg); color: #b7791f; }
+.rec-info .rec-icon { background: var(--info-bg); color: var(--info); }
+.rec-success .rec-icon { background: var(--success-bg); color: var(--success); }
+/* numbered workflow (kitchen dashboard, forecasting): each step links to the page where it happens */
+.steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12.5rem), 1fr)); gap: .6rem; list-style: none; margin: 0 0 1.1rem; padding: 0; counter-reset: step; }
+.steps > li { counter-increment: step; }
+.step { position: relative; display: grid; grid-template-columns: 2rem minmax(0, 1fr); gap: .65rem; align-items: start; height: 100%; padding: .75rem .85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--text); text-decoration: none; box-shadow: var(--shadow-sm); }
+a.step:hover { border-color: rgba(var(--accent-rgb), .45); background: var(--accent-soft); color: var(--text); }
+.step::before { content: counter(step); width: 2rem; height: 2rem; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: .85rem; color: var(--accent-strong); background: var(--accent-soft); }
+.step.is-done::before { content: "\2713"; color: #fff; background: var(--success); }
+.step.is-current { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(var(--accent-rgb), .12); }
+.step strong { display: block; font-size: .9rem; font-weight: 650; line-height: 1.3; }
+.step small { display: block; font-size: .78rem; color: var(--text-2); line-height: 1.35; margin-top: .1rem; }
+.step.is-static { cursor: default; box-shadow: none; }
+@media (max-width: 575.98px) {
+  .fc-foot-row { grid-template-columns: 1fr; }
+  .flow-line { font-size: .74rem; }
+}
+/* role access on phones: one entry per page or alert type, with the roles as badges */
+.role-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .5rem; }
+.role-list li { display: grid; gap: .25rem; padding: .6rem .75rem; border: 1px solid var(--border); border-radius: 10px; }
+.role-list small { color: var(--muted); font-size: .78rem; }
+.role-who { display: flex; flex-wrap: wrap; gap: .3rem; }
+/* menu & recipes */
+.link-btn { padding: 0; border: 0; background: none; color: var(--text); font-weight: 600; text-align: left; }
+.link-btn:hover { color: var(--accent-strong); text-decoration: underline; }
+.catalog-table tr.row-muted td { color: var(--muted); }
+.table tbody tr.row-selected > * { background-color: var(--accent-soft); }
+.table tbody tr.row-selected > td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+.catalog-table tr.detail-row > td { background: var(--surface-2); padding: 0; }
+.recipe-panel { padding: 1rem 1.1rem 1.1rem; border-left: 3px solid var(--accent); }
+.recipe-table { max-width: 40rem; background: var(--surface); }
+.kv { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: .35rem 1rem; font-size: .9rem; }
+.kv dt { color: var(--muted); font-weight: 500; }
+.kv dd { margin: 0; font-weight: 600; }
+/* plan & prepare: comparison table on wide screens */
+.prep-table { min-width: 960px; }
+.prep-table .avail-btn { display: block; font-size: .76rem; font-weight: 600; text-decoration: none; margin-top: .15rem; }
+.prep-table > :not(caption) > * > * { padding: .7rem .75rem; vertical-align: middle; }
+.prep-table .pt-name strong { font-weight: 650; }
+.prep-table .pt-num { color: var(--text-2); font-variant-numeric: tabular-nums; }
+.prep-table .pt-rec { font-size: 1.25rem; font-weight: 750; color: var(--accent); font-variant-numeric: tabular-nums; }
+.prep-table .pt-prep { min-width: 13.5rem; }
+.prep-table .pt-add { width: 4.5rem; }
+.prep-table tr.row-accepted > td:first-child { box-shadow: inset 3px 0 0 var(--success); }
+.prep-table tr.row-overridden > td:first-child { box-shadow: inset 3px 0 0 #d9931a; }
+.prep-table tr.override-row > td { background: var(--surface-2); }
+.calc-inline { margin: .1rem 0 0; }
+.calc-inline summary { font-size: .74rem; margin-left: auto; }
+.calc-inline[open] { position: absolute; z-index: 3; width: 17rem; right: 0; text-align: left; box-shadow: var(--shadow); background: var(--surface); }
+.prep-table td { position: relative; }
+@media (max-width: 575.98px) {
+  /* sub-section tabs scroll inside their own bar on phones instead of wrapping into several rows */
+  .nav-tabs { flex-wrap: nowrap !important; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; }
+  .nav-tabs .nav-link { white-space: nowrap; padding: .55rem .8rem; }
 }

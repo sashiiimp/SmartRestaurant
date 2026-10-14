@@ -1,14 +1,20 @@
+const WIDE = '(min-width: 1200px)';
 SR.createApp({
   data() {
-    return { date: ui.todayIso(), plan: null, loading: true, error: null, state: {}, ui };
+    // wide screens get the comparison table, narrower ones the cards (only one is rendered, so ids stay unique)
+    return { date: ui.todayIso(), plan: null, loading: true, error: null, state: {}, wide: window.matchMedia(WIDE).matches, ui };
   },
   computed: {
     items() { return this.plan ? this.plan.items : []; },
     isPast() { return this.date < ui.todayIso(); },
     isFuture() { return this.date > ui.todayIso(); },
     anyWeatherEstimated() { return this.items.some(it => it.weather_estimated); },
+    withForecast() { return this.items.filter(it => it.status !== 'no_forecast').length; },
+    decided() { return this.items.filter(it => it.status === 'accepted' || it.status === 'overridden').length; },
+    totalRecommended() { return this.items.reduce((n, it) => n + (it.status === 'no_forecast' ? 0 : Number(it.recommended_qty) || 0), 0); },
+    totalPrepared() { return this.items.reduce((n, it) => n + (Number(it.prepared_so_far) || 0), 0); },
   },
-  async mounted() { await this.load(); },
+  async mounted() { window.matchMedia(WIDE).addEventListener('change', e => { this.wide = e.matches; }); await this.load(); },
   methods: {
     st(id) {
       if (!this.state[id]) this.state[id] = { overriding: false, qty: '', reason: '', add: '', busy: false, errors: {}, message: null };

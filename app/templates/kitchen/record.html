@@ -1,11 +1,12 @@
 {% extends "base.html" %}
-{% block title %}End of day - SmartRestaurant{% endblock %}
+{% block title %}Served & waste - SmartRestaurant{% endblock %}
 {% block content %}
 <div id="app" v-cloak>
   <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-    <h1 class="h4 m-0">Served and waste</h1>
+    <h1 class="h4 m-0">Served &amp; waste</h1>
     <sr-date-nav v-model="date" @change="load"></sr-date-nav>
   </div>
+  <p class="page-intro">After service, record what happened to the prepared food: portions served or sold, portions wasted (with a reason) and other use such as staff meals. Prepared portions are recorded on Plan &amp; prepare. <strong>Daily balance</strong> checks that everything adds up and compares expected and actual ingredient use.</p>
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
   <div class="sr-tabs" role="tablist" aria-label="End of day records" @keydown.right.prevent="moveTab(1)" @keydown.left.prevent="moveTab(-1)">
     <button v-for="t in tabs" :key="t.id" type="button" role="tab" class="sr-tab" :id="'tab-' + t.id" :aria-controls="'panel-' + t.id"

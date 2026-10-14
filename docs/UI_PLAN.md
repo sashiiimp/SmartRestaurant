@@ -218,7 +218,7 @@ read-only list of the existing alert rule).
 
 | Role | Menu (heading: pages) | Tabs of a merged page |
 |---|---|---|
-| Administrator | *Overview*: Dashboard, Reports, Forecasting. *Setup*: Menu & recipes, Administration | **Reports** (`/admin/monitor`) gained Stock levels, Ingredient demand and Batches and expiry from the old Inventory overview (its Recent movements tab was already covered by Stock movements). **Forecasting** (`/admin/models`): Models & runs, Import data. **Administration** (`/admin/users`): Users, Settings & alerts, Role access |
+| Administrator | *Overview*: Dashboard, Reports, Forecasting. *Setup*: Menu & recipes, Administration | **Reports** (`/admin/monitor`) gained Stock levels, Ingredient demand and Batches and expiry from the old Inventory overview (its Recent movements tab was already covered by Stock movements). **Forecasting** (`/admin/models`): Historical data, ML models, Forecast generation (since the final UI pass, section 12). **Administration** (`/admin/users`): Users, Settings & alerts, Role access |
 | Food Production | *Today*: Dashboard, Plan & prepare, Served & waste. *Supplies & orders*: Ingredients, Orders & pre-orders | **Plan & prepare** (`/kitchen/prep`): Prep plan, 7-day forecast. **Ingredients** (`/kitchen/requirements`): Needs & shortages, Stock requests |
 | Inventory & Procurement | *Today*: Dashboard, Kitchen requests. *Stock & buying*: Stock, Purchasing | **Stock** (`/inventory/stock`): Stock levels, Record stock. **Purchasing** (`/inventory/reorder`): Reorder, Ingredient demand, Purchase orders, Suppliers |
 
@@ -236,3 +236,31 @@ read-only list of the existing alert rule).
   fixed (A8); the role of a user is changed on the Users tab.
 - **Look.** The tab strip of a merged page is a segmented control (CSS section 13) so it is not confused with the
   underlined tabs inside a section (Reports, Import data, Orders, Served & waste). Each tab's own heading is now an `h2`.
+
+## 12. Final UI pass (14 Oct 2026, branch `ui-final`)
+
+Presentation only: templates, page scripts, CSS, the menu labels and one default-tab setting in `utils/navigation.py`.
+No service, model, ML, migration, API or permission change (checked: `git diff` of those folders is empty, and 42 API
+responses are identical between the base build and this one on copies of the same data).
+
+- **One design language.** Every role now has the light sidebar, grey canvas and green accent that the administrator
+  had; the role keeps its own colour on the role chip and avatar only (`--role`). CSS section 1 and 12.
+- **One tab standard.** The main sections of a page are a segmented bar (`.hub-tabs`, `.sr-tabs`, `.nav-pills`, same
+  look, selected section filled green); sub-sections use the underlined `.nav-tabs`. Orders and Served & waste moved to
+  the segmented bar. On phones the underlined tabs scroll inside their bar.
+- **Admin dashboard.** A one-line flow (sales history → forecast → prep plan → ingredient needs → stock & reorder),
+  four summary tiles (Sales, Forecast demand next 7 days, Food waste, Inventory status), forecast and trend charts,
+  *Needs attention* (alerts, Recommended actions), then pre-orders, activity, quick actions. The per-ingredient
+  inventory table moved to Reports (its figures are on Stock levels, Ingredient demand, Batches and expiry).
+- **Reports & Analytics** (renamed): the 10 reports under 4 groups (Sales; Forecasting; Inventory; Waste & Analytics),
+  group bar plus sub-tabs; `?tab=` still opens any report directly.
+- **Forecasting**: tabs in workflow order, Historical data → ML models → Forecast generation, with a numbered step
+  strip; `/admin/models` still opens ML models (`DEFAULT_TAB`). All metrics and actions kept.
+- **Menu & recipes**: summary chips, a full-width table, and the recipe (BOM) opens under its item, per portion and per
+  batch, with Edit recipe. Daily availability is shown read-only (it stays a kitchen action).
+- **Kitchen**: dashboard workflow steps (forecast → plan → prepare → record); Plan & prepare shows a comparison table at
+  1200 px and wider (cards below), with a summary line; Ingredients lists short items first with counts.
+- **Inventory**: dashboard workflow steps (check stock → kitchen requests → reorder → receive) and a plain intro on
+  every tab.
+- **Phones**: the Role access tables become a stacked list below 576 px.
+

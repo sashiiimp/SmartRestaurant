@@ -1,0 +1,6 @@
+{# The three parts of Forecasting, in the order they are used; the current tab is outlined. Display only. #}
+<ol class="steps" aria-label="How forecasting works">
+  <li><a class="step {{ 'is-current' if hub.tab == 'data' else '' }}" href="/admin/models?tab=data"><span><strong>Historical data</strong><small>Sales history and the context the model learns from: promotions, holidays, weather.</small></span></a></li>
+  <li><a class="step {{ 'is-current' if hub.tab == 'models' else '' }}" href="/admin/models?tab=models"><span><strong>ML models</strong><small>Train Random Forest and XGBoost, compare them with simple baselines, activate the best.</small></span></a></li>
+  <li><a class="step {{ 'is-current' if hub.tab == 'runs' else '' }}" href="/admin/models?tab=runs"><span><strong>Forecast generation</strong><small>The active model predicts the next 7 days per menu item; runs daily and on demand.</small></span></a></li>
+</ol>

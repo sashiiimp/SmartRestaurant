@@ -114,7 +114,7 @@ These accuracy figures are for **synthetic** data. They show the method works on
 2. If today's forecast already succeeded with the active model, it does nothing. It also waits if another run is in progress, and gives up after 3 failures that day, so you see an alert instead of a loop.
 3. Otherwise `run_forecast(as_of=today, horizon=7)` builds the features for today … today + 6 and predicts every active item.
 4. It locks the outlet row, so the timer and the "Run forecast now" button can't both create "latest" rows. It then inserts the new forecasts and moves `is_latest`.
-5. The Dashboard, Prep plan, Ingredient needs, Reorder and Alerts all read the latest forecasts.
+5. The Dashboard, Plan & prepare, Ingredients, Purchasing (Reorder) and Alerts all read the latest forecasts.
 
 **Why there were only 5 days before:** forecasts only ran when someone pressed the button. The last live run was on 11 Oct (covering 11–17 Oct), so on 13 Oct, 18 and 19 Oct were missing. The daily job fixes this. Tested on a copy of production: 7 days × 10 items, no duplicates, and a second call does nothing.
 
@@ -239,33 +239,38 @@ Every arrow is a function call within one Flask process. There are no background
 
 ---
 
-## 12. Live demonstration script (about 10 minutes)
+## 12. Live demonstration script (about 10 minutes, updated 14 Oct 2026 for the final screens)
 
-Before the demo, check that the daily forecast ran today: Forecasting → Models & runs → Forecast runs should show today's date. If not, press **Run forecast now** once.
+Before the demo: log in as admin, open **Forecasting → Forecast generation** and check that the last run is today. If
+not, press **Run forecast now** once. Point out the **Synthetic demo data** label in the top bar at the start.
 
-1. **Login** as admin. Point at the role in the sidebar and the "Synthetic demo data" label.
-2. **Dashboard:**
-   - the reporting period and the "recorded for N of 7 days" note;
-   - the 4 KPIs. Explain the waste rate formula using the tile's own numbers;
-   - the forecast chart: 7 labelled days, the "Prediction" badge, the total = the sum of the bars, and the model name, MAE vs baseline and last run time.
-3. **Inventory alerts:** pick one ingredient and read **Now**, **Forecast** and **Expiry**. Open **Alerts → History** and explain that Acknowledge ≠ restocked.
-4. **Recent activity:** the sentences come from stored events. Each one shows who did it and when.
-5. Log out and log in as **kitchen**. Open **Orders → Pre-orders**:
-   - add a pre-order for today (customer, item Chicken Burger, quantity larger than the forecast, pickup time) as *Confirmed*;
-   - open **Details**: creator, "Counts in the prep plan".
-6. **Plan & prepare → Prep plan** for today, Chicken Burger:
-   - Forecast stays the same, Recommended rose to cover the pre-order;
-   - open "How was this worked out?" and explain max(forecast × 1.1, pre-orders) and why we don't add them;
-   - press **Accept**.
-7. **Ingredients → Needs & shortages:** chicken and bun requirements went up. Compare them with usable stock.
-8. Back on **Orders**, press **Complete** on the pre-order. The prep plan stays the same (completed still counts) and no sale is recorded.
-9. **Served & waste:** record a few wasted portions with a reason.
-10. Log in as **admin** again:
-    - the dashboard's upcoming pre-orders card and the activity lines ("Pre-order #… created / completed", "Food waste recorded…");
-    - **Reports → Waste** shows the per-item waste rate table.
-11. **Forecasting → Models & runs:** the model comparison table (XGBoost vs Random Forest vs baselines) and the hold-out period.
+1. **Admin → Dashboard (purpose in 30 seconds).** Read the flow line under the title: Sales history → ML demand
+   forecast → Preparation plan → Ingredient needs → Stock & reorder. Then the four tiles: Sales, Forecast demand (next 7
+   days), Food waste (rate against the 15% limit), Inventory status.
+2. **Forecast chart.** Seven predicted days (blue = prediction, never sales), the model (XGBoost) and its hold-out MAE
+   against the simple baseline.
+3. **Needs attention.** One alert (Acknowledge = "seen", it closes only when fixed) and the **Recommended actions**
+   (reorder, forecast shortfall, expired batches, waste), each linking to the report behind it.
+4. **Forecasting.** The three steps: **Historical data** (sales, promotions, holidays, weather) → **ML models** (the
+   comparison table: baselines vs Random Forest vs XGBoost; MAE, RMSE, MAPE, WAPE, R2) → **Forecast generation**
+   (Run forecast now, history of runs).
+5. **Menu & recipes.** Open Chicken Burger: the recipe (BOM) per portion and per batch. This is what turns portions into
+   ingredients.
+6. Log in as **kitchen** → **Dashboard**: the four workflow steps (forecast, plan, prepare, record) and the shortages.
+7. **Orders & pre-orders → Pre-orders:** add a confirmed pre-order for today (customer, Chicken Burger, quantity larger
+   than the forecast, pickup time). It is part of the prep plan; it is not added on top of the forecast.
+8. **Plan & prepare → Prep plan:** compare the rows; Chicken Burger's Recommended rose to cover the pre-order. Open
+   **How?** (forecast + 10%, or the pre-orders if higher, rounded up to whole batches). Press **Accept**, then **+ Add**
+   a prepared quantity.
+9. **Ingredients → Needs & shortages:** chicken and buns needed against usable stock; **Request stock** for a short one.
+10. **Served & waste:** record served portions and a few wasted portions with a reason; show **Daily balance**.
+11. Log in as **inventory** → **Dashboard** (check stock → kitchen requests → reorder → receive) → **Kitchen requests**
+    (approve and issue) → **Purchasing → Reorder** (suggested quantity formula) → create a purchase order.
+12. Back as **admin** → **Reports & Analytics**: Forecasting → Forecast accuracy (forecast vs actual), Waste &
+    Analytics → Waste reports, Inventory → Stock levels. Finish on **Administration → Role access** (who can open what).
 
-The demo writes to the live demo database. Run it on the deployed demo only as rehearsed, and expect the new rows to stay unless the demo is reset.
+The demo writes to the demo database. Run it on the deployed demo only as rehearsed, and expect the new rows to stay
+unless the demo is reset.
 
 ---
 

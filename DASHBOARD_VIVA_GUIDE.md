@@ -39,19 +39,28 @@ Dashboard එක කියන්නේ Administrator log වුණාම මු�
 
 ## 2. What each part is for, where the value comes from, and how it is calculated
 
+> **Layout since 14 Oct 2026 (final UI pass).** Top: four tiles, **Sales**, **Forecast demand (next 7 days)**,
+> **Food waste** (rate, with portions and value in the hint) and **Inventory status** (ingredients low or out). Then the
+> forecast chart and the sales and waste trend. Then **Needs attention**: Alerts and **Recommended actions** (plain
+> rules over the same figures: reorder, forecast shortfall, expired batches, waste above the limit, missing recipes,
+> confirmed pre-orders; each links to the report that holds the detail). Bottom: upcoming pre-orders, recent activity,
+> quick actions. The per-ingredient inventory table moved off the dashboard: the same figures are in Reports &
+> Analytics, Inventory group (Stock levels, Ingredient demand, Batches and expiry). No formula changed; the rows below
+> still describe where every number comes from.
+
 The reporting period is **the last 7 or 30 days, ending yesterday**. If today is 13 Oct, "Last 7 days" means 6 Oct to 12 Oct. Today is left out because sales and waste for today are still being recorded.
 
 | Dashboard part | Purpose | Source (database table) | Calculation |
 |---|---|---|---|
-| **Portions sold** | How much was sold | `sales_records` | Sum of `quantity_sold` for dates in the period. The revenue hint is the sum of `quantity_sold x unit_price`, using the price stored on each record. |
-| **Portions wasted** | How much prepared food was thrown away | `food_waste` | Sum of `quantity` in the period. The value hint is the sum of `quantity x unit_price` (the selling price, not the ingredient cost). |
-| **Food waste rate** | Waste as a share of production | `food_waste` and `preparation_records` | `wasted / prepared x 100`, rounded to 1 decimal place. Shows "No data" if nothing was prepared (never a misleading 0%). It turns amber above `waste_risk_threshold_pct` in `settings` (default 15%). The waste-risk alert and the Analytics chart use the same ratio. |
-| **Low stock ingredients** | How many ingredients need reordering now | `ingredients` and `stock_batches` | For each active ingredient, *usable stock* = the sum of `qty_remaining` over batches that are not expired. Status: `out` if usable ≤ 0; `low` if usable ≤ `reorder_level`; otherwise `ok`. "Below minimum" means usable ≤ `min_stock`. The tile counts out + low. |
+| **Sales** tile (portions sold) | How much was sold | `sales_records` | Sum of `quantity_sold` for dates in the period. The revenue hint is the sum of `quantity_sold x unit_price`, using the price stored on each record. |
+| Food waste tile hint (portions wasted) | How much prepared food was thrown away | `food_waste` | Sum of `quantity` in the period. The value hint is the sum of `quantity x unit_price` (the selling price, not the ingredient cost). |
+| **Food waste** tile (rate) | Waste as a share of production | `food_waste` and `preparation_records` | `wasted / prepared x 100`, rounded to 1 decimal place. Shows "No data" if nothing was prepared (never a misleading 0%). It turns amber above `waste_risk_threshold_pct` in `settings` (default 15%). The waste-risk alert and the Analytics chart use the same ratio. |
+| **Inventory status** tile | How many ingredients need reordering now | `ingredients` and `stock_batches` | For each active ingredient, *usable stock* = the sum of `qty_remaining` over batches that are not expired. Status: `out` if usable ≤ 0; `low` if usable ≤ `reorder_level`; otherwise `ok`. "Below minimum" means usable ≤ `min_stock`. The tile counts out + low. |
 | **Food demand forecast** | Expected demand for planning | `forecasts` (only rows with `is_latest = true`), plus `forecast_runs` and `model_versions` | For each day from today to today + 6: the sum of `predicted_qty` over all menu items. A day with no forecast rows is `null` and is named in a warning. The total is the sum over the 7 days. "Test error" is the model's hold-out MAE (mean absolute error) stored at training time, shown next to the naive "same day last week" baseline. |
 | **Sales and waste trend** | Day-by-day history | `sales_records` and `food_waste`, via the Reports endpoints | Quantity per day. Every date in the period is on the axis. A day with no sales records is a gap. Waste on a day with sales but no waste records counts as 0. |
-| **Inventory alerts table** | Which ingredients are low or out | Same as the Low stock tile | Out-of-stock ingredients come first, then low ones, ordered by usable ÷ reorder level (most urgent first). The first 6 are shown, with "Show all" for the rest. |
+| **Recommended actions** (was the inventory alerts table) | Which ingredients are low, short in the forecast or expired | Same as the Inventory status tile, plus projected stock-out alerts and batch expiry dates | The first four names are listed per line; the full per-ingredient detail is in Reports & Analytics, Inventory (Stock levels, Ingredient demand, Batches and expiry). |
 | **Open alerts** | Everything the alert check found | `alerts` | Produced by `alert_service` (low/critical stock, projected stock-out, expiry, waste risk, forecast failure, manual shortage). Most severe first. **Acknowledge** marks an alert as seen. The bell in the top bar links here (`/admin#alerts`). |
-| **Quick actions** | Shortcuts | none (links only) | Generate forecast → `/admin/models` (button "Run forecast now"); Manage BOM → `/admin/catalog`; View inventory → `/admin/monitor?tab=stock` (Reports, Stock levels); View reports → `/admin/monitor`. |
+| **Quick actions** | Shortcuts | none (links only) | Generate forecast → `/admin/models?tab=runs` (Forecasting, Forecast generation, "Run forecast now"); Manage BOM → `/admin/catalog`; View inventory → `/admin/monitor?tab=stock` (Reports, Stock levels); View reports → `/admin/monitor`. |
 | **Recent activity** | Audit trail | `audit_logs` | The last 10 actions (5 shown), turned into plain English. |
 | **Notes at the top** | Honesty about the data | `settings.data_source_label`, `sales_records` | The synthetic-data note shows when the data source label says synthetic/demo. The partial-period note shows when fewer days than the period length have sales records. |
 

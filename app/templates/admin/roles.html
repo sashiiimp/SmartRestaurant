@@ -6,7 +6,11 @@
 <p class="text-muted small">Every user has one of three fixed roles; change a user's role on the <a href="/admin/users?tab=users">Users</a> tab. This table is read from the access rules the server applies, and the server checks the role again on every page and every data request, so a hidden menu link is never the only protection.</p>
 <div class="card mb-3"><div class="card-body">
   <h3 class="h6">Pages each role can open</h3>
-  <div class="table-responsive"><table class="table table-sm align-middle role-table">
+  <ul class="role-list d-sm-none">
+    {% for r in role_access %}<li><strong>{{ r.page }}</strong>{% if r.tabs %}<small>{{ r.tabs|join(', ') }}</small>{% endif %}
+      <span class="role-who">{% for key, label in roles %}{% if r.roles[key] %}<span class="sr-badge sr-badge-success">{{ label }}</span>{% endif %}{% endfor %}</span></li>{% endfor %}
+  </ul>
+  <div class="table-responsive d-none d-sm-block"><table class="table table-sm align-middle role-table">
     <thead><tr><th>Page</th><th>Tabs</th>{% for key, label in roles %}<th class="text-center">{{ label }}</th>{% endfor %}</tr></thead>
     <tbody>
     {% for r in role_access %}
@@ -19,7 +23,11 @@
 </div></div>
 <div class="card mb-3"><div class="card-body">
   <h3 class="h6">Alerts each role receives</h3>
-  <div class="table-responsive"><table class="table table-sm align-middle role-table">
+  <ul class="role-list d-sm-none">
+    {% for a in alert_access %}<li><strong class="text-capitalize">{{ a.alert_type.replace('_', ' ') }}</strong>
+      <span class="role-who">{% for key, label in roles %}{% if key in a.roles %}<span class="sr-badge sr-badge-success">{{ label }}</span>{% endif %}{% endfor %}</span></li>{% endfor %}
+  </ul>
+  <div class="table-responsive d-none d-sm-block"><table class="table table-sm align-middle role-table">
     <thead><tr><th>Alert type</th>{% for key, label in roles %}<th class="text-center">{{ label }}</th>{% endfor %}</tr></thead>
     <tbody>
     {% for a in alert_access %}

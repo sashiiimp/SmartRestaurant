@@ -6,6 +6,7 @@
     <h2 class="h5 m-0">Stock levels</h2>
     <button class="btn btn-primary" type="button" @click="add">Add ingredient</button>
   </div>
+  <p class="page-intro">Usable stock (not expired) for every ingredient, compared with its minimum and reorder levels. Edit an ingredient to change its levels, pack size or supplier; record deliveries and usage on <a href="/inventory/stock?tab=record">Record stock</a>.</p>
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
   <div v-if="form" class="card mb-3"><div class="card-body">
     <h2 class="h6">[[ form.id ? 'Edit ingredient' : 'New ingredient' ]]</h2>

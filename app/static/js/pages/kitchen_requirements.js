@@ -1,5 +1,10 @@
 SR.createApp({
   data() { return { date: ui.todayIso(), r: null, loading: true, error: null, ui }; },
+  computed: {
+    shortCount() { return this.r ? this.r.ingredients.filter(i => i.status === 'short').length : 0; },
+    // short ingredients first, otherwise the order the service returns
+    sortedIngredients() { return this.r ? [...this.r.ingredients].sort((a, b) => (b.status === 'short') - (a.status === 'short')) : []; },
+  },
   async mounted() { await this.load(); },
   methods: {
     async report(i) {

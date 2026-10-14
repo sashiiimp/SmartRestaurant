@@ -3,7 +3,7 @@
 {% block content %}
 <div id="app" v-cloak>
   <div class="dash-head">
-    <div><h1 class="h4 m-0">Inventory</h1><p class="dash-sub">[[ ui.date(today) ]]</p></div>
+    <div><h1 class="h4 m-0">Inventory</h1><p class="dash-sub">[[ ui.date(today) ]] · stock on hand, what the forecast will need, and what to reorder</p></div>
     <div class="dash-actions">
       <a class="btn btn-primary btn-lg-touch" href="/inventory/stock?tab=record"><sr-icon name="swap" :size="16"></sr-icon> Record stock</a>
       <a class="btn btn-outline-primary btn-lg-touch" href="/inventory/reorder"><sr-icon name="refresh" :size="16"></sr-icon> Reorder</a>
@@ -12,6 +12,13 @@
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
   <sr-loading v-if="loading" :tiles="4" :cards="2"></sr-loading>
   <template v-else-if="d">
+    <!-- The inventory routine in four steps; each shows where it stands and opens the page where it is done -->
+    <ol class="steps" aria-label="Inventory workflow">
+      <li><a class="step" :class="{ 'is-done': !(d.counts.low + d.counts.out) }" href="/inventory/stock"><span><strong>Check stock</strong><small>[[ d.counts.low + d.counts.out ]] of [[ stockTotal ]] ingredients low or out</small></span></a></li>
+      <li><a class="step" :class="{ 'is-done': !d.pending_requests }" href="/inventory/requests"><span><strong>Kitchen requests</strong><small>[[ d.pending_requests ]] waiting for a decision</small></span></a></li>
+      <li><a class="step" :class="{ 'is-done': !d.reorder.length }" href="/inventory/reorder"><span><strong>Reorder</strong><small>[[ d.reorder.length ? 'Suggestions from the forecast and recipes' : 'Nothing to reorder' ]]</small></span></a></li>
+      <li><a class="step" href="/inventory/reorder?tab=orders"><span><strong>Receive deliveries</strong><small>Receiving a purchase order adds the stock and its expiry date</small></span></a></li>
+    </ol>
     <div class="row g-3 mb-3">
       <div class="col-6 col-lg-3"><sr-stat-tile label="Low stock" icon="warning" :value="d.counts.low" :hint="d.counts.ok + ' of ' + stockTotal + ' ingredients OK'" :tone="d.counts.low ? 'warning' : 'success'" href="/inventory/stock"></sr-stat-tile></div>
       <div class="col-6 col-lg-3"><sr-stat-tile label="Out of stock" icon="alert" :value="d.counts.out" :tone="d.counts.out ? 'danger' : 'success'" href="/inventory/stock"></sr-stat-tile></div>

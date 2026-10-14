@@ -11,7 +11,7 @@
       <button class="btn btn-primary" type="button" @click="startNew">New purchase order</button>
     </div>
   </div>
-  <p class="text-muted small">Orders are internal records. "Sent" is marked by hand; nothing is transmitted to the supplier. Receiving stock creates the batches and stock-in records and lowers "on order" on the Reorder tab.</p>
+  <p class="page-intro">Orders are internal records. "Sent" is marked by hand; nothing is transmitted to the supplier. Receiving stock creates the batches and stock-in records and lowers "on order" on the Reorder tab.</p>
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
 
   <div v-if="form" class="card mb-3"><div class="card-body">

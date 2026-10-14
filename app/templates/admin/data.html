@@ -1,11 +1,13 @@
 {% extends "hub.html" %}
-{% block title %}Data - SmartRestaurant{% endblock %}
+{% block title %}Historical data - SmartRestaurant{% endblock %}
 {% block panel %}
+{% include "admin/_forecast_steps.html" %}
 <div id="app" v-cloak>
-  <h2 class="h5 mb-3">Sales and contextual data</h2>
+  <h2 class="h5 mb-1">Historical data</h2>
+  <p class="page-intro">The data the forecasting model learns from: past sales per menu item, and the context that changes demand (promotions, holidays and Poya days, weather). Import files are checked before anything is saved.</p>
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
-  <ul class="nav nav-tabs mb-3"><li class="nav-item" v-for="t in [['sales','Sales import'],['promos','Promotions'],['holidays','Holidays'],['weather','Weather']]" :key="t[0]">
-    <button class="nav-link" :class="{ active: tab === t[0] }" @click="tab = t[0]">[[ t[1] ]]</button></li></ul>
+  <ul class="nav nav-tabs mb-3"><li class="nav-item" v-for="t in [['sales','Sales history'],['promos','Promotions'],['holidays','Holidays'],['weather','Weather']]" :key="t[0]">
+    <button class="nav-link" type="button" :class="{ active: tab === t[0] }" :aria-current="tab === t[0] ? 'true' : null" @click="tab = t[0]">[[ t[1] ]]</button></li></ul>
   <div v-if="tab === 'sales'" class="card"><div class="card-body"><p class="text-muted">CSV with columns <code>date, item, quantity</code> and optionally <code>unit_price</code>. Rows are checked first; nothing is saved until you confirm. Unknown item names are reported, never created.</p>
     <sr-csv-import endpoint="/sales/import" label="Sales CSV"></sr-csv-import></div></div>
   <div v-if="tab === 'holidays'" class="card"><div class="card-body"><p class="text-muted">CSV with columns <code>date, name, type</code> (type: public, poya, school, other).</p><sr-csv-import endpoint="/holidays/import" label="Holidays CSV"></sr-csv-import></div></div>

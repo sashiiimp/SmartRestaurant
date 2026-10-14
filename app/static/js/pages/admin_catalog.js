@@ -1,12 +1,27 @@
 const BLANK = { id: null, name: '', category: '', price: '', batch_size: 1, shelf_life_hours: '', portion_unit: 'portion' };
 SR.createApp({
-  data() { return { items: [], ingredients: [], loading: true, error: null, form: null, errors: {}, saving: false, recipe: null, ui }; },
+  data() { return { items: [], ingredients: [], loading: true, error: null, form: null, errors: {}, saving: false, recipe: null, view: null, ui }; },
+  computed: {
+    activeCount() { return this.items.filter(i => i.is_active).length; },
+    missingRecipes() { return this.items.filter(i => i.is_active && !i.has_recipe).length; },
+    unavailableCount() { return this.items.filter(i => i.is_active && !i.is_available).length; },
+  },
   async mounted() {
     try { this.items = (await api.get('/menu-items')).data; this.ingredients = (await api.get('/ingredients')).data; }
     catch (e) { this.error = ui.errorText(e); } finally { this.loading = false; }
+    if (this.items.length) await this.select(this.items[0]);
   },
   methods: {
-    async reload() { this.items = (await api.get('/menu-items')).data; },
+    async reload() {
+      this.items = (await api.get('/menu-items')).data;
+      if (this.view) { const again = this.items.find(i => i.id === this.view.item.id); if (again) await this.select(again); }
+    },
+    // read-only recipe panel; Edit recipe opens the editor below with the same lines
+    toggle(i) { if (this.view && this.view.item.id === i.id) { this.view = null; this.recipe = null; } else this.select(i); },
+    async select(i) {
+      try { this.view = { item: i, lines: (await api.get('/menu-items/' + i.id + '/recipe')).data }; this.recipe = null; }
+      catch (e) { ui.toast(ui.errorText(e), 'danger'); }
+    },
     add() { this.form = { ...BLANK }; this.errors = {}; },
     edit(i) { this.form = { ...i, shelf_life_hours: i.shelf_life_hours || '' }; this.errors = {}; },
     async save() {

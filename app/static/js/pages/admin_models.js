@@ -23,5 +23,6 @@ SR.createApp({
       catch (e) { ui.toast(ui.errorText(e), 'danger'); } finally { this.busy = ''; }
     },
     m(v, name) { return (v.metrics.comparison.find(c => c.model === name) || {}); },
+    algoName(a) { return { xgboost: 'XGBoost', random_forest: 'Random Forest', naive_lag7: 'Same day last week', seasonal_mean4: '4-week average' }[a] || a; },
   },
 }).mount('#app');

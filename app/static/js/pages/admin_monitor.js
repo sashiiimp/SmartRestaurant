@@ -3,8 +3,11 @@ SR.createApp({
     const end = ui.addDays(ui.todayIso(), -1);
     return {
       tab: 'sales', from: ui.addDays(end, -27), to: end, groupBy: 'day', itemId: '', ingId: '', mtype: '', demandStart: ui.todayIso(),
-      tabs: [['sales', 'Sales and revenue'], ['demand', 'Demand forecast'], ['forecast', 'Forecast accuracy'], ['analytics', 'Analytics'], ['waste', 'Waste'],
-             ['stock', 'Stock levels'], ['ingredients', 'Ingredient demand'], ['batches', 'Batches and expiry'], ['inventory', 'Stock trend'], ['movements', 'Stock movements']],
+      tabs: [['sales', 'Sales and revenue'], ['demand', 'Demand forecast'], ['forecast', 'Forecast accuracy'], ['analytics', 'Analytics'], ['waste', 'Waste reports'],
+             ['stock', 'Stock levels'], ['ingredients', 'Ingredient demand'], ['batches', 'Batches and expiry'], ['inventory', 'Stock trends'], ['movements', 'Stock movements']],
+      // the 10 reports under 4 headings: the heading bar picks a group, the underlined tabs pick a report inside it
+      groups: [['sales', 'Sales', ['sales']], ['forecasting', 'Forecasting', ['demand', 'forecast']],
+               ['inventory', 'Inventory', ['stock', 'ingredients', 'batches', 'inventory', 'movements']], ['waste', 'Waste & Analytics', ['waste', 'analytics']]],
       shortGroup: { 'Public holiday': 'Public', 'Poya day': 'Poya', 'School holiday': 'School', 'Ordinary day': 'Ordinary', 'Promotion running': 'Promotion', 'No promotion': 'No promo' },
       items: [], ingredients: [], levels: [], counts: { ok: 0, low: 0, out: 0 }, ingDemand: null, batches: [], sales: null, acc: null, waste: null, usage: null, trend: null, moves: null, an: null, demand: { rows: [], meta: {} },
       loading: false, error: null, ui,
@@ -23,6 +26,8 @@ SR.createApp({
   computed: {
     // tabs that show stock as it is now, so the date filters do not apply
     snapshot() { return ['stock', 'ingredients', 'batches'].includes(this.tab); },
+    group() { return this.groups.find(g => g[2].includes(this.tab)) || this.groups[0]; },
+    subTabs() { return this.group[2].map(k => this.tabs.find(t => t[0] === k)); },
     ingDays() { return this.ingDemand ? Array.from({ length: this.ingDemand.days }, (_, i) => ui.addDays(this.ingDemand.from, i)) : []; },
     csvUrl() {
       const range = '&from=' + this.from + '&to=' + this.to;

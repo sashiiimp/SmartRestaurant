@@ -1,35 +1,59 @@
 {% extends "hub.html" %}
-{% block title %}Forecast models - SmartRestaurant{% endblock %}
+{% block title %}Forecasting - SmartRestaurant{% endblock %}
 {% block panel %}
+{% include "admin/_forecast_steps.html" %}
 <div id="app" v-cloak>
-  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3"><h2 class="h5 m-0">Forecast models</h2>
-    <div class="d-flex gap-2"><button class="btn btn-outline-primary" :disabled="!!busy" @click="train"><span v-if="busy === 'train'" class="spinner-border spinner-border-sm me-1"></span>Train new model</button>
-      <button class="btn btn-primary" :disabled="!!busy || !active" @click="runForecast"><span v-if="busy === 'run'" class="spinner-border spinner-border-sm me-1"></span>Run forecast now</button></div></div>
+{% if hub.tab == 'runs' %}
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2"><h2 class="h5 m-0">Forecast generation</h2>
+    <button class="btn btn-primary" :disabled="!!busy || !active" @click="runForecast"><span v-if="busy === 'run'" class="spinner-border spinner-border-sm me-1"></span>Run forecast now</button></div>
+  <p class="page-intro">A forecast run uses the active model to predict demand for every menu item for the next 7 days. It runs automatically once a day; <strong>Run forecast now</strong> starts one at once. Earlier forecasts are kept for the accuracy report.</p>
+{% else %}
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2"><h2 class="h5 m-0">ML models</h2>
+    <button class="btn btn-primary" :disabled="!!busy" @click="train"><span v-if="busy === 'train'" class="spinner-border spinner-border-sm me-1"></span>Train new model</button></div>
+  <p class="page-intro">Training compares the simple baselines, Random Forest and XGBoost on a hold-out period the models never saw, and selects the one with the lowest error. A new model is used only after you activate it.</p>
+{% endif %}
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
   <div v-if="busy === 'train'" class="alert alert-info">Training compares the baselines, Random Forest and XGBoost on the last 56 days. This takes about 10 to 20 seconds.</div>
   <sr-loading v-if="loading"></sr-loading>
   <template v-else>
+{% if hub.tab == 'runs' %}
+    <div class="row g-3">
+      <div class="col-12 col-lg-4"><div class="card h-100"><div class="card-body">
+        <h3 class="h6">Model used for forecasting</h3>
+        <div v-if="!active" class="text-muted">No active model. <a href="/admin/models?tab=models">Train and activate one</a> first.</div>
+        <dl v-else class="kv mb-0">
+          <dt>Version</dt><dd>[[ active.version_label ]]</dd>
+          <dt>Algorithm</dt><dd>[[ algoName(active.algorithm) ]]</dd>
+          <dt>Hold-out MAE</dt><dd>[[ ui.num(m(active, active.algorithm).mae, 2) ]] portions</dd>
+          <dt>Last run</dt><dd>[[ runs.length ? ui.dateTime(runs[0].started_at) + ' (' + runs[0].status + ')' : 'none yet' ]]</dd>
+        </dl>
+      </div></div></div>
+      <div class="col-12 col-lg-8"><div class="card h-100"><div class="card-body"><h3 class="h6">Forecast history</h3>
+        <sr-empty v-if="!runs.length" message="No forecast has been run yet." icon="trending"></sr-empty>
+        <div v-else class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Started</th><th>As of</th><th>Type</th><th>Status</th><th class="text-end">Items</th></tr></thead>
+          <tbody><tr v-for="r in runs" :key="r.id"><td class="text-nowrap">[[ ui.dateTime(r.started_at) ]]</td><td class="text-nowrap">[[ ui.date(r.as_of) ]]</td><td>[[ r.trigger ]]</td>
+            <td><sr-status-badge :status="r.status === 'ok' ? 'ok' : r.status"></sr-status-badge><div v-if="r.reason" class="small text-muted">[[ r.reason ]]</div></td><td class="text-end">[[ r.items_forecast ]]</td></tr></tbody></table></div>
+        <p class="table-note">The latest 12 runs. "cli" is the daily scheduled run, "manual" is Run forecast now.</p></div></div></div>
+    </div>
+{% else %}
     <div class="card mb-3"><div class="card-body">
-      <h2 class="h6">Active model</h2>
+      <div class="card-head"><div><h3 class="h6">Active model and evaluation</h3><p class="card-sub">Errors on the hold-out period, in portions per item per day (lower is better)</p></div><span v-if="active" class="sr-badge sr-badge-success">Active</span></div>
       <div v-if="!active" class="text-muted">No active model. Train one, then activate it.</div>
-      <div v-else><strong>[[ active.version_label ]]</strong> ([[ active.algorithm ]]), trained [[ ui.dateTime(active.trained_at) ]]
+      <div v-else><strong>[[ active.version_label ]]</strong> ([[ algoName(active.algorithm) ]]), trained [[ ui.dateTime(active.trained_at) ]]
         <div class="small" :class="active.beats_baseline ? 'text-success' : 'text-warning'">[[ active.selection_reason ]]</div>
         <div class="small text-muted">Hold-out: [[ ui.date(active.holdout.start) ]] to [[ ui.date(active.holdout.end) ]] (chronological, never seen in training). Weather in the hold-out is the seasonal estimate, as it is when forecasting tomorrow.</div>
-        <div class="table-responsive mt-3" style="max-width: 46rem"><table class="table table-sm mb-0"><thead><tr><th>Model</th><th class="text-end">MAE</th><th class="text-end">RMSE</th><th class="text-end">MAPE %</th><th class="text-end">WAPE %</th><th class="text-end">R2</th><th class="text-end">Bias</th></tr></thead>
-          <tbody><tr v-for="c in active.metrics.comparison" :key="c.model" :class="c.model === active.algorithm ? 'table-success' : ''"><td>[[ c.model ]]</td><td class="text-end">[[ ui.num(c.mae, 2) ]]</td><td class="text-end">[[ ui.num(c.rmse, 2) ]]</td><td class="text-end">[[ ui.num(c.mape, 1) ]]</td><td class="text-end">[[ ui.num(c.wape, 1) ]]</td><td class="text-end">[[ ui.num(c.r2, 3) ]]</td><td class="text-end">[[ ui.num(c.bias, 2) ]]</td></tr></tbody></table></div>
+        <div class="table-responsive mt-3"><table class="table table-sm mb-0"><thead><tr><th>Model</th><th class="text-end">MAE</th><th class="text-end">RMSE</th><th class="text-end">MAPE %</th><th class="text-end">WAPE %</th><th class="text-end">R2</th><th class="text-end">Bias</th></tr></thead>
+          <tbody><tr v-for="c in active.metrics.comparison" :key="c.model" :class="c.model === active.algorithm ? 'table-success' : ''"><td>[[ algoName(c.model) ]] <span class="text-muted small">([[ c.model ]])</span></td><td class="text-end">[[ ui.num(c.mae, 2) ]]</td><td class="text-end">[[ ui.num(c.rmse, 2) ]]</td><td class="text-end">[[ ui.num(c.mape, 1) ]]</td><td class="text-end">[[ ui.num(c.wape, 1) ]]</td><td class="text-end">[[ ui.num(c.r2, 3) ]]</td><td class="text-end">[[ ui.num(c.bias, 2) ]]</td></tr></tbody></table></div>
+        <p class="table-note">MAE: average error in portions. RMSE: penalises large errors. MAPE / WAPE: error as a percentage. R2: share of the variation explained. Bias: average over- (+) or under- (-) forecast.</p>
         <div v-if="active.metrics.oracle_mae" class="small text-muted mt-1">Best possible MAE on this synthetic data (noise floor): [[ ui.num(active.metrics.oracle_mae, 2) ]]. These figures are for synthetic data and say nothing about a real restaurant.</div>
         <div v-if="active.metrics.feature_importance.length" class="small mt-2"><strong>Most influential inputs:</strong> [[ active.metrics.feature_importance.slice(0, 5).map(f => f.feature + ' (' + ui.num(f.importance * 100, 0) + '%)').join(', ') ]]</div>
       </div></div></div>
-    <div class="row g-3">
-      <div class="col-12 col-xl-5"><div class="card"><div class="card-body"><h2 class="h6">Versions</h2>
-        <div class="table-responsive"><table class="table table-sm align-middle mb-0"><thead><tr><th>Version</th><th>Algorithm</th><th class="text-end">MAE</th><th>Status</th><th></th></tr></thead>
-          <tbody><tr v-for="v in versions" :key="v.id"><td>[[ v.version_label ]]</td><td>[[ v.algorithm ]]</td><td class="text-end">[[ ui.num(m(v, v.algorithm).mae, 2) ]]</td><td><span class="sr-badge" :class="v.status === 'active' ? 'sr-badge-success' : (v.status === 'retired' ? '' : 'sr-badge-accent')">[[ v.status ]]</span></td>
-            <td><button v-if="v.status !== 'active'" class="btn btn-sm btn-outline-primary" @click="activate(v)">Activate</button></td></tr></tbody></table></div></div></div></div>
-      <div class="col-12 col-xl-7"><div class="card"><div class="card-body"><h2 class="h6">Forecast runs</h2>
-        <div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Started</th><th>As of</th><th>Type</th><th>Status</th><th class="text-end">Items</th></tr></thead>
-          <tbody><tr v-for="r in runs" :key="r.id"><td class="text-nowrap">[[ ui.dateTime(r.started_at) ]]</td><td class="text-nowrap">[[ ui.date(r.as_of) ]]</td><td>[[ r.trigger ]]</td>
-            <td>[[ r.status ]]<div v-if="r.reason" class="small text-muted">[[ r.reason ]]</div></td><td class="text-end">[[ r.items_forecast ]]</td></tr></tbody></table></div></div></div></div>
-    </div>
+    <div class="card"><div class="card-body"><h3 class="h6">Model versions</h3>
+      <div class="table-responsive"><table class="table table-sm align-middle mb-0"><thead><tr><th>Version</th><th>Algorithm</th><th class="text-end">Hold-out MAE</th><th>Trained</th><th>Status</th><th></th></tr></thead>
+        <tbody><tr v-for="v in versions" :key="v.id"><td>[[ v.version_label ]]</td><td>[[ algoName(v.algorithm) ]]</td><td class="text-end">[[ ui.num(m(v, v.algorithm).mae, 2) ]]</td><td class="text-nowrap">[[ ui.dateTime(v.trained_at) ]]</td><td><span class="sr-badge" :class="v.status === 'active' ? 'sr-badge-success' : (v.status === 'retired' ? '' : 'sr-badge-accent')">[[ v.status ]]</span></td>
+          <td class="text-end"><button v-if="v.status !== 'active'" class="btn btn-sm btn-outline-primary" @click="activate(v)">Activate</button></td></tr></tbody></table></div>
+      <p class="table-note">Activating a version keeps the previous one, so you can switch back.</p></div></div>
+{% endif %}
   </template>
 </div>
 {% endblock %}

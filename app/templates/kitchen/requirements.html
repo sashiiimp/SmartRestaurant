@@ -3,16 +3,17 @@
 {% block panel %}
 <div id="app" v-cloak>
   <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-    <h2 class="h5 m-0">Ingredient requirements</h2><sr-date-nav v-model="date" @change="load"></sr-date-nav>
+    <h2 class="h5 m-0">Needs &amp; shortages</h2><sr-date-nav v-model="date" @change="load"></sr-date-nav>
   </div>
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
   <sr-loading v-if="loading"></sr-loading>
   <template v-else-if="r">
-    <p class="text-muted small">Based on the accepted quantity where you accepted or overrode one, otherwise the recommended quantity. Only usable (not expired) stock is counted.</p>
+    <p class="page-intro">Ingredients needed for this day's plan (planned portions x recipe), compared with usable stock. Based on the quantity you accepted or set, otherwise the recommendation. Expired stock is not counted.</p>
+    <div v-if="r.ingredients.length" class="count-chips mb-3"><span class="chip" :class="shortCount ? 'chip-critical' : 'chip-info'">[[ shortCount ]] short</span><span class="chip chip-info">[[ r.ingredients.length - shortCount ]] sufficient</span></div>
     <sr-empty v-if="!r.ingredients.length" message="No requirements yet: there is no plan for this date."></sr-empty>
     <div v-else class="table-responsive"><table class="table table-sm align-middle">
       <thead><tr><th>Ingredient</th><th class="text-end">Required</th><th class="text-end">Usable stock</th><th>Status</th><th class="text-end">Short by</th><th></th></tr></thead>
-      <tbody><tr v-for="i in r.ingredients" :key="i.ingredient_id" :class="i.status === 'short' ? 'table-danger' : ''">
+      <tbody><tr v-for="i in sortedIngredients" :key="i.ingredient_id" :class="i.status === 'short' ? 'table-danger' : ''">
         <td>[[ i.name ]]</td><td class="text-end">[[ ui.qty(i.required, i.unit) ]]</td><td class="text-end">[[ ui.qty(i.usable_stock, i.unit) ]]</td>
         <td><sr-status-badge :status="i.status"></sr-status-badge></td><td class="text-end">[[ i.short_by ? ui.qty(i.short_by, i.unit) : '' ]]</td>
         <td class="text-nowrap text-end"><a v-if="i.status === 'short'" class="btn btn-sm btn-outline-primary me-1" :href="'/kitchen/requirements?tab=requests&ingredient=' + i.ingredient_id + '&qty=' + i.short_by">Request stock</a>

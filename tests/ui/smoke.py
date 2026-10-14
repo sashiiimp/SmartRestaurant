@@ -86,6 +86,7 @@ def kitchen(browser):
     assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth + 1"), "horizontal scroll at 390px"
     visit(page, "/kitchen", "k_dashboard", wait=".stat-tile")
     assert page.locator(".stat-tile").count() == 3
+    assert page.locator(".steps .step").count() == 4, "kitchen workflow steps"
     visit(page, "/kitchen/requirements", "k_requirements", wait="table")
     if page.locator("tr.table-danger").count():                          # a shortage depends on the demo date
         page.locator("tr.table-danger").first.get_by_role("link", name="Request stock").click()
@@ -97,6 +98,18 @@ def kitchen(browser):
     assert "/kitchen/requirements?tab=requests" in page.url, page.url
     r = page.goto(BASE + "/admin")
     assert r.status == 403, r.status
+    ctx.close()
+    # desktop: the prep plan is a comparison table with the same actions
+    ctx = browser.new_context(viewport={"width": 1366, "height": 900})
+    page = ctx.new_page()
+    login(page, "kitchen1")
+    visit(page, "/kitchen/prep", "k_prep_desktop", wait=".prep-table")
+    assert page.locator(".prep-table tbody tr").count() >= 10 and page.locator(".card-item").count() == 0
+    row = page.locator(".prep-table tbody tr", has=page.get_by_role("button", name="Override")).first
+    row.get_by_role("button", name="Override").click()
+    page.wait_for_selector(".override-row", timeout=3000)
+    page.locator(".override-row").get_by_role("button", name="Cancel").click()
+    assert page.locator(".override-row").count() == 0
     ctx.close()
 
 
@@ -151,11 +164,13 @@ def admin(browser):
     visit(page, "/admin", "a_dashboard", wait=".stat-tile")
     assert page.locator(".stat-tile").count() == 4
     visit(page, "/admin/monitor", "a_monitor_sales", wait="canvas")
+    page.get_by_role("tab", name="Forecasting").click()                 # report groups, then the report
     page.get_by_role("button", name="Forecast accuracy").click()
     page.wait_for_selector("text=Forecasts compared", timeout=8000)
     page.screenshot(path=os.path.join(SHOTS, "a_monitor_forecast.png"), full_page=True)
-    page.get_by_role("button", name="Waste", exact=True).click()
+    page.get_by_role("tab", name="Waste & Analytics").click()
     page.wait_for_selector("text=Prepared-food waste", timeout=8000)
+    page.get_by_role("tab", name="Inventory").click()
     page.get_by_role("button", name="Ingredient demand").click()        # tabs taken over from Inventory overview
     page.wait_for_selector("text=Days of cover", timeout=8000)
     page.get_by_role("button", name="Batches and expiry").click()
@@ -167,6 +182,7 @@ def admin(browser):
     page.wait_for_selector("text=Trained v", timeout=90000)
     page.get_by_role("button", name="Activate").first.click()
     page.wait_for_selector("text=is now active", timeout=8000)
+    visit(page, "/admin/models?tab=runs", "a_forecast_runs", wait=".card")
     page.get_by_role("button", name="Run forecast now").click()
     page.wait_for_selector("text=Forecast run ok", timeout=15000)
     visit(page, "/admin/models?tab=data", "a_data", wait="input[type=file]")
@@ -180,7 +196,8 @@ def admin(browser):
     page.get_by_role("button", name="Save 1 rows").click()
     page.wait_for_selector("text=1 rows saved", timeout=8000)
     visit(page, "/admin/catalog", "a_catalog", wait="table tbody tr")
-    page.get_by_role("button", name="Recipe").first.click()
+    page.wait_for_selector("text=Recipe (BOM):", timeout=4000)          # the first item's recipe opens read-only
+    page.get_by_role("button", name="Edit recipe").click()
     page.wait_for_selector("text=Save recipe", timeout=4000)
     page.get_by_role("button", name="Cancel").click()
     visit(page, "/admin/users", "a_users", wait="table tbody tr")
@@ -207,7 +224,8 @@ PAGES = {
                  "/kitchen/requirements?tab=requests", "/kitchen/orders"],
     "inventory1": ["/inventory", "/inventory/stock", "/inventory/stock?tab=record", "/inventory/requests", "/inventory/reorder",
                    "/inventory/reorder?tab=demand", "/inventory/reorder?tab=orders", "/inventory/reorder?tab=suppliers"],
-    "admin": ["/admin", "/admin/monitor", "/admin/monitor?tab=stock", "/admin/models", "/admin/models?tab=data", "/admin/catalog",
+    "admin": ["/admin", "/admin/monitor", "/admin/monitor?tab=forecast", "/admin/monitor?tab=stock", "/admin/monitor?tab=ingredients",
+              "/admin/monitor?tab=waste", "/admin/models", "/admin/models?tab=data", "/admin/models?tab=runs", "/admin/catalog",
               "/admin/users", "/admin/users?tab=settings", "/admin/users?tab=roles"],
 }
 

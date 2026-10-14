@@ -9,7 +9,7 @@ from flask import current_app, redirect, render_template, request
 
 NAV_GROUPS = {
     "admin": [
-        ("Overview", [("Dashboard", "/admin"), ("Reports", "/admin/monitor"), ("Forecasting", "/admin/models")]),
+        ("Overview", [("Dashboard", "/admin"), ("Reports & Analytics", "/admin/monitor"), ("Forecasting", "/admin/models")]),
         ("Setup", [("Menu & recipes", "/admin/catalog"), ("Administration", "/admin/users")]),
     ],
     "kitchen": [
@@ -24,7 +24,8 @@ NAV_GROUPS = {
 
 # page path -> tabs as (key, label, template). The first tab opens when ?tab= is missing or unknown.
 HUBS = {
-    "/admin/models": [("models", "Models & runs", "admin/models.html"), ("data", "Import data", "admin/data.html")],
+    "/admin/models": [("data", "Historical data", "admin/data.html"), ("models", "ML models", "admin/models.html"),
+                      ("runs", "Forecast generation", "admin/models.html")],
     "/admin/users": [("users", "Users", "admin/users.html"), ("settings", "Settings & alerts", "admin/settings.html"),
                      ("roles", "Role access", "admin/roles.html")],
     "/kitchen/prep": [("prep", "Prep plan", "kitchen/prep.html"), ("forecast", "7-day forecast", "kitchen/forecast.html")],
@@ -35,6 +36,9 @@ HUBS = {
                            ("orders", "Purchase orders", "inventory/purchase_orders.html"),
                            ("suppliers", "Suppliers", "inventory/suppliers.html")],
 }
+
+# merged pages whose first tab is not the one to open by default (Forecasting lists its tabs in workflow order)
+DEFAULT_TAB = {"/admin/models": "models"}
 
 # old page path -> (merged page, tab). Reports switches its tabs inside the page, so its tab is a Reports tab key.
 REDIRECTS = {
@@ -60,9 +64,10 @@ def nav_links(role: str):
 
 
 def render_hub(path: str, **context):
-    """Render the tab of a merged page that ?tab= names; context is passed to the tab's template."""
+    """Render the tab of a merged page that ?tab= names (else its default tab); context goes to the tab's template."""
     tabs = HUBS[path]
-    current = next((t for t in tabs if t[0] == request.args.get("tab")), tabs[0])
+    key = request.args.get("tab") or DEFAULT_TAB.get(path)
+    current = next((t for t in tabs if t[0] == key), tabs[0])
     hub = {"path": path, "tab": current[0], "tabs": [{"key": k, "label": label} for k, label, _ in tabs]}
     return render_template(current[2], hub=hub, **context)
 

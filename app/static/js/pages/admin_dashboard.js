@@ -61,10 +61,29 @@ SR.createApp({
     wasteTone() { const r = this.d.waste_rate.pct; return r === null ? 'neutral' : (r > this.d.waste_threshold_pct ? 'warning' : 'success'); },
     wasteHint() {
       const w = this.d.waste_rate;
-      return w.pct === null ? 'nothing prepared in this period' : ui.num(w.wasted, 0) + ' of ' + ui.num(w.prepared, 0) + ' prepared (limit ' + ui.num(this.d.waste_threshold_pct, 1) + '%)';
+      return w.pct === null ? 'nothing prepared in this period'
+        : ui.num(this.d.waste.quantity, 0) + ' portions wasted of ' + ui.num(w.prepared, 0) + ' prepared · ' + ui.money(this.d.waste.value) + ' at selling price · limit ' + ui.num(this.d.waste_threshold_pct, 1) + '%';
     },
-    stockHint() { const s = this.d.stock; return s.out + ' out of stock, ' + s.low + ' low, of ' + s.ingredients; },
-    invShown() { return this.allStock ? this.d.inventory_alerts : this.d.inventory_alerts.slice(0, 6); },
+    stockHint() { const s = this.d.stock; return s.out + ' out of stock, ' + s.low + ' low, of ' + s.ingredients + ' ingredients'; },
+    // Recommended actions: plain rules over figures the dashboard already has; each links to the page that handles it.
+    actions() {
+      const d = this.d, out = [], names = rows => rows.slice(0, 4).map(r => r.name).join(', ') + (rows.length > 4 ? ' and ' + (rows.length - 4) + ' more' : '');
+      if (!d.active_model) out.push({ key: 'model', tone: 'danger', icon: 'layers', title: 'No active forecasting model', detail: 'Train a model and activate it before forecasting.', href: '/admin/models?tab=models', link: 'ML models' });
+      if (this.forecastDays < 7) out.push({ key: 'fc', tone: 'warning', icon: 'trending', title: 'Run the forecast', detail: 'No forecast yet for ' + this.missingForecastText + '.', href: '/admin/models?tab=runs', link: 'Forecasting' });
+      const low = d.inventory_alerts.filter(r => r.status !== 'ok');
+      if (low.length) out.push({ key: 'low', tone: d.stock.out ? 'danger' : 'warning', icon: 'package', title: low.length + ' ingredient' + (low.length === 1 ? ' needs' : 's need') + ' reordering', detail: names(low) + '. Reordering is done by the Inventory & Procurement Manager.', href: '/admin/monitor?tab=stock', link: 'Stock levels' });
+      const short = d.inventory_alerts.filter(r => r.forecast);
+      if (short.length) out.push({ key: 'short', tone: 'info', icon: 'bars', title: short.length + ' ingredient' + (short.length === 1 ? '' : 's') + ' will run short within 7 days', detail: 'From the forecast and recipes: ' + names(short) + '.', href: '/admin/monitor?tab=ingredients', link: 'Ingredient demand' });
+      const expired = d.inventory_alerts.reduce((n, r) => n + r.expiry.filter(e => e.expired).length, 0);
+      if (expired) out.push({ key: 'exp', tone: 'danger', icon: 'clock', title: expired + ' expired batch' + (expired === 1 ? '' : 'es') + ' still in stock', detail: 'They should be recorded as inventory wastage.', href: '/admin/monitor?tab=batches', link: 'Batches' });
+      const w = d.waste_rate.pct;
+      if (w !== null && w > d.waste_threshold_pct) out.push({ key: 'waste', tone: 'warning', icon: 'trash', title: 'Food waste ' + ui.num(w, 1) + '% is above the ' + ui.num(d.waste_threshold_pct, 1) + '% limit', detail: 'Check which items are wasted most.', href: '/admin/monitor?tab=waste', link: 'Waste report' });
+      if (d.items_without_recipe.length) out.push({ key: 'bom', tone: 'warning', icon: 'book', title: 'Menu items without a recipe', detail: d.items_without_recipe.join(', ') + ': their ingredient needs count as zero.', href: '/admin/catalog', link: 'Add recipes' });
+      if (d.pre_orders.count) out.push({ key: 'po', tone: 'info', icon: 'bag', title: d.pre_orders.count + ' confirmed pre-order' + (d.pre_orders.count === 1 ? '' : 's') + ', ' + d.pre_orders.portions + ' portions', detail: 'In the next 7 days. Already included in the kitchen prep plan.', href: null });
+      if (w !== null && w <= d.waste_threshold_pct) out.push({ key: 'wasteok', tone: 'success', icon: 'check', title: 'Food waste ' + ui.num(w, 1) + '% is within the ' + ui.num(d.waste_threshold_pct, 1) + '% limit', detail: 'For the reporting period.', href: '/admin/monitor?tab=waste', link: 'Waste report' });
+      if (!out.length) out.push({ key: 'ok', tone: 'success', icon: 'check', title: 'Nothing needs attention', detail: 'Stock, forecast and waste are within their limits.', href: null });
+      return out;
+    },
     forecastShortCount() { return this.d.inventory_alerts.filter(r => r.forecast).length; },
     forecastDays() { return this.d.forecast_next7.filter(f => f.qty !== null).length; },
     forecastLabels() { return this.d.forecast_next7.map(f => shortDate(f.date, true)); },

@@ -2,7 +2,8 @@
 {% block title %}Stock movements - SmartRestaurant{% endblock %}
 {% block panel %}
 <div id="app" v-cloak>
-  <h2 class="h5 mb-3">Record stock</h2>
+  <h2 class="h5 mb-1">Record stock</h2>
+  <p class="page-intro"><strong>Stock in</strong>: deliveries (creates a batch with its expiry date). <strong>Stock out</strong>: issued to the kitchen, earliest expiry first. <strong>Wastage</strong>: expired, damaged or spoiled stock. <strong>Adjustment</strong>: a correction after a count.</p>
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
   <div class="row g-4">
     <div class="col-12 col-lg-5">

@@ -390,3 +390,15 @@ force equal timestamps in both directions (both fail on the old code). No schema
 
 The walkthrough's old "Chicken is short today" check depended on the demo date; it now follows a shortage link when
 one exists and otherwise opens the same pre-filled Stock requests address directly.
+
+## 20. Final UI pass (14 Oct 2026, branch `ui-final` on `nav-consolidation`, staging only, not deployed)
+
+| Check | Result |
+|---|---|
+| Backup first | `/root/smartrest/backups/before_ui_final_20261014_112309/`: bundle of every branch (restored by a test clone to `3d37cd9`), worktree files, staging demo database, SHA256SUMS |
+| Scope | templates, page scripts, CSS, menu labels, a default tab; `git diff nav-consolidation` of `app/services`, `app/ml`, `app/models`, `app/controllers`, `migrations`, `app/seed`, config: **empty** |
+| Same results as before | base build `a8cb275` (system-integration) and this build, two copies of the same demo database, the same fixed date: **42 of 42 GET endpoints give identical JSON** (dashboards for all roles, every report, forecasts, accuracy, prep plan, requirements, reorder, ingredient forecast, model versions, stock levels and batches, stock check, pre-orders, purchase orders, settings; only timestamps ignored); responses checked to contain real data |
+| Fast suite | **423 passed**, 2 skipped (3 new tests: Forecasting tabs and default, Reports title and dashboard labels, Role access phone list) |
+| Browser walkthrough (fresh copy of the staging demo database per engine) | Chromium and Firefox: kitchen, inventory, admin and responsive (360, 768, 1280 px; every menu page, tab and Reports group) all ok, including the new desktop prep table, recipe panel, Reports groups and Forecasting tabs. WebKit: every section passed in at least one run; failures moved between runs (login redirected back to the login page, requests cancelled while leaving a page), the same intermittent WebKit behaviour recorded in sections 18 and 19 |
+| Found and fixed | dashboard template briefly held the old body twice (edit anchored on the wrong `endblock`), caught before testing; prep table and recipe actions cut off at 1366 px (layout changed); a test-harness port clash (review server and walkthrough server both on 39531) that made Firefox and WebKit see data saved by the Chromium run |
+| Not run | MySQL-marked tests (no `TEST_DATABASE_URL` on staging; no database code changed); production checks (nothing deployed) |

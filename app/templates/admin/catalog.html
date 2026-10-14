@@ -1,33 +1,65 @@
 {% extends "base.html" %}
-{% block title %}Menu and recipes - SmartRestaurant{% endblock %}
+{% block title %}Menu & recipes - SmartRestaurant{% endblock %}
 {% block content %}
 <div id="app" v-cloak>
-  <div class="d-flex justify-content-between align-items-center mb-3"><h1 class="h4 m-0">Menu and recipes</h1><button class="btn btn-primary" @click="add">Add menu item</button></div>
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-1"><h1 class="h4 m-0">Menu &amp; recipes</h1><button class="btn btn-primary" type="button" @click="add">Add menu item</button></div>
+  <p class="page-intro">Each menu item has a recipe (bill of materials, BOM): the quantity of every ingredient in one portion. The system multiplies these by the planned portions to work out ingredient needs and reorders.</p>
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
-  <div v-if="form" class="card mb-3"><div class="card-body"><h2 class="h6">[[ form.id ? 'Edit menu item' : 'New menu item' ]]</h2>
+  <div v-if="!loading" class="count-chips mb-3">
+    <span class="chip chip-info">[[ items.length ]] menu items</span>
+    <span class="chip" :class="activeCount === items.length ? 'chip-info' : 'chip-warning'">[[ activeCount ]] active</span>
+    <span class="chip" :class="missingRecipes ? 'chip-critical' : 'chip-info'">[[ missingRecipes ]] without a recipe</span>
+    <span v-if="unavailableCount" class="chip chip-warning">[[ unavailableCount ]] marked unavailable by the kitchen</span>
+  </div>
+  <div v-if="form" class="card mb-3"><div class="card-body"><h2 class="h6">[[ form.id ? 'Edit menu item: ' + form.name : 'New menu item' ]]</h2>
     <div class="row g-2">
       <div class="col-12 col-md-4"><label class="form-label" for="c-name">Name</label><input id="c-name" class="form-control" v-model="form.name"><sr-field-error :errors="errors" name="name"></sr-field-error></div>
       <div class="col-6 col-md-2"><label class="form-label" for="c-cat">Category</label><input id="c-cat" class="form-control" v-model="form.category"></div>
       <div class="col-6 col-md-2"><label class="form-label" for="c-price">Price (LKR)</label><input id="c-price" class="form-control" inputmode="decimal" v-model="form.price"><sr-field-error :errors="errors" name="price"></sr-field-error></div>
-      <div class="col-6 col-md-2"><label class="form-label" for="c-batch">Batch size</label><input id="c-batch" class="form-control" inputmode="numeric" v-model="form.batch_size"><sr-field-error :errors="errors" name="batch_size"></sr-field-error></div>
+      <div class="col-6 col-md-2"><label class="form-label" for="c-batch">Batch size (portions)</label><input id="c-batch" class="form-control" inputmode="numeric" v-model="form.batch_size"><sr-field-error :errors="errors" name="batch_size"></sr-field-error></div>
       <div class="col-6 col-md-2"><label class="form-label" for="c-shelf">Shelf life (hours)</label><input id="c-shelf" class="form-control" inputmode="numeric" v-model="form.shelf_life_hours"><sr-field-error :errors="errors" name="shelf_life_hours"></sr-field-error></div>
     </div>
-    <div class="mt-3 d-flex gap-2"><button class="btn btn-primary" :disabled="saving" @click="save">Save</button><button class="btn btn-outline-secondary" @click="form = null">Cancel</button></div></div></div>
-  <div v-if="recipe" class="card mb-3"><div class="card-body"><h2 class="h6">Recipe: [[ recipe.item.name ]] <span class="text-muted small">(quantities per portion, in each ingredient's unit)</span></h2>
-    <div class="row g-2 mb-2 align-items-center" v-for="(l, n) in recipe.lines" :key="n">
-      <div class="col-7 col-md-4"><select class="form-select" :aria-label="'Ingredient ' + (n + 1)" v-model.number="l.ingredient_id"><option v-for="g in ingredients" :key="g.id" :value="g.id">[[ g.name ]]</option></select></div>
-      <div class="col-3 col-md-2"><input class="form-control" inputmode="decimal" :aria-label="'Quantity ' + (n + 1)" v-model="l.quantity_per_portion"></div>
-      <div class="col-2 col-md-1 small">[[ unit(l.ingredient_id) ]]</div>
-      <div class="col-12 col-md-2"><button class="btn btn-sm btn-outline-danger" @click="recipe.lines.splice(n, 1)">Remove</button></div></div>
-    <div v-if="recipe.error" class="alert alert-danger py-2" role="alert">[[ recipe.error ]]</div>
-    <div class="d-flex gap-2"><button class="btn btn-outline-primary" @click="addLine">Add ingredient</button><button class="btn btn-primary" @click="saveRecipe">Save recipe</button><button class="btn btn-outline-secondary" @click="recipe = null">Cancel</button></div></div></div>
+    <p class="form-text mb-0 mt-2">The batch size is how many portions are cooked together; the prep plan rounds up to whole batches.</p>
+    <div class="mt-3 d-flex gap-2"><button class="btn btn-primary" type="button" :disabled="saving" @click="save">Save</button><button class="btn btn-outline-secondary" type="button" @click="form = null">Cancel</button></div></div></div>
   <sr-loading v-if="loading"></sr-loading>
-  <div v-else class="table-responsive"><table class="table table-sm align-middle">
-    <thead><tr><th>Item</th><th>Category</th><th class="text-end">Price</th><th class="text-end">Batch</th><th>Recipe</th><th>Status</th><th></th></tr></thead>
-    <tbody><tr v-for="i in items" :key="i.id" :class="i.is_active ? '' : 'text-muted'"><td>[[ i.name ]]</td><td>[[ i.category ]]</td><td class="text-end">[[ ui.money(i.price) ]]</td><td class="text-end">[[ i.batch_size ]]</td>
-      <td><span v-if="i.has_recipe" class="sr-badge sr-badge-success">defined</span><span v-else class="badge text-bg-warning">missing</span></td><td><span class="sr-badge" :class="i.is_active ? 'sr-badge-success' : ''">[[ i.is_active ? 'Active' : 'Inactive' ]]</span></td>
-      <td class="text-nowrap"><button class="btn btn-sm btn-outline-secondary me-1" @click="edit(i)">Edit</button><button class="btn btn-sm btn-outline-primary me-1" @click="openRecipe(i)">Recipe</button>
-        <button class="btn btn-sm" :class="i.is_active ? 'btn-outline-danger' : 'btn-outline-success'" @click="setActive(i, !i.is_active)">[[ i.is_active ? 'Deactivate' : 'Activate' ]]</button></td></tr></tbody></table></div>
+  <div v-else>
+    <div class="table-responsive"><table class="table table-sm align-middle catalog-table">
+      <thead><tr><th>Item</th><th>Category</th><th class="text-end">Price</th><th class="text-end">Batch</th><th>Recipe (BOM)</th><th>Status</th><th class="text-end">Actions</th></tr></thead>
+      <tbody>
+        <template v-for="i in items" :key="i.id">
+        <tr :class="[i.is_active ? '' : 'row-muted', view && view.item.id === i.id ? 'row-selected' : '']">
+          <td class="text-nowrap"><button type="button" class="link-btn" @click="toggle(i)" :aria-expanded="view && view.item.id === i.id ? 'true' : 'false'" :aria-label="'Show the recipe of ' + i.name">[[ i.name ]]</button></td>
+          <td class="text-muted">[[ i.category || '-' ]]</td>
+          <td class="text-end text-nowrap">[[ ui.money(i.price) ]]</td><td class="text-end">[[ i.batch_size ]]</td>
+          <td><span v-if="i.has_recipe" class="sr-badge sr-badge-success">Defined</span><span v-else class="sr-badge sr-badge-danger">Missing</span></td>
+          <td><span class="sr-badge" :class="i.is_active ? 'sr-badge-success' : ''">[[ i.is_active ? 'Active' : 'Inactive' ]]</span>
+            <small v-if="i.is_active && !i.is_available" class="d-block text-warning">unavailable today</small></td>
+          <td class="text-nowrap text-end"><button class="btn btn-sm btn-outline-primary me-1" type="button" @click="toggle(i)">[[ view && view.item.id === i.id ? 'Hide recipe' : 'Recipe' ]]</button><button class="btn btn-sm btn-outline-secondary me-1" type="button" @click="edit(i)">Edit</button>
+            <button class="btn btn-sm" type="button" :class="i.is_active ? 'btn-outline-danger' : 'btn-outline-success'" @click="setActive(i, !i.is_active)">[[ i.is_active ? 'Deactivate' : 'Activate' ]]</button></td></tr>
+        <tr v-if="view && view.item.id === i.id" class="detail-row"><td colspan="7"><div class="recipe-panel">
+          <template v-if="recipe">
+            <h2 class="h6">Edit recipe: [[ recipe.item.name ]]</h2>
+            <p class="card-sub mb-3">Quantity of each ingredient in <strong>one portion</strong>, in the ingredient's own unit.</p>
+            <div class="row g-2 mb-2 align-items-center" v-for="(l, n) in recipe.lines" :key="n">
+              <div class="col-12 col-sm-5 col-lg-4"><select class="form-select" :aria-label="'Ingredient ' + (n + 1)" v-model.number="l.ingredient_id"><option v-for="g in ingredients" :key="g.id" :value="g.id">[[ g.name ]]</option></select></div>
+              <div class="col-7 col-sm-4 col-lg-3"><div class="input-group"><input class="form-control" inputmode="decimal" :aria-label="'Quantity ' + (n + 1)" v-model="l.quantity_per_portion"><span class="input-group-text">[[ unit(l.ingredient_id) ]]</span></div></div>
+              <div class="col-5 col-sm-3 col-lg-2"><button class="btn btn-sm btn-outline-danger" type="button" @click="recipe.lines.splice(n, 1)">Remove</button></div></div>
+            <div v-if="recipe.error" class="alert alert-danger py-2" role="alert">[[ recipe.error ]]</div>
+            <div class="d-flex flex-wrap gap-2 mt-3"><button class="btn btn-outline-primary" type="button" @click="addLine">Add ingredient</button><button class="btn btn-primary" type="button" @click="saveRecipe">Save recipe</button><button class="btn btn-outline-secondary" type="button" @click="recipe = null">Cancel</button></div>
+          </template>
+          <template v-else>
+            <div class="card-head"><div><h2 class="h6">Recipe (BOM): [[ view.item.name ]]</h2><p class="card-sub">Ingredients per portion, and for one batch of [[ view.item.batch_size ]] portions</p></div>
+              <button class="btn btn-sm btn-primary" type="button" @click="openRecipe(view.item)">Edit recipe</button></div>
+            <sr-empty v-if="!view.lines.length" message="No recipe yet. Without one, this item's ingredient needs count as zero." icon="book"></sr-empty>
+            <table v-else class="table table-sm mb-0 recipe-table">
+              <thead><tr><th>Ingredient</th><th class="text-end">Per portion</th><th class="text-end">Per batch</th></tr></thead>
+              <tbody><tr v-for="l in view.lines" :key="l.ingredient_id"><td>[[ l.ingredient ]]</td><td class="text-end">[[ ui.qty(l.quantity_per_portion, l.unit) ]]</td><td class="text-end text-muted">[[ ui.qty(l.quantity_per_portion * view.item.batch_size, l.unit) ]]</td></tr></tbody></table>
+          </template>
+        </div></td></tr>
+        </template>
+      </tbody></table></div>
+    <p class="table-note">Select an item or <strong>Recipe</strong> to see its ingredients. Active items are forecast and appear in data entry; deactivated items keep their history. Whether an item is available today is set by the kitchen on Plan &amp; prepare.</p>
+  </div>
 </div>
 {% endblock %}
 {% block scripts %}<script src="{{ url_for('static', filename='js/pages/admin_catalog.js') }}"></script>{% endblock %}

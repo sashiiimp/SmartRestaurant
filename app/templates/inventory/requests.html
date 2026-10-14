@@ -7,7 +7,7 @@
     <div class="d-flex gap-2 align-items-center"><label for="rq-status" class="form-label m-0 small">Show</label>
       <select id="rq-status" class="form-select form-select-sm" style="max-width: 15rem" v-model="status" @change="load"><option value="">All requests</option><option value="pending">Pending</option><option value="approved">Approved</option><option value="issued">Issued</option><option value="rejected">Rejected</option><option value="cancelled">Cancelled</option></select></div>
   </div>
-  <p class="text-muted small">Ingredients the kitchen has asked for. Issuing records a stock-out (earliest expiry first, expired stock is never issued) linked to the request.</p>
+  <p class="page-intro">Ingredients the kitchen has asked for. Issuing records a stock-out (earliest expiry first, expired stock is never issued) linked to the request.</p>
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
 
   <div v-if="req" class="card mb-3"><div class="card-body">

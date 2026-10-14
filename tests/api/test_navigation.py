@@ -118,3 +118,33 @@ def test_reports_has_the_inventory_overview_tabs(as_role):
     js = client.get("/static/js/pages/admin_monitor.js").get_data(as_text=True)
     for key in ("stock", "ingredients", "batches", "inventory", "movements"):
         assert f"['{key}', " in js
+
+
+# ---- NAV-7: final UI pass (14 Oct 2026) ----------------------------------------------------------------
+def test_forecasting_opens_ml_models_and_lists_its_tabs_in_workflow_order(as_role):
+    client = as_role("admin")
+    html = client.get("/admin/models").get_data(as_text=True)
+    assert 'href="/admin/models?tab=models" aria-current="page">ML models</a>' in html
+    assert html.index(">Historical data</a>") < html.index(">ML models</a>") < html.index(">Forecast generation</a>")
+    runs = client.get("/admin/models?tab=runs").get_data(as_text=True)
+    assert "Run forecast now" in runs and "Forecast history" in runs and "Train new model" not in runs
+    models = client.get("/admin/models?tab=models").get_data(as_text=True)
+    assert "Train new model" in models and "Model versions" in models and "Run forecast now" not in models
+    assert client.get("/admin/data").headers["Location"] == "/admin/models?tab=data"
+
+
+def test_reports_title_and_dashboard_labels(as_role):
+    client = as_role("admin")
+    assert "Reports &amp; Analytics" in client.get("/admin/monitor").get_data(as_text=True)
+    dash = client.get("/admin").get_data(as_text=True)
+    assert "Forecast models" not in dash and "Forecasting, Run forecast now" in dash
+    js = client.get("/static/js/pages/admin_monitor.js").get_data(as_text=True)
+    for group in ("'Sales'", "'Forecasting'", "'Inventory'", "'Waste & Analytics'"):
+        assert group in js
+
+
+def test_role_access_has_a_phone_list_with_the_same_pages(as_role):
+    html = as_role("admin").get("/admin/users?tab=roles").get_data(as_text=True)
+    start = html.index('<ul class="role-list d-sm-none">')
+    phone = html[start:html.index("</ul>", start)]
+    assert phone.count("<li>") == 14
