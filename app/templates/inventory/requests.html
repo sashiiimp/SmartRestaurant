@@ -37,11 +37,13 @@
       <h3 class="h6">Issue to kitchen</h3>
       <div class="row g-2 mb-2 align-items-center" v-for="(l, n) in issue.lines" :key="l.line_id">
         <div class="col-12 col-md-4">[[ l.ingredient ]] <span class="text-muted small">(outstanding [[ ui.qty(l.outstanding, l.unit) ]], usable [[ ui.qty(l.usable, l.unit) ]])</span></div>
-        <div class="col-6 col-md-3"><input class="form-control" inputmode="decimal" :aria-label="'Quantity to issue for ' + l.ingredient" v-model="l.quantity"></div>
+        <div class="col-6 col-md-3"><input v-if="l.usable > 0" class="form-control" inputmode="decimal" :aria-label="'Quantity to issue for ' + l.ingredient" v-model="l.quantity">
+          <span v-else class="text-danger small fw-semibold">No usable stock</span></div>
         <div class="col-12"><sr-field-error :errors="errors" :name="'lines[' + n + ']'"></sr-field-error></div></div>
       <sr-field-error :errors="errors" name="lines"></sr-field-error>
       <div class="form-check mb-2"><input id="cl" type="checkbox" class="form-check-input" v-model="issue.close"><label class="form-check-label" for="cl">This closes the request even if some lines are only part issued</label></div>
-      <div class="d-flex gap-2"><button class="btn btn-primary" type="button" :disabled="busy" @click="doIssue">Issue</button><button class="btn btn-outline-secondary" type="button" @click="issue = null">Cancel</button></div>
+      <p v-if="!issuable" class="text-danger small mb-2" role="status">Nothing can be issued yet: receive stock first.</p>
+      <div class="d-flex gap-2"><button class="btn btn-primary" type="button" :disabled="busy || !issuable" @click="doIssue">Issue</button><button class="btn btn-outline-secondary" type="button" @click="issue = null">Cancel</button></div>
       <div class="form-text">Empty or 0 skips a line. Nothing is issued unless usable stock covers every entered line.</div>
     </div>
   </div></div>

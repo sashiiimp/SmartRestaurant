@@ -811,6 +811,8 @@ a.wf-step:focus-visible { outline: 3px solid rgba(var(--accent-rgb), .35); outli
 .req-steps li { padding: .15rem .6rem; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); }
 .req-steps li.is-now { background: var(--accent-soft); border-color: rgba(var(--accent-rgb), .45); color: var(--accent-strong); }
 .req-steps li.is-done { background: var(--success-bg); border-color: var(--success-line); color: var(--success); }
+.eod-steps a { color: inherit; text-decoration: none; }
+.eod-steps a:focus-visible { outline: 2px solid rgba(var(--accent-rgb), .45); outline-offset: 3px; border-radius: 999px; }
 .req-steps small { font-weight: 500; }
 /* on phones the requirements table scrolls sideways; keep the two choices in view at the visible width */
 @media (max-width: 767.98px) { .ask-panel { position: sticky; left: .75rem; width: calc(100vw - 4.5rem); } }

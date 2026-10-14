@@ -34,7 +34,7 @@
               <div v-if="it.status === 'accepted' || it.status === 'overridden'" class="small mt-1"><strong>[[ it.final_qty ]]</strong> to prepare<span v-if="it.status === 'accepted' && it.final_qty !== it.recommended_qty" class="text-warning"> (now [[ it.recommended_qty ]])</span></div>
               <div v-if="it.override_reason" class="small text-muted">[[ it.override_reason ]]</div></td>
             <td class="text-nowrap"><template v-if="it.status !== 'no_forecast' && !isPast && it.prep_status !== 'done'">
-              <button class="btn btn-sm btn-success me-1" type="button" :disabled="st(it.menu_item_id).busy" @click="decide(it, 'accept')">Accept [[ it.recommended_qty ]]</button>
+              <button v-if="acceptLabel(it)" class="btn btn-sm btn-success me-1" type="button" :disabled="st(it.menu_item_id).busy" @click="decide(it, 'accept')">[[ acceptLabel(it) ]]</button>
               <button class="btn btn-sm btn-outline-secondary" type="button" :aria-expanded="st(it.menu_item_id).overriding ? 'true' : 'false'" @click="st(it.menu_item_id).overriding = !st(it.menu_item_id).overriding">Override</button></template>
               <span v-else class="text-muted small">-</span></td>
             <td class="pt-prep">
@@ -96,7 +96,7 @@
               <div v-if="it.override_reason">Reason: [[ it.override_reason ]]</div>
             </div>
             <div v-if="!isPast && it.prep_status !== 'done'" class="d-flex gap-2 mb-2">
-              <button class="btn btn-success btn-lg-touch flex-fill" type="button" :disabled="st(it.menu_item_id).busy" @click="decide(it, 'accept')">Accept [[ it.recommended_qty ]]</button>
+              <button v-if="acceptLabel(it)" class="btn btn-success btn-lg-touch flex-fill" type="button" :disabled="st(it.menu_item_id).busy" @click="decide(it, 'accept')">[[ acceptLabel(it) ]]</button>
               <button class="btn btn-outline-secondary btn-lg-touch flex-fill" type="button" @click="st(it.menu_item_id).overriding = !st(it.menu_item_id).overriding">Override</button>
             </div>
             <div v-if="st(it.menu_item_id).overriding" class="border rounded p-2 mb-2">

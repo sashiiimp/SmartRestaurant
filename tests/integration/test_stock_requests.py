@@ -202,3 +202,35 @@ def test_concurrent_issues_never_exceed_usable_stock(app):
     db.session.rollback()
     assert db.session.query(StockBatch).one().qty_remaining == Decimal("2.000")
     assert inv.stock_invariant_violations(1) == []
+
+
+# ---- final checks (Oct 2026): approval never moves stock; issuing needs usable stock --------------------------
+def test_approve_with_no_usable_stock_is_allowed_and_moves_nothing(world):
+    tofu = make_ingredient(name="Tofu", unit="kg")                            # no batches at all
+    r = inv.create_stock_request(1, {"lines": [{"ingredient_id": tofu.id, "quantity": 3}]}, world["kitchen"].id)
+    before = StockMovement.query.count()
+    assert inv.approve_stock_request(1, r["id"])["status"] == "approved"
+    assert StockMovement.query.count() == before
+
+
+def test_issue_with_zero_usable_stock_is_refused_and_writes_nothing(world):
+    tofu = make_ingredient(name="Tofu", unit="kg")
+    r = inv.create_stock_request(1, {"lines": [{"ingredient_id": tofu.id, "quantity": 3}]}, world["kitchen"].id)
+    inv.approve_stock_request(1, r["id"])
+    before = StockMovement.query.count()
+    with pytest.raises(ValidationError) as e:
+        inv.issue_stock_request(1, r["id"], {"lines": [{"line_id": r["lines"][0]["id"], "quantity": 1}]})
+    assert e.value.code == "insufficient_stock" and e.value.extra["available"] == 0.0
+    assert StockMovement.query.count() == before and inv.get_stock_request(1, r["id"]).status == "approved"
+
+
+def test_only_expired_stock_counts_as_zero_usable(world):
+    milk = make_ingredient(name="Milk", unit="l")
+    add_batch(milk, 8, received=date(2026, 9, 10), expiry=date(2026, 9, 20), batch_no="M-OLD")   # expired before today
+    r = inv.create_stock_request(1, {"lines": [{"ingredient_id": milk.id, "quantity": 2}]}, world["kitchen"].id)
+    assert inv.get_stock_request(1, r["id"]).status == "pending"
+    detail = inv.stock_request_dict(inv.get_stock_request(1, r["id"]))
+    assert detail["lines"][0]["usable_stock"] == 0.0                          # what the issue form shows
+    with pytest.raises(ValidationError) as e:
+        inv.issue_stock_request(1, r["id"], {"lines": [{"line_id": r["lines"][0]["id"], "quantity": 2}]})
+    assert e.value.code == "insufficient_stock" and e.value.extra["available"] == 0.0

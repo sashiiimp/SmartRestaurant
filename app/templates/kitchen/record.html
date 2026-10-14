@@ -16,6 +16,10 @@
   <div v-else>
     <!-- End of day: served, food waste and other use on one page (three records, three saves) -->
     <div v-show="tab === 'day'" class="tab-panel" role="tabpanel" id="panel-day" aria-labelledby="tab-day">
+      <!-- the order to record in; a tick means something is already recorded for this day -->
+      <ol class="req-steps eod-steps mb-3" aria-label="End of day steps">
+        <li v-for="(s, n) in eodSteps" :key="s.id" :class="s.done ? 'is-done' : ''"><a :href="'#' + s.id" @click.prevent="go(s.id)">[[ n + 1 ]] [[ s.label ]]<span v-if="s.done" aria-label="recorded"> &#10003;</span></a></li>
+      </ol>
       <div class="card mb-3" id="sec-served"><div class="card-body">
         <h2 class="h6">1. Portions served or sold</h2>
         <p class="text-muted small">Total served or sold per item; blank skips. <a href="#balance" @click.prevent="setTab('balance')">Daily balance</a> shows how each item adds up.</p>

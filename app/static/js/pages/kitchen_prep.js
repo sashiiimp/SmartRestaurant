@@ -16,6 +16,12 @@ SR.createApp({
   },
   async mounted() { window.matchMedia(WIDE).addEventListener('change', e => { this.wide = e.matches; }); await this.load(); },
   methods: {
+    // Accept is offered only when it would change something: not yet decided, overridden, or accepted earlier at a
+    // quantity the recommendation has since moved away from (for example after a new pre-order).
+    acceptLabel(it) {
+      if (it.status === 'accepted' && it.final_qty === it.recommended_qty) return null;
+      return (it.status === 'accepted' ? 'Accept new ' : 'Accept ') + it.recommended_qty;
+    },
     st(id) {
       if (!this.state[id]) this.state[id] = { overriding: false, qty: '', reason: '', add: '', busy: false, errors: {}, message: null };
       return this.state[id];

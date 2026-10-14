@@ -27,6 +27,12 @@ SR.createApp({
     await this.load();
   },
   computed: {
+    eodSteps() {
+      return [{ id: 'served', label: 'Served', done: this.items.some(i => i.served !== null && i.served !== undefined) },
+              { id: 'waste', label: 'Food waste', done: this.items.some(i => Number(i.wasted) > 0) },
+              { id: 'other', label: 'Other use', done: !!(this.foodUsage && this.foodUsage.entries.length) },
+              { id: 'balance', label: 'Daily balance', done: false }];
+    },
     // column totals for the Served tab (display only; the saved figures come from the daily summary)
     totals() {
       const n = v => (v === '' || v === null || v === undefined || isNaN(Number(v)) ? 0 : Number(v));
@@ -36,6 +42,10 @@ SR.createApp({
     otherIngredients() { const shown = new Set(this.usage ? this.usage.rows.map(r => r.ingredient_id) : []); return this.allIngredients.filter(g => !shown.has(g.id)); },
   },
   methods: {
+    go(id) {
+      if (id === 'balance') { this.setTab('balance'); return; }
+      const el = document.getElementById('sec-' + id); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    },
     setTab(id) { this.tab = id; history.replaceState(null, '', '#' + id); },
     moveTab(step) {
       const i = this.tabs.findIndex(t => t.id === this.tab);

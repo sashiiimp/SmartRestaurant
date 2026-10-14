@@ -1,6 +1,10 @@
 SR.createApp({
   data() { return { rows: [], status: '', loading: true, error: null, req: null, issue: null, rejecting: false, reason: '', errors: {}, busy: false, ui }; },
-  computed: { open() { return this.req && ['pending', 'approved'].includes(this.req.status); } },
+  computed: {
+    open() { return this.req && ['pending', 'approved'].includes(this.req.status); },
+    // a line can be issued only from usable (non-expired) stock; the server checks it again when issuing
+    issuable() { return !!this.issue && this.issue.lines.some(l => Number(l.usable) > 0); },
+  },
   async mounted() {
     await this.load();
     const id = new URLSearchParams(location.search).get('open');

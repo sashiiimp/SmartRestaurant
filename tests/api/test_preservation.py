@@ -24,6 +24,8 @@ MOVED = {
     ("/inventory/requests", "Issue stock"): ("/inventory/requests", "Issue to kitchen"),
     ("/inventory/stock?tab=record", "Stock out"): ("/inventory/stock?tab=record", "Issue to kitchen"),
     ("/inventory/stock?tab=record", "Wastage"): ("/inventory/stock?tab=record", "Stock wastage"),
+    # final checks: Accept is shown only when it changes the plan ("Accept 84", or "Accept new 90" after a change)
+    ("/kitchen/prep?tab=prep", "Accept [[ it.recommended_qty ]]"): ("/kitchen/prep?tab=prep", "[[ acceptLabel(it) ]]"),
 }
 
 # Removed with approval, each with the reason the capability is still there (checked by the named test).

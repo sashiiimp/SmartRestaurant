@@ -91,6 +91,8 @@ def kitchen(browser):
     print("prep cards:", n)
     first = page.locator(".card-item").first
     first.get_by_role("button", name="Accept").click()
+    page.wait_for_function("document.querySelector('.card-item.accepted') !== null", timeout=8000)
+    assert page.locator(".card-item.accepted").first.get_by_role("button", name="Accept").count() == 0, "no second Accept once accepted"
     page.wait_for_selector(".card-item.accepted", timeout=5000)
     second = page.locator(".card-item").nth(1)
     second.get_by_role("button", name="Override").click()
@@ -120,6 +122,7 @@ def kitchen(browser):
     page.fill("#w-qty", "3")
     page.get_by_role("button", name="Record waste").click()
     page.wait_for_selector("text=Waste recorded", timeout=5000)
+    page.wait_for_function("document.querySelectorAll('.eod-steps li.is-done').length >= 2", timeout=5000)   # served and waste ticked
     assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth + 1"), "horizontal scroll at 390px"
     visit(page, "/kitchen", "k_dashboard", wait=".kpis")
     assert page.locator(".kpis .stat-tile").count() == 4 and page.locator(".wf").count() == 0, "kitchen figures, no shared strip"
@@ -197,6 +200,8 @@ def inventory(browser):
     page.wait_for_selector("text=Request approved", timeout=5000)
     page.get_by_role("button", name="Issue to kitchen").click()
     page.wait_for_selector("h3:has-text('Issue to kitchen')", timeout=5000)
+    if page.locator("text=Nothing can be issued yet").count():                # zero usable stock: nothing to press
+        assert page.get_by_role("button", name="Issue", exact=True).is_disabled()
     visit(page, "/inventory/reorder?tab=demand", "i_forecast", wait="table tbody tr")
     visit(page, "/inventory/reorder", "i_reorder", wait="table, .text-center")
     visit(page, "/inventory/reorder?tab=orders", "i_purchase_orders", wait="h2")

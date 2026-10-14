@@ -466,3 +466,18 @@ one exists and otherwise opens the same pre-filled Stock requests address direct
 | Found and fixed | the Ask inventory button on red (short) rows had unreadable text; on phones its panel sat inside the sideways-scrolling table (now pinned to the visible width); Forecast generation could read an empty model list when a page was left mid-load (WebKit console error, an older race; guarded) |
 | Test environment | Chromium failed once more because its temporary directory under `instance/tmp_tests` had been handed to another user; Chromium's processes drop the right to bypass file permissions. The directory is root's again |
 | Screens | 41 pages plus 5 before/after pairs: `SmartRestaurant_Simplify_Screens.pdf` |
+
+## 26. Final checks (15 Oct 2026, branch `final-checks` on `simplify`, staging only, not deployed)
+
+| Issue | Verified | Fix |
+|---|---|---|
+| 1. Prep plan: Accept on an already accepted plan | **Confirmed**: an accepted item still showed "Accept 84" (table and phone cards); pressing it only wrote a second, identical acceptance to the audit log | Accept is shown only when it changes the plan: not yet decided ("Accept 84"), overridden ("Accept 84"), or accepted at a quantity the recommendation has since left ("Accept new 90", e.g. after a new pre-order). Override stays. Server unchanged |
+| 2. End of day sequence | **Confirmed**: the three sections were numbered but nothing showed what was already recorded, and Daily balance, the last step, sat in another tab without a number | One step line "1 Served · 2 Food waste · 3 Other use · 4 Daily balance", ticked when the day has a record; each step jumps to its section or tab. No new explanatory text |
+| 3. Requests with zero or too little usable stock | **Server correct** (no change): Approve moves no stock and is allowed without stock (stock may arrive before issuing); Issue checks usable, non-expired stock under a row lock and refuses the whole issue with "only X usable" if any line is short, writing nothing. **Screen confirmed**: with 0 usable the issue form opened empty and pressing Issue said "enter a quantity for at least one line", hiding the reason | A line with no usable stock shows "No usable stock" instead of a quantity box; when no line can be issued the form says "Nothing can be issued yet: receive stock first" and Issue is disabled. Partly covered lines are still filled with the usable quantity |
+
+| Check | Result |
+|---|---|
+| New tests | approve with no usable stock moves nothing; issue with zero usable stock is refused (`insufficient_stock`, available 0), nothing written, request stays approved; expired-only stock counts as 0 usable and the request shows 0 |
+| Fast suite (SQLite) | **483 passed**, 16 skipped |
+| MySQL 8.4 (isolated) | stock requests, prep workflow, recommendations, role dashboards, E2E-1, preservation, RBAC: **104 passed** |
+| Browsers | Chromium, Firefox, WebKit **pass**; the walkthrough now checks that an accepted card has no second Accept, that End of day ticks served and waste once recorded, and that Issue is disabled when nothing is usable |
