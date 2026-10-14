@@ -319,3 +319,11 @@ are unchanged; `docs/PRESERVATION_CHECKLIST.md` lists every function and where i
 - Read-only additions to `dashboard_service`: `day` on the kitchen dashboard, `totals` and `requests` on the inventory
   dashboard, `accuracy` on the admin dashboard, all from existing service functions. Counts are no longer cut at the
   length of the list shown.
+
+## 17. Simplification (14 Oct 2026, branch `simplify`)
+
+Approved list M1-M8, R1, R2 (`docs/PRESERVATION_CHECKLIST.md` section 7): one Ask inventory action with two choices;
+kitchen requests shown one step at a time (Approve, then Issue to kitchen; still two operations); no Start button (the
+first prepared quantity starts an item); Served & waste as End of day + Daily balance; Reports with Stock & expiry and
+Stock history (8 reports); Role access under Users; one word per operation (Food waste, Stock wastage, Issue to
+kitchen); no step marker in the top bar; unused CSS and dashboard fields removed. CSS section 17.

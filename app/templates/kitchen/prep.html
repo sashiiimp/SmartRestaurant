@@ -44,7 +44,6 @@
                 <input class="form-control form-control-sm pt-add" inputmode="numeric" placeholder="Qty" :aria-label="'Add prepared quantity for ' + it.name" v-model="st(it.menu_item_id).add" @keyup.enter="addPrepared(it)">
                 <button class="btn btn-sm btn-outline-primary" type="button" :disabled="st(it.menu_item_id).busy" @click="addPrepared(it)">+ Add</button>
                 <template v-if="it.prep_status && !isFuture">
-                  <button v-if="it.prep_status === 'planned'" class="btn btn-sm btn-outline-primary" type="button" :disabled="st(it.menu_item_id).busy" @click="prepStatus(it, 'start')">Start</button>
                   <button v-if="it.prep_status !== 'done'" class="btn btn-sm btn-outline-success" type="button" :disabled="st(it.menu_item_id).busy" @click="prepStatus(it, 'done')">Mark done</button>
                   <button v-if="it.prep_status === 'done'" class="btn btn-sm btn-outline-secondary" type="button" :disabled="st(it.menu_item_id).busy" @click="prepStatus(it, 'reopen')">Reopen</button>
                 </template></div>
@@ -124,7 +123,6 @@
                  :aria-valuenow="it.prepared_so_far" aria-valuemin="0" :aria-valuemax="it.final_qty">
               <div class="progress-bar" :class="it.prep_status === 'done' ? 'bg-success' : ''" :style="{ width: progress(it) + '%' }"></div></div>
             <div v-if="it.prep_status && !isFuture" class="d-flex gap-2 mt-2">
-              <button v-if="it.prep_status === 'planned'" class="btn btn-sm btn-outline-primary" type="button" :disabled="st(it.menu_item_id).busy" @click="prepStatus(it, 'start')">Start</button>
               <button v-if="it.prep_status !== 'done'" class="btn btn-sm btn-outline-success" type="button" :disabled="st(it.menu_item_id).busy" @click="prepStatus(it, 'done')">Mark done</button>
               <button v-if="it.prep_status === 'done'" class="btn btn-sm btn-outline-secondary" type="button" :disabled="st(it.menu_item_id).busy" @click="prepStatus(it, 'reopen')">Reopen</button>
             </div>

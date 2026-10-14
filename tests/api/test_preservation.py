@@ -1,4 +1,4 @@
-"""PRES-1 .. PRES-8: nothing the system could do before the role dashboards (baseline = production d26b1e9) is lost.
+"""PRES-1 .. PRES-5: nothing the system could do before the role dashboards (baseline = production d26b1e9) is lost.
 
 The baseline is tests/preservation_baseline.json, written by scripts/preservation_audit.py; the checklist that explains
 it is docs/PRESERVATION_CHECKLIST.md. Every item in the baseline must still exist. A dashboard may show an action in a
@@ -20,7 +20,23 @@ MOVED = {
     ("/kitchen", "GET /kitchen/daily-summary"): ("/kitchen/record", "GET /kitchen/daily-summary"),
     # the inventory dashboard reads the full reorder count from /dashboards/inventory ("totals"); Reorder lists them all
     ("/inventory", "GET /recommendations/reorder"): ("/inventory/reorder?tab=reorder", "GET /recommendations/reorder"),
+    # M8 (approved 14 Oct 2026): one word for each operation; same buttons, same API calls
+    ("/inventory/requests", "Issue stock"): ("/inventory/requests", "Issue to kitchen"),
+    ("/inventory/stock?tab=record", "Stock out"): ("/inventory/stock?tab=record", "Issue to kitchen"),
+    ("/inventory/stock?tab=record", "Wastage"): ("/inventory/stock?tab=record", "Stock wastage"),
 }
+
+# Removed with approval, each with the reason the capability is still there (checked by the named test).
+APPROVED_REMOVALS = {
+    # M3: the first prepared quantity starts an item (test_prep_workflow.py::test_recording_the_first_prepared_quantity_starts_preparation);
+    # POST /recommendations/prep/status still accepts "start"
+    ("/kitchen/prep?tab=prep", "Start"),
+}
+
+# M7: the Role access tab is a section under Users; ?tab=roles still opens it
+MERGED_VIEWS = {"/admin/users?tab=roles": "/admin/users?tab=users"}
+# M5, M6: reports merged; the earlier ?tab= keys open the report that holds them
+MERGED_REPORTS = {"stock": "stock", "batches": "stock", "inventory": "history", "movements": "history"}
 
 
 def _routes(data):
@@ -37,13 +53,25 @@ def test_every_route_and_method_still_exists_with_the_same_roles():
 
 
 # ---- PRES-2: the menu: same pages, same groups, same tabs in the same order ------------------------------------
-def test_menu_pages_and_tabs_are_unchanged():
-    assert NOW["pages"] == BASELINE["pages"]
+def test_menu_pages_and_tabs_are_unchanged_apart_from_the_approved_merges():
+    expected = json.loads(json.dumps(BASELINE["pages"]))
+    for p in expected:
+        if p["path"] == "/admin/users":                                   # M7
+            p["tabs"] = [t for t in p["tabs"] if t["key"] != "roles"]
+        if p["path"] == "/kitchen/requirements":                          # M8
+            p["label"] = "Ingredients & requests"
+    assert NOW["pages"] == expected
 
 
 # ---- PRES-3: Reports & Analytics keeps all 10 reports; CLI keeps all commands; old addresses still redirect -----
 def test_reports_cli_and_redirects_are_kept():
-    assert [t for t in BASELINE["report_tabs"] if t not in NOW["report_tabs"]] == []
+    now_keys = {t["key"] for t in NOW["report_tabs"]}
+    js = (Path(__file__).resolve().parents[2] / "app/static/js/pages/admin_monitor.js").read_text()
+    for t in BASELINE["report_tabs"]:
+        if t["key"] in now_keys:
+            continue
+        target = MERGED_REPORTS[t["key"]]                                 # M5, M6: merged, and the old key still opens it
+        assert target in now_keys and f"{t['key']}: '{target}'" in js, t
     assert set(BASELINE["cli"]) <= set(NOW["cli"])
     assert NOW["redirects"] == BASELINE["redirects"]
 
@@ -58,8 +86,8 @@ def test_old_address_redirects(as_role, old, new):
 # ---- PRES-4: every page view keeps its buttons and its API calls (a dashboard change is listed in MOVED) ---------
 @pytest.mark.parametrize("view", sorted(BASELINE["ui"]))
 def test_page_keeps_its_actions_and_data(view):
-    before, now = BASELINE["ui"][view], NOW["ui"][view]
-    lost = [a for a in before["actions"] if a not in now["actions"] and (view, a) not in MOVED]
+    before, now = BASELINE["ui"][view], NOW["ui"][MERGED_VIEWS.get(view, view)]
+    lost = [a for a in before["actions"] if a not in now["actions"] and (view, a) not in MOVED and (view, a) not in APPROVED_REMOVALS]
     lost_api = [c for c in before["api"] if c not in now["api"] and (view, c) not in MOVED]
     assert not lost, (view, lost)
     assert not lost_api, (view, lost_api)

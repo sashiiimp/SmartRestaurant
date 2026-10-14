@@ -6,7 +6,7 @@
     <h1 class="h4 m-0">Served &amp; waste</h1>
     <sr-date-nav v-model="date" @change="load"></sr-date-nav>
   </div>
-  <p class="page-intro">After service: served, waste with a reason, and other use. <strong>Daily balance</strong> checks it all adds up.</p>
+  <p class="page-intro">After service, record what was served, wasted and used otherwise. <strong>Daily balance</strong> checks it all adds up.</p>
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
   <div class="sr-tabs" role="tablist" aria-label="End of day records" @keydown.right.prevent="moveTab(1)" @keydown.left.prevent="moveTab(-1)">
     <button v-for="t in tabs" :key="t.id" type="button" role="tab" class="sr-tab" :id="'tab-' + t.id" :aria-controls="'panel-' + t.id"
@@ -14,9 +14,10 @@
   </div>
   <sr-loading v-if="loading"></sr-loading>
   <div v-else>
-    <div v-show="tab === 'served'" class="tab-panel" role="tabpanel" id="panel-served" aria-labelledby="tab-served">
-      <div class="card"><div class="card-body">
-        <h2 class="h6">Portions served or sold</h2>
+    <!-- End of day: served, food waste and other use on one page (three records, three saves) -->
+    <div v-show="tab === 'day'" class="tab-panel" role="tabpanel" id="panel-day" aria-labelledby="tab-day">
+      <div class="card mb-3" id="sec-served"><div class="card-body">
+        <h2 class="h6">1. Portions served or sold</h2>
         <p class="text-muted small">Total served or sold per item; blank skips. <a href="#balance" @click.prevent="setTab('balance')">Daily balance</a> shows how each item adds up.</p>
         <div class="table-responsive served-table"><table class="table table-sm align-middle mb-0">
           <thead><tr><th scope="col">Item</th><th scope="col" class="text-end">Prepared</th><th scope="col" class="text-end">Waste</th><th scope="col" class="col-served">Served or sold</th></tr></thead>
@@ -37,10 +38,10 @@
         </div>
         <button class="btn btn-primary btn-lg-touch mt-2" type="button" :disabled="savingServed" @click="saveServed(false)">Save served quantities</button>
       </div></div>
-    </div>
-    <div v-show="tab === 'waste'" class="tab-panel tab-narrow" role="tabpanel" id="panel-waste" aria-labelledby="tab-waste">
-      <div class="card"><div class="card-body">
-        <h2 class="h6">Record waste</h2>
+      <div class="row g-3">
+      <div class="col-12 col-lg-6">
+      <div class="card h-100" id="sec-waste"><div class="card-body">
+        <h2 class="h6">2. Food waste</h2>
         <p class="text-muted small">Prepared portions thrown away, with a reason.</p>
         <div class="mb-2"><label class="form-label" for="w-item">Item</label>
           <select id="w-item" class="form-select" v-model.number="waste.menu_item_id"><option v-for="i in items" :key="i.menu_item_id" :value="i.menu_item_id">[[ i.name ]]</option></select>
@@ -53,10 +54,10 @@
         <sr-field-error :errors="wasteErrors" name="date"></sr-field-error>
         <button class="btn btn-outline-danger btn-lg-touch" type="button" :disabled="savingWaste" @click="saveWaste">Record waste</button>
       </div></div>
-    </div>
-    <div v-show="tab === 'other'" class="tab-panel tab-narrow" role="tabpanel" id="panel-other" aria-labelledby="tab-other">
-      <div class="card"><div class="card-body">
-        <h2 class="h6">Other food use</h2>
+      </div>
+      <div class="col-12 col-lg-6">
+      <div class="card h-100" id="sec-other"><div class="card-body">
+        <h2 class="h6">3. Other food use</h2>
         <p class="text-muted small">Staff meals, complimentary portions, samples. Recording a type again replaces it; sales and forecast are unchanged.</p>
         <div class="mb-2"><label class="form-label" for="u-item">Item</label>
           <select id="u-item" class="form-select" v-model.number="food.menu_item_id"><option v-for="i in items" :key="i.menu_item_id" :value="i.menu_item_id">[[ i.name ]]</option></select>
@@ -76,6 +77,8 @@
             <span>[[ e.item ]]: [[ usageLabel(e.usage_type) ]] [[ e.quantity ]]<span v-if="e.note" class="text-muted"> ([[ e.note ]])</span></span>
             <button class="btn btn-sm btn-outline-secondary" type="button" @click="clearFood(e)">Clear</button></li></ul>
       </div></div>
+      </div>
+      </div>
     </div>
     <div v-show="tab === 'balance'" class="tab-panel" role="tabpanel" id="panel-balance" aria-labelledby="tab-balance">
       <div class="card mb-3"><div class="card-body">

@@ -85,7 +85,7 @@ def test_forecast_days_mark_missing_days_as_none_not_zero(world):
 def test_stock_summary_lists_out_then_low(world):
     r = dash.admin_dashboard(1, 7)
     s = r["stock"]
-    assert (s["ingredients"], s["out"], s["low"]) == (5, 2, 2) and r["low_stock_count"] == 4
+    assert (s["ingredients"], s["out"], s["low"]) == (5, 2, 2) and s["out"] + s["low"] == 4          # low or out (the field low_stock_count was removed, R2)
     # out first (Lettuce: none, Sauce: only an expired batch), then low by usable / reorder level: Cheese 0.2, Chicken 0.5
     assert [(x["name"], x["status"], x["is_critical"]) for x in s["rows"]] == [
         ("Lettuce", "out", True), ("Sauce", "out", True), ("Cheese", "low", True), ("Chicken", "low", False)]

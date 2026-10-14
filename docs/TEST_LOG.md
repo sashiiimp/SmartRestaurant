@@ -453,3 +453,16 @@ one exists and otherwise opens the same pre-filled Stock requests address direct
 | Environment defect found | `/tmp` (tmpfs, 1.9 GB) was full: 1.3 GB of assistant session scratch and 413 MB of pytest temp folders. It caused the Chromium crashes of section 23 and, this time, 22 unit-test errors (OSError). The pytest folders of this work were removed; tests and browsers now keep temporary files under `instance/tmp_tests` on the main disk. Production does not use `/tmp` for data (MySQL under `/srv`) |
 | Consistency across roles (demo data, 14 Oct) | the same figures on all three dashboards: 5 out of stock and 1 low, 6 ingredients short in 7 days, 7 expired batches, 604 portions to prepare, 511 forecast |
 | Screens | 41 pages plus 6 before/after dashboard pages (desktop and phone), no page scrolls sideways: `SmartRestaurant_Role_Dashboards_Screens.pdf` |
+
+## 25. Simplification (14 Oct 2026, branch `simplify` on `role-dashboards`, staging only, not deployed)
+
+| Check | Result |
+|---|---|
+| Scope | approved M1, M2 (approve and issue stay separate operations), M3, M4, M5, M6, M7, M8, R1, R2; templates, page scripts, CSS, navigation (one tab moved, one label), two unread dashboard fields; no service rule, ML, model, migration, route or permission change |
+| Preservation test | **pass**: every baseline route with the same roles; menus equal to the baseline apart from the approved M7 tab and M8 label; the 10 baseline reports reachable (8 reports, the merged keys open them); every baseline action and API call present or listed as an approved change with the place it moved to (`tests/api/test_preservation.py`, `docs/PRESERVATION_CHECKLIST.md` section 7) |
+| Fast suite (SQLite) | **479 passed**, 16 skipped (step-marker tests replaced by a no-marker test, R1) |
+| MySQL 8.4 (isolated, port 3310) | role dashboards, admin dashboard, E2E-1, prep workflow, preservation, navigation, RBAC: **113 passed** |
+| Browsers | Chromium, Firefox, WebKit **pass**; the walkthrough now uses Ask inventory, sends a kitchen request, checks that inventory sees only Approve first and Issue to kitchen after approval, records waste on End of day, opens Stock & expiry, Stock history and the old `?tab=movements` address, and Role access under Users |
+| Found and fixed | the Ask inventory button on red (short) rows had unreadable text; on phones its panel sat inside the sideways-scrolling table (now pinned to the visible width); Forecast generation could read an empty model list when a page was left mid-load (WebKit console error, an older race; guarded) |
+| Test environment | Chromium failed once more because its temporary directory under `instance/tmp_tests` had been handed to another user; Chromium's processes drop the right to bypass file permissions. The directory is root's again |
+| Screens | 41 pages plus 5 before/after pairs: `SmartRestaurant_Simplify_Screens.pdf` |

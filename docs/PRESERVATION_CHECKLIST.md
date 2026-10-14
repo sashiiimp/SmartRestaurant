@@ -346,3 +346,24 @@ dashboard calls marked *moved* now come from the dashboard endpoint, and the sam
 | GET | `/login` | (any / public) |
 | POST | `/login` | (any / public) |
 | POST | `/logout` | admin, inventory, kitchen |
+
+## 7. Approved simplifications (14 Oct 2026, branch `simplify`)
+
+Approved by the project owner: M1, M2 (modified), M3, M4, M5, M6, M7, M8, R1, R2. No route, role, record, calculation,
+ML function or proposal capability was removed; `tests/api/test_preservation.py` lists each change and checks where the
+function now is.
+
+| ID | Change | Capability kept, and where |
+|---|---|---|
+| M1 | Ingredients & requests: one **Ask inventory** button per ingredient opens two choices | Kitchen stock request (K11): *Request stock* opens the request form filled in. Shortage reporting (K12): *Report shortage* with an optional note, now inline instead of a browser prompt. Both endpoints unchanged |
+| M2 | Kitchen requests: one step at a time. Pending shows **Approve** / **Reject**; approved shows **Issue to kitchen**; a step line shows who approved | Approve and Issue stay two separate, recorded operations (as instructed); the list says the next step. Server rules unchanged |
+| M3 | Prep plan: the **Start** button is gone | Recording the first prepared quantity marks the item in progress (unchanged service rule, test_prep_workflow); Mark done and Reopen stay; the API still accepts `start` |
+| M4 | Served & waste: four tabs become **End of day** (1 served, 2 food waste, 3 other food use) and **Daily balance** (balance + ingredient use) | K6, K7, K14, K8 unchanged; each section saves on its own; `#served`, `#waste`, `#other` open End of day at that section |
+| M5 | Reports: Stock trends + Stock movements = **Stock history** | Day-by-day stock for one ingredient and the movement table; both CSV downloads; `?tab=inventory` and `?tab=movements` open it |
+| M6 | Reports: Stock levels + Batches and expiry = **Stock & expiry** | Stock levels table and CSV, batch table with days to expiry; `?tab=batches` opens it at the batches |
+| M7 | Administration: Role access is a section under **Users** | Same tables (read from the server's access rules); `?tab=roles` opens Users at that section |
+| M8 | Wording: kitchen **Food waste**, inventory **Stock wastage**, **Issue to kitchen** (was Stock out / Issue stock), menu **Ingredients & requests** | Labels only; movement types, endpoints and records unchanged |
+| R1 | The "Step n of 6" marker in the top bar is removed | The six-step workflow stays on the admin dashboard |
+| R2 | 83 unused CSS rules; dashboard fields no page read: `low_stock_count` (= out + low, still in `stock`), kitchen `tiles.items_to_prepare`, `tiles.open_alerts` | `tiles.items_planned` / `items_done` kept (prep-workflow tests use them) |
+
+Reports & Analytics now has 8 reports (was 10) under the same 4 groups; Administration has 2 tabs (was 3).

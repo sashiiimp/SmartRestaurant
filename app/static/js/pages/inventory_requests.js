@@ -23,7 +23,8 @@ SR.createApp({
       catch (e) { this.errors = e.fields || {}; if (!Object.keys(this.errors).length) ui.toast(ui.errorText(e), 'danger'); await this.load(); return false; }
       finally { this.busy = false; }
     },
-    approve() { return this.act('/approve', undefined, 'Request approved.'); },
+    approve() { return this.act('/approve', undefined, 'Request approved. Next: issue to kitchen.'); },
+    next(r) { return { pending: 'approve or reject', approved: 'issue to kitchen' }[r.status] || ''; },
     async reject() { if (await this.act('/reject', { reason: this.reason }, 'Request rejected.')) { this.rejecting = false; this.reason = ''; } },
     startIssue() {
       this.errors = {};

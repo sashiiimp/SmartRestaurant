@@ -55,7 +55,7 @@
       </div></div></div>
       <div class="col-12 col-xl-4">
         <div class="card mb-3"><div class="card-body">
-          <div class="card-head"><h2 class="h6">Ingredient shortages</h2><a href="/kitchen/requirements">Ingredients</a></div>
+          <div class="card-head"><h2 class="h6">Ingredient shortages</h2><a href="/kitchen/requirements">Ingredients &amp; requests</a></div>
           <sr-empty v-if="!d.shortages.length" message="No shortages for this plan." icon="check"></sr-empty>
           <template v-else>
             <ul class="short-list"><li v-for="s in d.shortages" :key="s.ingredient_id"><strong>[[ s.name ]]</strong><span>short by [[ ui.qty(s.short_by, s.unit) ]]</span><small>need [[ ui.qty(s.required, s.unit) ]], have [[ ui.qty(s.usable_stock, s.unit) ]]</small></li></ul>

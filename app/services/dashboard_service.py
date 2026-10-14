@@ -52,11 +52,10 @@ def kitchen_dashboard(outlet_id: int, day: date, role: str = "kitchen") -> dict:
     planned = sum((r["final_qty"] if r["final_qty"] is not None else (r["recommended_qty"] or 0)) for r in rows)
     shorts = [r for r in reqs["ingredients"] if r["status"] == "short"]
     return {"date": day.isoformat(), "day": _kitchen_day(outlet_id, day, rows),
-            "tiles": {"items_to_prepare": sum(1 for r in rows if (r["recommended_qty"] or 0) > 0),
-                      "planned_total": planned, "prepared_total": sum(r["prepared"] for r in rows),
+            "tiles": {"planned_total": planned, "prepared_total": sum(r["prepared"] for r in rows),
                       "items_planned": sum(1 for r in rows if r["prep_status"]),
                       "items_done": sum(1 for r in rows if r["prep_status"] == "done"),
-                      "shortage_count": len(shorts), "open_alerts": len(alerts["rows"])},
+                      "shortage_count": len(shorts)},
             "plan": rows, "shortages": shorts, "cannot_compute": reqs["cannot_compute"], "alerts": alerts["rows"][:8]}
 
 
@@ -249,7 +248,6 @@ def admin_dashboard(outlet_id: int, range_days: int = 7) -> dict:
             "forecast_next7": fdays,
             "forecast_next7_total": round(sum(f["qty"] for f in fdays if f["qty"] is not None), 1),
             "menu_items_active": MenuItem.query.filter_by(outlet_id=outlet_id, is_active=True).count(),
-            "low_stock_count": sum(1 for r in levels if r["status"] != "ok"),
             "stock": _stock_summary(levels),
             "inventory_alerts": _inventory_alerts(outlet_id, levels, day),
             "pre_orders": kit.upcoming_pre_orders(outlet_id, 7),

@@ -16,9 +16,12 @@
       <div class="col-6 col-md-2"><label class="form-label" for="m-from">From</label><input id="m-from" type="date" class="form-control" v-model="from" @change="load"></div>
       <div class="col-6 col-md-2"><label class="form-label" for="m-to">To</label><input id="m-to" type="date" class="form-control" v-model="to" @change="load"></div>
       <div class="col-6 col-md-2" v-if="tab === 'forecast'"><label class="form-label" for="m-item">Menu item</label><select id="m-item" class="form-select" v-model="itemId" @change="load"><option value="">All items</option><option v-for="i in items" :key="i.id" :value="i.id">[[ i.name ]]</option></select></div>
-      <div class="col-6 col-md-3" v-if="tab === 'inventory' || tab === 'movements'"><label class="form-label" for="m-ing">Ingredient</label><select id="m-ing" class="form-select" v-model="ingId" @change="load"><option v-if="tab === 'movements'" value="">All ingredients</option><option v-for="g in ingredients" :key="g.id" :value="g.id">[[ g.name ]]</option></select></div>
-      <div class="col-6 col-md-2" v-if="tab === 'movements'"><label class="form-label" for="m-type">Type</label><select id="m-type" class="form-select" v-model="mtype" @change="load"><option value="">All types</option><option value="stock_in">Stock in</option><option value="stock_out">Stock out</option><option value="wastage">Wastage</option><option value="adjustment">Adjustment</option></select></div>
-      <div class="col-12 col-md-3 ms-md-auto text-md-end" v-if="tab !== 'analytics'"><a class="btn btn-outline-secondary" :href="csvUrl">Download CSV</a></div>
+      <div class="col-6 col-md-3" v-if="tab === 'history'"><label class="form-label" for="m-ing">Ingredient</label><select id="m-ing" class="form-select" v-model="ingId" @change="load"><option value="">All ingredients</option><option v-for="g in ingredients" :key="g.id" :value="g.id">[[ g.name ]]</option></select></div>
+      <div class="col-6 col-md-2" v-if="tab === 'history'"><label class="form-label" for="m-type">Movement type</label><select id="m-type" class="form-select" v-model="mtype" @change="load"><option value="">All types</option><option value="stock_in">Stock in</option><option value="stock_out">Issued to kitchen</option><option value="wastage">Stock wastage</option><option value="adjustment">Adjustment</option></select></div>
+      <div class="col-12 col-md-3 ms-md-auto text-md-end" v-if="tab !== 'analytics' && tab !== 'history'"><a class="btn btn-outline-secondary" :href="csvUrl">Download CSV</a></div>
+      <div class="col-12 col-md-auto ms-md-auto d-flex flex-wrap gap-2 justify-content-md-end" v-if="tab === 'history'">
+        <a v-if="ingId" class="btn btn-outline-secondary" :href="'/api/v1/reports/inventory-trend?format=csv&from=' + from + '&to=' + to + '&ingredient_id=' + ingId">Daily stock (CSV)</a>
+        <a class="btn btn-outline-secondary" :href="csvUrl">Movements (CSV)</a></div>
       <div class="col-6 col-md-2" v-if="tab === 'sales' || tab === 'waste'"><label class="form-label" for="m-group">Group by</label><select id="m-group" class="form-select" v-model="groupBy" @change="load"><option value="day">Day</option><option value="week">Week</option><option value="month">Month</option></select></div>
     </div>
   </div></div>
@@ -98,7 +101,8 @@
       <div v-if="ingDemand.unknown_items.length" class="alert alert-warning">Unknown demand (no recipe): [[ ingDemand.unknown_items.map(i => i.name).join(', ') ]]</div>
     </div>
 
-    <div v-if="tab === 'batches'">
+    <div v-if="tab === 'stock'" id="batches" class="mt-4">
+      <h2 class="h6">Batches and expiry</h2>
       <sr-empty v-if="!batches.length" message="No stock batches."></sr-empty>
       <div v-else class="table-responsive"><table class="table table-sm align-middle">
         <thead><tr><th>Ingredient</th><th>Batch</th><th>Received</th><th class="text-end">Remaining</th><th>Expiry</th><th class="text-end">Days to expiry</th></tr></thead>
@@ -108,18 +112,21 @@
       <div class="small text-muted">Batches with stock remaining, earliest expiry first.</div>
     </div>
 
-    <div v-if="tab === 'inventory' && trend">
+    <div v-if="tab === 'history' && trend">
+      <h2 class="h6">[[ trend.ingredient ]]: stock day by day</h2>
       <div class="row g-3 mb-3"><div class="col-6 col-md-3"><sr-stat-tile label="Opening stock" icon="package" :value="ui.qty(trend.opening, trend.unit)"></sr-stat-tile></div><div class="col-6 col-md-3"><sr-stat-tile label="Closing stock" icon="package" tone="info" :value="ui.qty(trend.closing, trend.unit)"></sr-stat-tile></div></div>
       <div class="card mb-3"><div class="card-body"><sr-line-chart :labels="trend.rows.map(r => ui.date(r.date))" :datasets="trendData" :y-title="'Closing stock (' + trend.unit + ')'" title="Closing stock"></sr-line-chart></div></div>
-      <div class="table-responsive" style="max-height: 24rem; overflow: auto"><table class="table table-sm"><thead><tr><th>Date</th><th class="text-end">Stock in</th><th class="text-end">Stock out</th><th class="text-end">Wastage</th><th class="text-end">Adjustment</th><th class="text-end">Closing</th></tr></thead>
+      <div class="table-responsive" style="max-height: 24rem; overflow: auto"><table class="table table-sm"><thead><tr><th>Date</th><th class="text-end">Stock in</th><th class="text-end">Issued</th><th class="text-end">Stock wastage</th><th class="text-end">Adjustment</th><th class="text-end">Closing</th></tr></thead>
         <tbody><tr v-for="r in trend.rows" :key="r.date"><td>[[ ui.date(r.date) ]]</td><td class="text-end">[[ ui.num(r.stock_in, 3) ]]</td><td class="text-end">[[ ui.num(r.stock_out, 3) ]]</td><td class="text-end">[[ ui.num(r.wastage, 3) ]]</td><td class="text-end">[[ ui.num(r.adjustment, 3) ]]</td><td class="text-end fw-semibold">[[ ui.num(r.closing, 3) ]]</td></tr></tbody></table></div>
-      <div class="small text-muted mt-2">Rebuilt from stock movements; the last closing figure equals stock on hand.</div>
+      <div class="small text-muted mt-2 mb-4">Rebuilt from stock movements; the last closing figure equals stock on hand.</div>
     </div>
-    <div v-if="tab === 'movements' && moves">
+    <p v-if="tab === 'history' && !ingId" class="small text-muted">Choose one ingredient to see its stock day by day.</p>
+    <div v-if="tab === 'history' && moves">
+      <h2 class="h6">Movements</h2>
       <div class="small text-muted mb-2">[[ moves.meta.total ]] movements in this period<span v-if="moves.meta.total > moves.meta.shown">; the latest [[ moves.meta.shown ]] are shown, the CSV has all of them</span>.</div>
       <sr-empty v-if="!moves.data.length" message="No stock movements in this period."></sr-empty>
       <div v-else class="table-responsive" style="max-height: 32rem; overflow: auto"><table class="table table-sm"><thead><tr><th>Date</th><th>Ingredient</th><th>Type</th><th class="text-end">Quantity</th><th>Reason</th><th>Note</th><th>Linked to</th></tr></thead>
-        <tbody><tr v-for="(m, i) in moves.data" :key="i"><td class="text-nowrap">[[ ui.date(m.date) ]]</td><td>[[ m.ingredient ]]</td><td>[[ m.type.replace('_', ' ') ]]</td>
+        <tbody><tr v-for="(m, i) in moves.data" :key="i"><td class="text-nowrap">[[ ui.date(m.date) ]]</td><td>[[ m.ingredient ]]</td><td>[[ moveType(m.type) ]]</td>
           <td class="text-end fw-semibold" :class="m.quantity < 0 ? 'text-danger' : 'text-success'">[[ m.quantity > 0 ? '+' : '' ]][[ ui.qty(m.quantity, m.unit) ]]</td><td>[[ (m.reason || '').replace('_', ' ') ]]</td><td>[[ m.note ]]</td><td>[[ m.reference ]]</td></tr></tbody></table></div>
     </div>
     <div v-if="tab === 'sales' && sales">
@@ -143,7 +150,7 @@
       </template>
     </div>
     <div v-if="tab === 'waste' && waste">
-      <h2 class="h6">Prepared-food waste</h2>
+      <h2 class="h6">Food waste (prepared portions)</h2>
       <div class="row g-3 mb-2"><div class="col-6 col-md-3"><sr-stat-tile label="Portions wasted" icon="trash" :value="ui.num(waste.food.totals.quantity, 0)"></sr-stat-tile></div><div class="col-6 col-md-3"><sr-stat-tile label="Value at selling price" icon="dollar" :value="ui.money(waste.food.totals.value)"></sr-stat-tile></div></div>
       <div class="card mb-3"><div class="card-body"><sr-bar-chart :labels="wasteLabels" :datasets="wasteData" y-title="LKR" title="Food waste value"></sr-bar-chart></div></div>
       <div class="row g-3 mt-1"><div class="col-12 col-md-6"><h3 class="h6">Top 5 wasted items</h3><table class="table table-sm"><thead><tr><th>Item</th><th class="text-end">Portions</th><th class="text-end">Value</th></tr></thead><tbody><tr v-for="i in waste.food.top_items" :key="i.item"><td>[[ i.item ]]</td><td class="text-end">[[ i.quantity ]]</td><td class="text-end">[[ ui.money(i.value) ]]</td></tr></tbody></table></div>
@@ -156,8 +163,8 @@
         <tbody><tr v-for="r in waste.food.by_item" :key="r.item">
           <td class="fw-semibold">[[ r.item ]]</td><td class="text-end">[[ r.planned === null ? '-' : ui.num(r.planned, 0) ]]</td><td class="text-end">[[ ui.num(r.prepared, 0) ]]</td><td class="text-end">[[ ui.num(r.sold, 0) ]]</td><td class="text-end">[[ ui.num(r.wasted, 0) ]]</td>
           <td class="text-end" :class="r.suggestion ? 'text-warning-emphasis fw-semibold' : ''">[[ r.waste_pct === null ? '-' : ui.num(r.waste_pct, 1) + '%' ]]</td><td class="small">[[ r.suggestion || '' ]]</td></tr></tbody></table></div>
-      <h2 class="h6 mt-3">Ingredient wastage (stock)</h2>
-      <sr-empty v-if="!waste.ingredient.by_ingredient.length" message="No ingredient wastage recorded in this period."></sr-empty>
+      <h2 class="h6 mt-3">Stock wastage (ingredients)</h2>
+      <sr-empty v-if="!waste.ingredient.by_ingredient.length" message="No stock wastage recorded in this period."></sr-empty>
       <table v-else class="table table-sm" style="max-width: 40rem"><thead><tr><th>Ingredient</th><th class="text-end">Quantity</th><th class="text-end">Cost</th></tr></thead><tbody><tr v-for="i in waste.ingredient.by_ingredient" :key="i.ingredient"><td>[[ i.ingredient ]]</td><td class="text-end">[[ ui.qty(i.quantity, i.unit) ]]</td><td class="text-end">[[ ui.money(i.value) ]]</td></tr></tbody></table>
       <h2 class="h6 mt-3">Other food use (not sold, not wasted)</h2>
       <sr-empty v-if="!usage || !usage.total" message="No staff meals, complimentary portions or samples recorded in this period."></sr-empty>
@@ -167,7 +174,7 @@
         <table class="table table-sm" style="max-width: 40rem"><thead><tr><th>Item</th><th class="text-end">Staff meals</th><th class="text-end">Complimentary</th><th class="text-end">Samples</th><th class="text-end">Other</th><th class="text-end">Total</th></tr></thead>
           <tbody><tr v-for="i in usage.by_item" :key="i.item"><td>[[ i.item ]]</td><td class="text-end">[[ i.staff_meal ]]</td><td class="text-end">[[ i.complimentary ]]</td><td class="text-end">[[ i.sample ]]</td><td class="text-end">[[ i.other ]]</td><td class="text-end">[[ i.total ]]</td></tr></tbody></table>
       </template>
-      <div class="small text-muted">Food waste, ingredient wastage and other use are separate records. Source: [[ waste.data_source ]].</div>
+      <div class="small text-muted">Food waste, stock wastage and other food use are separate records. Source: [[ waste.data_source ]].</div>
     </div>
   </template>
 </div>

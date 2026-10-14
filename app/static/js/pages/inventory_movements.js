@@ -28,6 +28,7 @@ SR.createApp({
     } catch (e) { this.error = ui.errorText(e); } finally { this.loading = false; }
   },
   methods: {
+    moveType(t) { return { stock_in: 'Stock in', stock_out: 'Issued to kitchen', wastage: 'Stock wastage', adjustment: 'Adjustment' }[t] || t; },
     async refresh() {
       const r = await api.get('/stock/movements', { ingredient_id: this.filterIng, limit: 30 });
       this.moves = r.data; this.total = r.meta.total;

@@ -12,11 +12,11 @@ SR.createApp({
     actions() {
       const d = this.d, t = this.t, out = [], s = (n, one, many) => n + ' ' + (n === 1 ? one : many);
       if (d.pending_requests) out.push({ key: 'req', tone: 'warning', title: s(d.pending_requests, 'kitchen request waits', 'kitchen requests wait'),
-        detail: 'Approve and issue the stock, or reject with a reason.', action: 'Kitchen requests', href: '/inventory/requests' });
+        detail: 'Approve it, then issue to kitchen; or reject it with a reason.', action: 'Kitchen requests', href: '/inventory/requests' });
       if (t.approved_requests) out.push({ key: 'issue', tone: 'info', title: s(t.approved_requests, 'approved request is', 'approved requests are') + ' not issued yet',
-        detail: 'Issue the stock; the earliest expiry goes first.', action: 'Issue stock', href: '/inventory/requests' });
+        detail: 'Issue to kitchen; the earliest expiry goes first.', action: 'Issue to kitchen', href: '/inventory/requests' });
       if (t.expired_batches) out.push({ key: 'exp', tone: 'danger', title: s(t.expired_batches, 'expired batch is', 'expired batches are') + ' still in stock',
-        detail: 'Expired stock is not usable. Record it as wastage.', action: 'Record wastage', href: '/inventory/stock?tab=record' });
+        detail: 'Expired stock is not usable. Record it as stock wastage.', action: 'Record stock wastage', href: '/inventory/stock?tab=record' });
       if (t.reorder) out.push({ key: 'reorder', tone: d.counts.out ? 'danger' : 'warning', title: s(t.reorder, 'ingredient needs', 'ingredients need') + ' reordering',
         detail: 'Create purchase orders with the suggested quantities.', action: 'Reorder', href: '/inventory/reorder' });
       if (t.po_draft) out.push({ key: 'draft', tone: 'info', title: s(t.po_draft, 'purchase order is', 'purchase orders are') + ' still a draft',

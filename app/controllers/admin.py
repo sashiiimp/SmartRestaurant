@@ -16,7 +16,7 @@ def dashboard():
 
 @bp.route("/users")
 def users():
-    """Administration: Users, Settings & alerts, Role access."""
+    """Administration: Users (with the Role access section) and Settings & alerts."""
     return render_hub("/admin/users", role_access=role_access(), alert_access=alert_service.visibility())
 
 

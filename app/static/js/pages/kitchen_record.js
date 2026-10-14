@@ -2,7 +2,7 @@ SR.createApp({
   data() {
     return {
       date: ui.todayIso(), items: [], loading: true, error: null, ui,
-      tab: 'served', tabs: [{ id: 'served', label: 'Served' }, { id: 'waste', label: 'Waste' }, { id: 'other', label: 'Other use' }, { id: 'balance', label: 'Daily balance' }],
+      tab: 'day', tabs: [{ id: 'day', label: 'End of day' }, { id: 'balance', label: 'Daily balance' }],
       served: {}, savingServed: false, servedErrors: {}, conflicts: null, servedMessages: [],
       waste: { menu_item_id: '', quantity: '', reason: 'overproduction', note: '' }, wasteErrors: {}, savingWaste: false,
       usage: null, use: {}, usageErrors: {}, allIngredients: [], otherIng: '',
@@ -11,8 +11,16 @@ SR.createApp({
     };
   },
   async mounted() {
-    // A link such as /kitchen/record#waste opens that tab, also when only the address hash changes.
-    const fromHash = () => { const h = location.hash.slice(1); if (this.tabs.some(t => t.id === h)) this.tab = h; };
+    // A link such as /kitchen/record#balance opens that tab, also when only the address hash changes. The earlier
+    // addresses #served, #waste and #other open End of day at that section.
+    const fromHash = () => {
+      const h = location.hash.slice(1);
+      if (this.tabs.some(t => t.id === h)) this.tab = h;
+      else if (['served', 'waste', 'other'].includes(h)) {
+        this.tab = 'day';
+        this.$nextTick(() => setTimeout(() => { const el = document.getElementById('sec-' + h); if (el) el.scrollIntoView({ block: 'start' }); }, 300));
+      }
+    };
     fromHash();
     window.addEventListener('hashchange', fromHash);
     try { this.allIngredients = (await api.get('/ingredients', { active: true })).data; } catch (e) { /* the rest of the page still works */ }

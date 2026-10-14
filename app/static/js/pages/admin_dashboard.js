@@ -23,8 +23,8 @@ const ACTIVITY = {
   'preorder.hold': (e) => 'Pre-order #' + e.entity_id + ' put back on hold',
   'preorder.update': (e) => 'Pre-order #' + e.entity_id + ' updated',
   'stock.stock_in': (e, x) => 'Stock received: ' + ui.qty(x.quantity, x.unit) + ' of ' + e.name,
-  'stock.stock_out': (e, x) => 'Stock issued: ' + ui.qty(-x.quantity, x.unit) + ' of ' + e.name,
-  'stock.wastage': (e, x) => 'Ingredient wastage recorded: ' + ui.qty(-x.quantity, x.unit) + ' of ' + e.name,
+  'stock.stock_out': (e, x) => 'Issued to kitchen: ' + ui.qty(-x.quantity, x.unit) + ' of ' + e.name,
+  'stock.wastage': (e, x) => 'Stock wastage recorded: ' + ui.qty(-x.quantity, x.unit) + ' of ' + e.name,
   'stock.adjustment': (e, x) => 'Stock corrected for ' + e.name + ' (' + (x.quantity > 0 ? '+' : '') + ui.qty(x.quantity, x.unit) + ')',
   'stock.adjust': (e) => 'Stock corrected for ' + e.name,
   'shortage.report': (e) => 'Kitchen reported a shortage of ' + e.name,
@@ -77,13 +77,13 @@ SR.createApp({
         detail: d.items_without_recipe.join(', ') + ': ingredient needs count as zero until a recipe is added.', action: 'Add recipes', href: '/admin/catalog' });
       const low = d.stock.out + d.stock.low;
       if (low) out.push({ key: 'low', tone: d.stock.out ? 'danger' : 'warning', title: s(low, 'ingredient is', 'ingredients are') + ' low or out of stock',
-        detail: names(d.stock.rows) + '. The inventory manager reorders.', action: 'Stock levels', href: '/admin/monitor?tab=stock' });
+        detail: names(d.stock.rows) + '. The inventory manager reorders.', action: 'Stock & expiry', href: '/admin/monitor?tab=stock' });
       const short = d.inventory_alerts.filter(r => r.forecast);
       if (short.length) out.push({ key: 'short', tone: 'info', title: s(short.length, 'ingredient runs', 'ingredients run') + ' short within 7 days',
         detail: names(short) + ', from the forecast and recipes.', action: 'Ingredient demand', href: '/admin/monitor?tab=ingredients' });
       const expired = d.inventory_alerts.reduce((n, r) => n + r.expiry.filter(e => e.expired).length, 0);
       if (expired) out.push({ key: 'exp', tone: 'warning', title: s(expired, 'expired batch is', 'expired batches are') + ' still in stock',
-        detail: 'The inventory manager records them as wastage.', action: 'Batches', href: '/admin/monitor?tab=batches' });
+        detail: 'The inventory manager records them as stock wastage.', action: 'Batches', href: '/admin/monitor?tab=batches' });
       return out;
     },
     forecastDays() { return this.d.forecast_next7.filter(f => f.qty !== null).length; },

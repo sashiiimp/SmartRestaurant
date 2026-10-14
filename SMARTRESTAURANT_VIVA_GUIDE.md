@@ -263,13 +263,17 @@ not, press **Run forecast now** once. Point out the **Synthetic demo data** labe
    than the forecast, pickup time). It is part of the prep plan; it is not added on top of the forecast.
 8. **Plan & prepare → Prep plan:** compare the rows; Chicken Burger's Recommended rose to cover the pre-order. Open
    **How?** (forecast + 10%, or the pre-orders if higher, rounded up to whole batches). Press **Accept**, then **+ Add**
-   a prepared quantity.
-9. **Ingredients → Needs & shortages:** chicken and buns needed against usable stock; **Request stock** for a short one.
-10. **Served & waste:** record served portions and a few wasted portions with a reason; show **Daily balance**.
+   a prepared quantity (the first one marks the item in progress).
+9. **Ingredients & requests → Needs & shortages:** chicken and buns needed against usable stock; **Ask inventory** on a
+   short one, then **Request stock** (or **Report shortage** if the shelf does not match the system).
+10. **Served & waste → End of day:** served portions, a few wasted portions with a reason, other food use; then
+    **Daily balance**.
 11. Log in as **inventory** → **Dashboard** (check stock → kitchen requests → reorder → receive) → **Kitchen requests**
-    (approve and issue) → **Purchasing → Reorder** (suggested quantity formula) → create a purchase order.
+    (**Approve**, then **Issue to kitchen**: two recorded steps) → **Purchasing → Reorder** (suggested quantity
+    formula) → create a purchase order.
 12. Back as **admin** → **Reports & Analytics**: Forecasting → Forecast accuracy (forecast vs actual), Waste &
-    Analytics → Waste reports, Inventory → Stock levels. Finish on **Administration → Role access** (who can open what).
+    Analytics → Waste reports, Inventory → Stock & expiry and Stock history. Finish on **Administration → Users**,
+    Role access section (who can open what).
 
 The demo writes to the demo database. Run it on the deployed demo only as rehearsed, and expect the new rows to stay
 unless the demo is reset.

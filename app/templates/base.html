@@ -58,7 +58,6 @@
       <div class="topbar-title">
         <span class="crumb">{{ role_labels.get(current_user.role, current_user.role) }}</span>
         {% if page.label %}<span class="crumb-sep" aria-hidden="true">/</span><span class="crumb-page">{{ page.label }}</span>{% endif %}
-        {% set step = workflow_step(request.path) %}{% if step %}<span class="step-chip" title="Where this page sits in the SmartRestaurant workflow">Step {{ step[0] }} of 6 &middot; {{ step[1] }}</span>{% endif %}
       </div>
       {% if data_source_label %}<span class="data-pill" role="note" title="All figures in this demo are synthetic"><span class="dot" aria-hidden="true"></span>{{ data_source_label }}</span>{% endif %}
       <a class="bell" href="{{ home_href }}#alerts" id="alert-bell" title="Open alerts">

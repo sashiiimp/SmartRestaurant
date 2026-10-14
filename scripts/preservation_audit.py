@@ -48,12 +48,13 @@ def page_actions(template: str) -> list[str]:
     return sorted(out)
 
 
-def api_calls(script: str) -> list[str]:
-    """API paths a page script calls, as 'METHOD /path' with ids and query strings left out."""
+def api_calls(script: str, template: str | None = None) -> list[str]:
+    """API paths a page script calls, as 'METHOD /path' with ids and query strings left out, plus the CSV downloads
+    the page links to (in the script or in its template)."""
     path = ROOT / "app" / "static" / "js" / "pages" / script
     if not path.exists():
         return []
-    src = path.read_text()
+    src = path.read_text() + ((ROOT / "app" / "templates" / template).read_text() if template else "")
     out = set()
     for m in re.finditer(r"api\.(get|post|patch|put|del)\(\s*(['`])(/[^'`]*)\2(?!\s*\+)", src):
         p = re.sub(r"\$\{[^}]*\}", "<id>", m.group(3)).split("?")[0].rstrip("/")
@@ -118,7 +119,7 @@ def inventory() -> dict:
     for path, template in sorted(templates.items()):
         script = script_for(template)
         ui[path] = {"template": template, "script": script, "actions": page_actions(template),
-                    "api": api_calls(script) if script else []}
+                    "api": api_calls(script, template) if script else []}
 
     report_tabs = []
     monitor_js = (ROOT / "app" / "static" / "js" / "pages" / "admin_monitor.js").read_text()

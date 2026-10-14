@@ -7,17 +7,22 @@
     <div class="d-flex gap-2 align-items-center"><label for="rq-status" class="form-label m-0 small">Show</label>
       <select id="rq-status" class="form-select form-select-sm" style="max-width: 15rem" v-model="status" @change="load"><option value="">All requests</option><option value="pending">Pending</option><option value="approved">Approved</option><option value="issued">Issued</option><option value="rejected">Rejected</option><option value="cancelled">Cancelled</option></select></div>
   </div>
-  <p class="page-intro">Issuing records a stock-out, earliest expiry first; expired stock is never issued.</p>
+  <p class="page-intro">Approve a request first, then issue the stock. Issuing records the stock leaving the store, earliest expiry first; expired stock is never issued.</p>
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
 
   <div v-if="req" class="card mb-3"><div class="card-body">
     <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
       <div><h2 class="h6 mb-1">Request #[[ req.id ]] <sr-status-badge :status="req.status"></sr-status-badge></h2>
-        <div class="small text-muted">from [[ req.requested_by ]] &middot; [[ ui.dateTime(req.created_at) ]]<span v-if="req.needed_date"> &middot; needed by [[ ui.date(req.needed_date) ]]</span><span v-if="req.note"> &middot; [[ req.note ]]</span></div></div>
+        <div class="small text-muted">from [[ req.requested_by ]] &middot; [[ ui.dateTime(req.created_at) ]]<span v-if="req.needed_date"> &middot; needed by [[ ui.date(req.needed_date) ]]</span><span v-if="req.note"> &middot; [[ req.note ]]</span></div>
+        <!-- two separate, recorded steps: approval first, then the issue that moves stock -->
+        <ol class="req-steps" aria-label="Request steps">
+          <li :class="req.status === 'pending' ? 'is-now' : (['approved', 'issued'].includes(req.status) ? 'is-done' : 'is-off')">1 Approve<small v-if="req.decided_by && req.status !== 'pending' && req.status !== 'cancelled'"> · [[ req.decided_by ]]</small></li>
+          <li :class="req.status === 'approved' ? 'is-now' : (req.status === 'issued' ? 'is-done' : 'is-off')">2 Issue to kitchen</li>
+        </ol></div>
       <div class="d-flex gap-2">
-        <button v-if="req.status === 'pending'" class="btn btn-outline-primary" type="button" :disabled="busy" @click="approve">Approve</button>
+        <button v-if="req.status === 'pending'" class="btn btn-primary" type="button" :disabled="busy" @click="approve">Approve</button>
         <button v-if="req.status === 'pending'" class="btn btn-outline-danger" type="button" @click="rejecting = !rejecting">Reject</button>
-        <button v-if="open" class="btn btn-primary" type="button" @click="startIssue">Issue stock</button>
+        <button v-if="req.status === 'approved'" class="btn btn-primary" type="button" @click="startIssue">Issue to kitchen</button>
         <button class="btn btn-outline-secondary" type="button" @click="req = null; issue = null; rejecting = false">Close</button></div></div>
     <div v-if="req.status === 'rejected'" class="alert alert-danger py-2 small"><strong>Rejected:</strong> [[ req.reject_reason ]]</div>
     <div v-if="rejecting" class="border rounded p-3 mb-3">
@@ -29,7 +34,7 @@
         <td class="text-end" :class="l.qty_outstanding > 0 ? 'fw-semibold' : 'text-muted'">[[ ui.qty(l.qty_outstanding, l.unit) ]]</td>
         <td class="text-end" v-if="open" :class="l.usable_stock < l.qty_outstanding ? 'text-danger' : ''">[[ ui.qty(l.usable_stock, l.unit) ]]</td></tr></tbody></table></div>
     <div v-if="issue" class="border rounded p-3 mt-3">
-      <h3 class="h6">Issue stock</h3>
+      <h3 class="h6">Issue to kitchen</h3>
       <div class="row g-2 mb-2 align-items-center" v-for="(l, n) in issue.lines" :key="l.line_id">
         <div class="col-12 col-md-4">[[ l.ingredient ]] <span class="text-muted small">(outstanding [[ ui.qty(l.outstanding, l.unit) ]], usable [[ ui.qty(l.usable, l.unit) ]])</span></div>
         <div class="col-6 col-md-3"><input class="form-control" inputmode="decimal" :aria-label="'Quantity to issue for ' + l.ingredient" v-model="l.quantity"></div>
@@ -47,7 +52,8 @@
     <thead><tr><th>Request</th><th>From</th><th>Items</th><th>Needed by</th><th>Status</th><th></th></tr></thead>
     <tbody><tr v-for="r in rows" :key="r.id" :class="req && req.id === r.id ? 'table-active' : ''">
       <td class="text-nowrap">#[[ r.id ]] <span class="text-muted small">[[ ui.dateTime(r.created_at) ]]</span></td><td>[[ r.requested_by ]]</td><td>[[ r.summary ]]</td><td>[[ ui.date(r.needed_date) ]]</td>
-      <td><sr-status-badge :status="r.status"></sr-status-badge></td><td><button class="btn btn-sm btn-outline-secondary" type="button" @click="openReq(r.id)">Open</button></td></tr></tbody></table></div>
+      <td><sr-status-badge :status="r.status"></sr-status-badge><small v-if="next(r)" class="d-block text-muted">next: [[ next(r) ]]</small></td>
+      <td><button class="btn btn-sm" :class="next(r) ? 'btn-outline-primary' : 'btn-outline-secondary'" type="button" @click="openReq(r.id)">Open</button></td></tr></tbody></table></div>
 </div>
 {% endblock %}
 {% block scripts %}<script src="{{ url_for('static', filename='js/pages/inventory_requests.js') }}"></script>{% endblock %}

@@ -14,7 +14,7 @@ NAV_GROUPS = {
     ],
     "kitchen": [
         ("Today", [("Dashboard", "/kitchen"), ("Plan & prepare", "/kitchen/prep"), ("Served & waste", "/kitchen/record")]),
-        ("Supplies & orders", [("Ingredients", "/kitchen/requirements"), ("Orders & pre-orders", "/kitchen/orders")]),
+        ("Supplies & orders", [("Ingredients & requests", "/kitchen/requirements"), ("Orders & pre-orders", "/kitchen/orders")]),
     ],
     "inventory": [
         ("Today", [("Dashboard", "/inventory"), ("Kitchen requests", "/inventory/requests")]),
@@ -26,8 +26,7 @@ NAV_GROUPS = {
 HUBS = {
     "/admin/models": [("data", "Historical data", "admin/data.html"), ("models", "ML models", "admin/models.html"),
                       ("runs", "Forecast generation", "admin/models.html")],
-    "/admin/users": [("users", "Users", "admin/users.html"), ("settings", "Settings & alerts", "admin/settings.html"),
-                     ("roles", "Role access", "admin/roles.html")],
+    "/admin/users": [("users", "Users", "admin/users.html"), ("settings", "Settings & alerts", "admin/settings.html")],
     "/kitchen/prep": [("prep", "Prep plan", "kitchen/prep.html"), ("forecast", "7-day forecast", "kitchen/forecast.html")],
     "/kitchen/requirements": [("needs", "Needs & shortages", "kitchen/requirements.html"),
                               ("requests", "Stock requests", "kitchen/stock_requests.html")],
@@ -36,6 +35,9 @@ HUBS = {
                            ("orders", "Purchase orders", "inventory/purchase_orders.html"),
                            ("suppliers", "Suppliers", "inventory/suppliers.html")],
 }
+
+# a tab merged into another one: ?tab=<old> opens the tab that now holds it (Role access is a section under Users)
+TAB_ALIAS = {("/admin/users", "roles"): "users"}
 
 # merged pages whose first tab is not the one to open by default (Forecasting lists its tabs in workflow order)
 DEFAULT_TAB = {"/admin/models": "models"}
@@ -67,6 +69,7 @@ def render_hub(path: str, **context):
     """Render the tab of a merged page that ?tab= names (else its default tab); context goes to the tab's template."""
     tabs = HUBS[path]
     key = request.args.get("tab") or DEFAULT_TAB.get(path)
+    key = TAB_ALIAS.get((path, key), key)
     current = next((t for t in tabs if t[0] == key), tabs[0])
     hub = {"path": path, "tab": current[0], "tabs": [{"key": k, "label": label} for k, label, _ in tabs]}
     return render_template(current[2], hub=hub, **context)
@@ -92,30 +95,3 @@ def role_access():
                 rows.append({"page": label, "path": href, "tabs": [t[1] for t in HUBS.get(href, [])],
                              "roles": {r: r in allowed for r in NAV_GROUPS}})
     return rows
-
-
-# The decision chain the whole system follows (proposal: forecast -> decision -> outcome). Shown on the dashboards and,
-# as "Step n of 6", in the top bar of the page where that step happens. Display only.
-WORKFLOW = ["Historical sales", "ML demand forecast", "Preparation recommendations", "BOM & ingredient requirements",
-            "Inventory decisions", "Food waste monitoring"]
-
-# (page path, tab) -> step number; tab None = the page's only (or default) view. Reports & Analytics and the dashboards
-# cover several steps, so they have none.
-PAGE_STEP = {
-    ("/admin/models", "data"): 1, ("/admin/models", "models"): 2, ("/admin/models", "runs"): 2, ("/admin/catalog", None): 4,
-    ("/kitchen/prep", "prep"): 3, ("/kitchen/prep", "forecast"): 2, ("/kitchen/orders", None): 3,
-    ("/kitchen/requirements", "needs"): 4, ("/kitchen/requirements", "requests"): 5, ("/kitchen/record", None): 6,
-    ("/inventory/stock", "levels"): 5, ("/inventory/stock", "record"): 5, ("/inventory/requests", None): 5,
-    ("/inventory/reorder", "reorder"): 5, ("/inventory/reorder", "demand"): 4, ("/inventory/reorder", "orders"): 5,
-    ("/inventory/reorder", "suppliers"): 5,
-}
-
-
-def workflow_step(path: str):
-    """(number, name) of the workflow step the current page belongs to, or None."""
-    tab = None
-    if path in HUBS:
-        keys = [t[0] for t in HUBS[path]]
-        tab = request.args.get("tab") if request.args.get("tab") in keys else (DEFAULT_TAB.get(path) or keys[0])
-    n = PAGE_STEP.get((path, tab))
-    return (n, WORKFLOW[n - 1]) if n else None

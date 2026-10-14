@@ -22,5 +22,6 @@
       <td><span class="sr-badge" :class="u.is_active ? 'sr-badge-success' : ''">[[ u.is_active ? 'Active' : 'Deactivated' ]]</span></td><td>[[ ui.dateTime(u.last_login_at) ]]</td>
       <td><button class="btn btn-sm" :class="u.is_active ? 'btn-outline-danger' : 'btn-outline-success'" @click="toggle(u)">[[ u.is_active ? 'Deactivate' : 'Reactivate' ]]</button></td></tr></tbody></table></div>
 </div>
+{% include "admin/_role_access.html" %}
 {% endblock %}
 {% block scripts %}<script src="{{ url_for('static', filename='js/pages/admin_users.js') }}"></script>{% endblock %}

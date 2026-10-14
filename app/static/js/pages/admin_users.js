@@ -1,6 +1,10 @@
 SR.createApp({
   data() { return { users: [], loading: true, error: null, form: null, errors: {}, saving: false, ui }; },
-  async mounted() { await this.load(); },
+  async mounted() {
+    await this.load();
+    // the earlier Role access tab (?tab=roles) is now the section under the users table
+    if (new URLSearchParams(location.search).get('tab') === 'roles') { const el = document.getElementById('roles'); if (el) el.scrollIntoView(); }
+  },
   methods: {
     async load() {
       this.loading = true;

@@ -112,8 +112,8 @@ def kitchen(browser):
     page.locator("input[id^=s]").first.fill("999")
     page.get_by_role("button", name="Save served quantities").click()
     page.wait_for_selector("text=served above prepared", timeout=5000)
-    page.get_by_role("tab", name="Waste").click()
-    page.wait_for_selector("#w-item", timeout=2000)
+    page.wait_for_selector("#w-item", timeout=2000)                      # End of day: served, waste and other use on one tab
+    assert page.locator("[role=tab]").count() == 2, "End of day and Daily balance"
     page.fill("#w-qty", "-4")
     page.get_by_role("button", name="Record waste").click()
     page.wait_for_selector("text=must be greater than 0", timeout=5000)
@@ -127,12 +127,16 @@ def kitchen(browser):
     page.wait_for_selector(".act-list, .act-clear", timeout=8000)
     assert "Not recorded" not in page.locator(".kpis").inner_text(), "served was recorded above"
     visit(page, "/kitchen/requirements", "k_requirements", wait="table")
-    if page.locator("tr.table-danger").count():                          # a shortage depends on the demo date
-        page.locator("tr.table-danger").first.get_by_role("link", name="Request stock").click()
-    else:
-        page.goto(BASE + "/kitchen/requirements?tab=requests&ingredient=1&qty=2.5")   # the address that link opens
+    first = page.locator("tbody tr").first
+    first.get_by_role("button", name="Ask inventory").click()          # one action, two choices
+    page.wait_for_selector(".ask-panel", timeout=3000)
+    assert page.locator(".ask-panel").get_by_role("button", name="Report shortage").count() == 1
+    page.locator(".ask-panel").get_by_role("link", name="Request stock").click()
     page.wait_for_selector("text=New stock request", timeout=8000)      # Stock requests tab with the form filled in
-    assert "tab=requests" in page.url and page.locator("input[inputmode=decimal]").first.input_value() != "", page.url
+    assert "tab=requests" in page.url, page.url
+    page.locator("input[inputmode=decimal]").first.fill("2")
+    page.get_by_role("button", name="Send request").click()            # inventory approves, then issues it (below)
+    page.wait_for_selector(".sr-badge:has-text('Pending')", timeout=8000)
     page.goto(BASE + "/kitchen/stock-requests")                          # old address
     assert "/kitchen/requirements?tab=requests" in page.url, page.url
     r = page.goto(BASE + "/admin")
@@ -174,16 +178,25 @@ def inventory(browser):
     page.fill("#m-qty", "100")
     page.get_by_role("button", name="Save", exact=True).click()
     page.wait_for_selector("text=Usable stock is now", timeout=5000)
-    page.get_by_role("button", name="Stock out").click()
+    page.get_by_role("button", name="Issue to kitchen").click()
     page.select_option("#m-ing", label="Potato (kg)")
     page.fill("#m-qty", "9999")
     page.get_by_role("button", name="Save", exact=True).click()
     page.wait_for_selector("text=available", timeout=5000)
-    page.get_by_role("button", name="Wastage").click()
+    page.get_by_role("button", name="Stock wastage").click()
     page.select_option("#m-ing", label="Chicken (kg)")
     page.fill("#m-qty", "5")
     page.get_by_role("button", name="Save", exact=True).click()
     page.wait_for_selector("text=Saved", timeout=5000)
+    # a kitchen request: approval and issue stay two separate, recorded steps
+    visit(page, "/inventory/requests", "i_requests", wait="table tbody tr")
+    page.locator("tbody tr", has_text="Pending").first.get_by_role("button", name="Open").click()
+    page.wait_for_selector(".req-steps", timeout=5000)
+    assert page.get_by_role("button", name="Issue to kitchen").count() == 0, "issue only after approval"
+    page.get_by_role("button", name="Approve").click()
+    page.wait_for_selector("text=Request approved", timeout=5000)
+    page.get_by_role("button", name="Issue to kitchen").click()
+    page.wait_for_selector("h3:has-text('Issue to kitchen')", timeout=5000)
     visit(page, "/inventory/reorder?tab=demand", "i_forecast", wait="table tbody tr")
     visit(page, "/inventory/reorder", "i_reorder", wait="table, .text-center")
     visit(page, "/inventory/reorder?tab=orders", "i_purchase_orders", wait="h2")
@@ -227,12 +240,17 @@ def admin(browser):
     page.wait_for_selector("text=Forecasts compared", timeout=8000)
     page.screenshot(path=os.path.join(SHOTS, "a_monitor_forecast.png"), full_page=True)
     page.get_by_role("tab", name="Waste & Analytics").click()
-    page.wait_for_selector("text=Prepared-food waste", timeout=8000)
+    page.wait_for_selector("text=Food waste (prepared portions)", timeout=8000)
     page.get_by_role("tab", name="Inventory").click()
     page.get_by_role("button", name="Ingredient demand").click()        # tabs taken over from Inventory overview
     page.wait_for_selector("text=Days of cover", timeout=8000)
-    page.get_by_role("button", name="Batches and expiry").click()
+    page.get_by_role("button", name="Stock & expiry").click()           # stock levels and batches in one report
     page.wait_for_selector("text=Days to expiry", timeout=8000)
+    page.get_by_role("button", name="Stock history").click()            # day-by-day stock and the movements
+    page.wait_for_selector("text=stock day by day", timeout=8000)
+    page.wait_for_selector("h2:has-text('Movements')", timeout=8000)
+    page.goto(BASE + "/admin/monitor?tab=movements")                     # earlier report address
+    page.wait_for_selector("text=stock day by day", timeout=8000)
     visit(page, "/admin/inventory", "a_inventory", wait="text=Stock OK")   # old address opens Reports, Stock levels
     assert "/admin/monitor?tab=stock" in page.url, page.url
     visit(page, "/admin/models", "a_models", wait=".card")
@@ -270,7 +288,8 @@ def admin(browser):
     page.locator("tr", has_text="admin").first.get_by_role("button", name="Deactivate").click()
     page.wait_for_selector("text=last active administrator", timeout=5000)
     visit(page, "/admin/users?tab=settings", "a_settings", wait="text=Thresholds")
-    visit(page, "/admin/users?tab=roles", "a_roles", wait=".role-table")
+    visit(page, "/admin/users?tab=roles", "a_roles", wait=".role-table")   # now a section under Users
+    assert page.locator(".hub-tab").count() == 2, "Users and Settings & alerts"
     assert page.locator(".role-yes").count() == 14 + 14, "one tick per page and one per alert recipient"
     r = page.goto(BASE + "/kitchen")
     assert r.status == 403, r.status

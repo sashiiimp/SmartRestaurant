@@ -1,9 +1,8 @@
-{% extends "hub.html" %}
-{% block title %}Role access - SmartRestaurant{% endblock %}
-{% block panel %}
+{# Role access (read-only): which role opens which page and receives which alerts. Shown under Users. #}
+<section id="roles" class="mt-4" aria-labelledby="roles-h">
 {% set roles = [('admin', 'Administrator'), ('kitchen', 'Food Production'), ('inventory', 'Inventory & Procurement')] %}
-<h2 class="h5 mb-1">Role access</h2>
-<p class="text-muted small">Read from the server's access rules, which are checked on every page and data request. Change a role on <a href="/admin/users?tab=users">Users</a>.</p>
+<h2 class="h5 mb-1" id="roles-h">Role access</h2>
+<p class="text-muted small">Read from the server's access rules, which are checked on every page and data request. Change a user's role in the table above.</p>
 <div class="card mb-3"><div class="card-body">
   <h3 class="h6">Pages each role can open</h3>
   <ul class="role-list d-sm-none">
@@ -39,4 +38,4 @@
     </tbody></table></div>
   <p class="small text-muted mb-0">Switch alert types on or off in <a href="/admin/users?tab=settings">Settings &amp; alerts</a>.</p>
 </div></div>
-{% endblock %}
+</section>

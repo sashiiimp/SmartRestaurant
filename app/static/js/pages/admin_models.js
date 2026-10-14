@@ -4,7 +4,7 @@ SR.createApp({
   async mounted() { await this.load(); },
   methods: {
     async load() {
-      try { this.versions = (await api.get('/model-versions')).data; this.runs = (await api.get('/forecast-runs', { limit: 12 })).data; }
+      try { this.versions = (await api.get('/model-versions')).data || []; this.runs = (await api.get('/forecast-runs', { limit: 12 })).data || []; }
       catch (e) { this.error = ui.errorText(e); } finally { this.loading = false; }
     },
     async train() {

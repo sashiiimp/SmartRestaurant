@@ -116,8 +116,11 @@ def test_reports_has_the_inventory_overview_tabs(as_role):
     client = as_role("admin")
     assert client.get("/admin/inventory").headers["Location"] == "/admin/monitor?tab=stock"
     js = client.get("/static/js/pages/admin_monitor.js").get_data(as_text=True)
-    for key in ("stock", "ingredients", "batches", "inventory", "movements"):
+    for key in ("stock", "ingredients", "history"):
         assert f"['{key}', " in js
+    # M5, M6 (Oct 2026): Batches and expiry is part of Stock & expiry; Stock trends and Stock movements are Stock history
+    for old, new in (("batches", "stock"), ("inventory", "history"), ("movements", "history")):
+        assert f"{old}: '{new}'" in js
 
 
 # ---- NAV-7: final UI pass (14 Oct 2026) ----------------------------------------------------------------
@@ -153,28 +156,11 @@ def test_role_access_has_a_phone_list_with_the_same_pages(as_role):
     assert phone.count("<li>") == 14
 
 
-# ---- NAV-8: the workflow step marker in the top bar (viva polish) ------------------------------------------------
-@pytest.mark.parametrize("role,url,step", [
-    ("admin", "/admin/models?tab=data", "Step 1 of 6 &middot; Historical sales"),
-    ("admin", "/admin/models", "Step 2 of 6 &middot; ML demand forecast"),
-    ("kitchen", "/kitchen/prep", "Step 3 of 6 &middot; Preparation recommendations"),
-    ("kitchen", "/kitchen/requirements", "Step 4 of 6 &middot; BOM &amp; ingredient requirements"),
-    ("inventory", "/inventory/reorder", "Step 5 of 6 &middot; Inventory decisions"),
-    ("kitchen", "/kitchen/record", "Step 6 of 6 &middot; Food waste monitoring"),
-])
-def test_page_shows_its_workflow_step(as_role, role, url, step):
-    assert step in as_role(role).get(url).get_data(as_text=True)
+# ---- NAV-8: the "Step n of 6" marker was removed from the top bar (R1, Oct 2026); the workflow stays on the admin dashboard
+@pytest.mark.parametrize("role,url", [("admin", "/admin/models"), ("kitchen", "/kitchen/prep"), ("inventory", "/inventory/reorder")])
+def test_no_step_marker_in_the_top_bar(as_role, role, url):
+    assert "step-chip" not in as_role(role).get(url).get_data(as_text=True)
 
 
-def test_dashboards_and_reports_have_no_single_step(as_role):
-    client = as_role("admin")
-    for url in ("/admin", "/admin/monitor"):
-        assert "step-chip" not in client.get(url).get_data(as_text=True)
-
-
-def test_every_step_page_is_a_menu_page_of_its_role():
-    from app.utils.navigation import PAGE_STEP, WORKFLOW
-    for (path, tab), n in PAGE_STEP.items():
-        assert 1 <= n <= len(WORKFLOW) and path in menu(owner(path)) + [p for p in HUBS if owner(p) == owner(path)]
-        if tab:
-            assert tab in [t[0] for t in HUBS[path]], (path, tab)
+def test_admin_dashboard_keeps_the_workflow(as_role):
+    assert "<sr-workflow" in as_role("admin").get("/admin").get_data(as_text=True)

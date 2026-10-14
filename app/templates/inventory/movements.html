@@ -3,15 +3,15 @@
 {% block panel %}
 <div id="app" v-cloak>
   <h2 class="h5 mb-1">Record stock</h2>
-  <p class="page-intro"><strong>In</strong>: delivery (new batch). <strong>Out</strong>: to the kitchen, earliest expiry first. <strong>Wastage</strong>: expired or damaged. <strong>Adjustment</strong>: count correction.</p>
+  <p class="page-intro"><strong>Stock in</strong>: delivery (new batch). <strong>Issue to kitchen</strong>: earliest expiry first. <strong>Stock wastage</strong>: expired or damaged. <strong>Adjustment</strong>: count correction.</p>
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
   <div class="row g-4">
     <div class="col-12 col-lg-5">
       <div class="card"><div class="card-body">
         <ul class="nav nav-pills mb-3" role="tablist">
           <li class="nav-item"><button class="nav-link" :class="{ active: tab === 'in' }" type="button" @click="tab = 'in'; errors = {}">Stock in</button></li>
-          <li class="nav-item"><button class="nav-link" :class="{ active: tab === 'out' }" type="button" @click="tab = 'out'; errors = {}">Stock out</button></li>
-          <li class="nav-item"><button class="nav-link" :class="{ active: tab === 'wastage' }" type="button" @click="tab = 'wastage'; errors = {}">Wastage</button></li>
+          <li class="nav-item"><button class="nav-link" :class="{ active: tab === 'out' }" type="button" @click="tab = 'out'; errors = {}">Issue to kitchen</button></li>
+          <li class="nav-item"><button class="nav-link" :class="{ active: tab === 'wastage' }" type="button" @click="tab = 'wastage'; errors = {}">Stock wastage</button></li>
           <li class="nav-item"><button class="nav-link" :class="{ active: tab === 'adjust' }" type="button" @click="tab = 'adjust'; errors = {}">Adjustment</button></li>
         </ul>
         <div class="mb-2"><label class="form-label" for="m-ing">Ingredient</label>
@@ -56,7 +56,7 @@
             <select id="filter-ing" class="form-select form-select-sm" style="max-width: 14rem" v-model="filterIng" @change="refresh"><option value="">All ingredients</option><option v-for="i in ingredients" :key="i.id" :value="i.id">[[ i.name ]]</option></select></div></div>
         <div class="table-responsive" style="max-height: 22rem; overflow: auto"><table class="table table-sm">
           <thead><tr><th>Date</th><th>Ingredient</th><th>Type</th><th class="text-end">Quantity</th><th>Reason</th></tr></thead>
-          <tbody><tr v-for="m in moves" :key="m.id"><td>[[ ui.date(m.date) ]]</td><td>[[ m.ingredient ]]</td><td>[[ m.type.replace('_', ' ') ]]</td>
+          <tbody><tr v-for="m in moves" :key="m.id"><td>[[ ui.date(m.date) ]]</td><td>[[ m.ingredient ]]</td><td>[[ moveType(m.type) ]]</td>
             <td class="text-end fw-semibold" :class="m.quantity < 0 ? 'text-danger' : 'text-success'">[[ m.quantity > 0 ? '+' : '' ]][[ ui.qty(m.quantity, m.unit) ]]</td><td>[[ (m.reason || '').replace('_', ' ') ]]</td></tr></tbody></table></div>
       </div></div>
       <div class="card"><div class="card-body">
