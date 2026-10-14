@@ -244,11 +244,12 @@ Every arrow is a function call within one Flask process. There are no background
 Before the demo: log in as admin, open **Forecasting → Forecast generation** and check that the last run is today. If
 not, press **Run forecast now** once. Point out the **Synthetic demo data** label in the top bar at the start.
 
-1. **Admin → Dashboard (purpose in 30 seconds).** Read the flow line under the title: Sales history → ML demand
-   forecast → Preparation plan → Ingredient needs → Stock & reorder. Then the four tiles: Sales, Forecast demand (next 7
-   days), Food waste (rate against the 15% limit), Inventory status.
-2. **Forecast chart.** Seven predicted days (blue = prediction, never sales), the model (XGBoost) and its hold-out MAE
-   against the simple baseline.
+1. **Admin → Dashboard (purpose in 30 seconds).** Read the one-sentence purpose, then the six numbered steps with
+   today's figures: Historical sales → ML demand forecast → Preparation recommendations → BOM & ingredient
+   requirements → Inventory decisions → Food waste monitoring. Each card says who does that step; step 3 is the
+   kitchen's, so it is shown but not linked for the administrator.
+2. **Sales history and ML forecast chart.** Recorded sales as a green line, then seven predicted days as blue bars
+   (prediction, never sales), the model (XGBoost) and its hold-out MAE against the simple baseline.
 3. **Needs attention.** One alert (Acknowledge = "seen", it closes only when fixed) and the **Recommended actions**
    (reorder, forecast shortfall, expired batches, waste), each linking to the report behind it.
 4. **Forecasting.** The three steps: **Historical data** (sales, promotions, holidays, weather) → **ML models** (the

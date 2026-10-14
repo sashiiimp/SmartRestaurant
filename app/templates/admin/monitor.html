@@ -7,6 +7,7 @@
   <div class="sr-tabs" role="tablist" aria-label="Report groups">
     <button v-for="g in groups" :key="g[0]" type="button" role="tab" class="sr-tab" :class="{ active: group[0] === g[0] }" :aria-selected="group[0] === g[0] ? 'true' : 'false'" @click="setTab(g[2][0])">[[ g[1] ]]</button>
   </div>
+  <p class="group-note">[[ group[3] ]]</p>
   <ul v-if="subTabs.length > 1" class="nav nav-tabs mb-3 flex-wrap" aria-label="Reports in this group"><li class="nav-item" v-for="t in subTabs" :key="t[0]"><button class="nav-link" type="button" :class="{ active: tab === t[0] }" :aria-current="tab === t[0] ? 'true' : null" @click="setTab(t[0])">[[ t[1] ]]</button></li></ul>
   <div class="card mb-3" v-if="!snapshot"><div class="card-body py-3">
     <div class="row g-2 align-items-end" v-if="tab === 'demand'">

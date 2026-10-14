@@ -73,7 +73,7 @@ def create_app(config_name: str | None = None, overrides: dict | None = None) ->
         if current_user.is_authenticated:
             label = settings.get(current_user.outlet_id, "data_source_label")
         from app.services import auth_service as _a
-        from app.utils.navigation import nav_groups, nav_links
+        from app.utils.navigation import nav_groups, nav_links, workflow_step
         home = _a.home_url_for(current_user.role) if current_user.is_authenticated else "/"
         restaurant = None
         if current_user.is_authenticated:
@@ -81,7 +81,7 @@ def create_app(config_name: str | None = None, overrides: dict | None = None) ->
             outlet = db.session.get(Outlet, current_user.outlet_id)
             restaurant = outlet.name if outlet else None
         return {"data_source_label": label, "business_today": today(), "nav_links": nav_links, "nav_groups": nav_groups, "home_href": home,
-                "restaurant_name": restaurant}
+                "restaurant_name": restaurant, "workflow_step": workflow_step}
 
     @app.after_request
     def _no_store(resp):

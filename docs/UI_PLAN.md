@@ -273,3 +273,19 @@ responses are identical between the base build and this one on copies of the sam
   so the suggested quantity, 7-day need, status and Edit / Open actions are in view without a sideways table; the
   working stays under "How was this worked out?" / "Need per day". Wider screens keep the tables. Only one view is
   rendered, so the checkboxes and ids stay unique.
+
+## 14. Viva polish: the workflow everywhere (14 Oct 2026, branch `viva-polish`)
+
+Presentation only. No service, ML, model, migration, API or permission change; the menus are unchanged.
+
+- **Six-step workflow strip** (`sr-workflow` in `components.js`, CSS section 15) on the Admin, Kitchen and Inventory
+  dashboards: Historical sales → ML demand forecast → Preparation recommendations → BOM & ingredient requirements →
+  Inventory decisions → Food waste monitoring. Each step shows a figure from data the page already reads (admin also
+  reads today's prep plan, requirements and reorder list; kitchen the daily summary and its stock requests; inventory
+  the full reorder list; all read-only), says which role does it, and links to its page when the viewer may open it.
+  Steps of other roles stay visible, muted. The strip replaces the dashboards' summary tiles (their figures are in it).
+- **Step marker** in the top bar of every page that belongs to one step ("Step 3 of 6 · Preparation recommendations"),
+  from `PAGE_STEP` in `utils/navigation.py`; dashboards and Reports & Analytics cover several steps and show none.
+- **Admin chart**: recorded sales (line, last 7 days) and the 7-day ML forecast (bars) on one axis.
+- **Reports & Analytics**: each group names the workflow step it covers. Short intros on Users and Settings.
+

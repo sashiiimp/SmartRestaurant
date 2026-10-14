@@ -6,8 +6,10 @@ SR.createApp({
       tabs: [['sales', 'Sales and revenue'], ['demand', 'Demand forecast'], ['forecast', 'Forecast accuracy'], ['analytics', 'Analytics'], ['waste', 'Waste reports'],
              ['stock', 'Stock levels'], ['ingredients', 'Ingredient demand'], ['batches', 'Batches and expiry'], ['inventory', 'Stock trends'], ['movements', 'Stock movements']],
       // the 10 reports under 4 headings: the heading bar picks a group, the underlined tabs pick a report inside it
-      groups: [['sales', 'Sales', ['sales']], ['forecasting', 'Forecasting', ['demand', 'forecast']],
-               ['inventory', 'Inventory', ['stock', 'ingredients', 'batches', 'inventory', 'movements']], ['waste', 'Waste & Analytics', ['waste', 'analytics']]],
+      groups: [['sales', 'Sales', ['sales'], 'Step 1, historical sales: portions sold and revenue, the data the forecast learns from.'],
+               ['forecasting', 'Forecasting', ['demand', 'forecast'], 'Step 2, ML demand forecast: what the model predicts, and how close earlier forecasts came to what was sold.'],
+               ['inventory', 'Inventory', ['stock', 'ingredients', 'batches', 'inventory', 'movements'], 'Steps 4 and 5, ingredients and inventory: needs from the recipes, stock now, expiry and every movement.'],
+               ['waste', 'Waste & Analytics', ['waste', 'analytics'], 'Step 6, food waste monitoring: prepared food and ingredients wasted, plus patterns by weekday, holiday and promotion.']],
       shortGroup: { 'Public holiday': 'Public', 'Poya day': 'Poya', 'School holiday': 'School', 'Ordinary day': 'Ordinary', 'Promotion running': 'Promotion', 'No promotion': 'No promo' },
       items: [], ingredients: [], levels: [], counts: { ok: 0, low: 0, out: 0 }, ingDemand: null, batches: [], sales: null, acc: null, waste: null, usage: null, trend: null, moves: null, an: null, demand: { rows: [], meta: {} },
       loading: false, error: null, ui,

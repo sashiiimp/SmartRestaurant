@@ -53,7 +53,7 @@ function describe(raw) {
 }
 
 SR.createApp({
-  data() { return { range: 7, d: null, alerts: [], history: undefined, alertTab: 'open', trend: undefined, perf: null, allActivity: false, allStock: false, loading: true, error: null, ui }; },
+  data() { return { range: 7, d: null, alerts: [], history: undefined, alertTab: 'open', trend: undefined, perf: null, prep: null, req: null, reorder: null, allActivity: false, allStock: false, loading: true, error: null, ui }; },
   async mounted() { await this.load(); this.loadPerf(); },
   computed: {
     synthetic() { return this.d && /synthetic|demo|simulated/i.test(this.d.data_source || ''); },
@@ -122,6 +122,43 @@ SR.createApp({
       }
       return out;
     },
+    // The six steps with today's figures (all values come from the endpoints above; nothing is calculated anew)
+    chain() {
+      const d = this.d, n = v => ui.num(v, 0), wait = 'loading';
+      const items = this.prep ? this.prep.items.filter(i => i.status !== 'no_forecast') : [];
+      const decided = items.filter(i => i.status === 'accepted' || i.status === 'overridden').length;
+      const toMake = items.reduce((t, i) => t + Number(i.final_qty ?? i.recommended_qty ?? 0), 0);
+      const short = this.req ? this.req.ingredients.filter(i => i.status === 'short').length : null;
+      const w = d.waste_rate.pct, cov = d.coverage;
+      return [
+        { title: 'Historical sales', value: n(d.sales.quantity) + ' sold', mine: true, href: '/admin/monitor?tab=sales',
+          caption: ui.money(d.sales.revenue) + ' · ' + cov.days_with_sales + ' of ' + cov.days + ' days recorded', owner: 'Admin imports · kitchen records' },
+        { title: 'ML demand forecast', value: this.forecastDays ? n(d.forecast_next7_total) + ' portions' : 'No forecast', mine: true, href: '/admin/models?tab=models',
+          tone: this.forecastDays < 7 ? 'warning' : 'info',
+          caption: 'next 7 days' + (this.perf ? ' · ' + this.algoName(d.active_model.algorithm) + ' MAE ' + ui.num(this.perf.model, 1) + ' vs ' + ui.num(this.perf.baseline, 1) + ' baseline' : ''), owner: 'Admin trains · runs daily' },
+        { title: 'Preparation recommendations', value: this.prep ? n(toMake) + ' to prepare' : (this.prep === false ? '-' : wait), mine: false, href: null,
+          caption: this.prep ? 'today, forecast + ' + this.prep.buffer_pct + '% buffer in whole batches · ' + decided + ' of ' + items.length + ' decided' : 'today', owner: 'Kitchen accepts or overrides' },
+        { title: 'BOM & ingredient requirements', value: short === null ? (this.req === false ? '-' : wait) : (short ? short + ' short' : 'All covered'), mine: true, href: '/admin/catalog',
+          tone: short ? 'danger' : (short === 0 ? 'success' : null),
+          caption: "today's plan x recipes" + (d.items_without_recipe.length ? ' · ' + d.items_without_recipe.length + ' items lack a recipe' : ''), owner: 'Admin keeps the recipes' },
+        { title: 'Inventory decisions', value: this.reorder ? (this.reorder.length ? this.reorder.length + ' to reorder' : 'Nothing to order') : (this.reorder === false ? '-' : wait), mine: true, href: '/admin/monitor?tab=stock',
+          tone: d.stock.out ? 'danger' : (d.stock.low ? 'warning' : 'success'),
+          caption: d.stock.out + ' out of stock · ' + d.stock.low + ' low · of ' + d.stock.ingredients, owner: 'Inventory manager orders' },
+        { title: 'Food waste monitoring', value: w === null ? 'No data' : ui.num(w, 1) + '% wasted', mine: true, href: '/admin/monitor?tab=waste', tone: this.wasteTone,
+          caption: n(d.waste.quantity) + ' portions · ' + ui.money(d.waste.value) + ' · limit ' + ui.num(d.waste_threshold_pct, 0) + '%', owner: 'Kitchen records · admin reviews' },
+      ];
+    },
+    // Last 7 recorded days, then the 7 forecast days, on one axis: history as a line, prediction as bars.
+    hfDays() { return this.trendDates.slice(-7); },
+    hfLabels() { return [...this.hfDays.map(x => shortDate(x, true)), ...this.forecastLabels]; },
+    hfData() {
+      const c = getComputedStyle(document.body).getPropertyValue('--info').trim() || '#175cd3';
+      const sold = this.trendSeries ? this.trendSeries.sold.slice(-7) : this.hfDays.map(() => null);
+      return [
+        { type: 'line', label: 'Recorded sales (history)', data: [...sold, ...Array(7).fill(null)], borderColor: '#047857', backgroundColor: '#047857', borderWidth: 2.5, tension: 0.3, pointRadius: 3, pointBackgroundColor: '#fff', pointBorderWidth: 2, order: 0 },
+        { type: 'bar', label: 'ML forecast (prediction)', data: [...Array(7).fill(null), ...this.d.forecast_next7.map(f => f.qty)], backgroundColor: c + '59', borderColor: c, borderWidth: 1.5, order: 1 },
+      ];
+    },
     activityShown() { return this.activity.slice(0, this.allActivity ? 10 : 5); },
   },
   methods: {
@@ -131,10 +168,18 @@ SR.createApp({
       this.loading = true; this.error = null;
       try { this.d = (await api.get('/dashboards/admin', { range: this.range })).data; } catch (e) { this.d = null; this.error = ui.errorText(e); } finally { this.loading = false; }
       this.trend = undefined; this.allStock = false; this.history = undefined; this.alertTab = 'open';
-      if (this.d) { await this.loadAlerts(); this.loadTrend(); }
+      if (this.d) { await this.loadAlerts(); this.loadTrend(); this.loadChain(); }
     },
     // Loaded after the dashboard (never in parallel) so the alert check runs once.
     async loadAlerts() { try { this.alerts = (await api.get('/alerts', { status: 'open' })).data; } catch (e) { this.alerts = this.d.alerts; } },
+    // Today's prep plan, ingredient requirements and reorder suggestions for the workflow strip (read-only; the
+    // administrator may read them). Loaded one after another, after the dashboard; a failure only blanks that step.
+    async loadChain() {
+      const day = ui.todayIso();
+      try { this.prep = (await api.get('/recommendations/prep', { date: day })).data; } catch (e) { this.prep = false; }
+      try { this.req = (await api.get('/recommendations/requirements', { date: day })).data; } catch (e) { this.req = false; }
+      try { this.reorder = (await api.get('/recommendations/reorder')).data; } catch (e) { this.reorder = false; }
+    },
     // The trend chart reuses the existing report endpoints; if they fail the cards above still show.
     async loadTrend() {
       const p = { from: this.d.from, to: this.d.to, group_by: 'day' };

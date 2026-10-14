@@ -39,6 +39,12 @@ Dashboard එක කියන්නේ Administrator log වුණාම මු�
 
 ## 2. What each part is for, where the value comes from, and how it is calculated
 
+> **Since the viva polish (14 Oct 2026)** the four tiles are replaced by the six-step workflow strip (Historical sales,
+> ML demand forecast, Preparation recommendations, BOM & ingredient requirements, Inventory decisions, Food waste
+> monitoring), each with today's figure: the same tile values plus today's prep plan, ingredient shortages and reorder
+> count, read from the existing recommendation endpoints. The forecast chart also shows the last 7 recorded days as a
+> line before the 7 forecast bars. The Kitchen and Inventory dashboards use the same strip.
+>
 > **Layout since 14 Oct 2026 (final UI pass).** Top: four tiles, **Sales**, **Forecast demand (next 7 days)**,
 > **Food waste** (rate, with portions and value in the hint) and **Inventory status** (ingredients low or out). Then the
 > forecast chart and the sales and waste trend. Then **Needs attention**: Alerts and **Recommended actions** (plain

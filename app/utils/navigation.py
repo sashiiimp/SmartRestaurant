@@ -92,3 +92,30 @@ def role_access():
                 rows.append({"page": label, "path": href, "tabs": [t[1] for t in HUBS.get(href, [])],
                              "roles": {r: r in allowed for r in NAV_GROUPS}})
     return rows
+
+
+# The decision chain the whole system follows (proposal: forecast -> decision -> outcome). Shown on the dashboards and,
+# as "Step n of 6", in the top bar of the page where that step happens. Display only.
+WORKFLOW = ["Historical sales", "ML demand forecast", "Preparation recommendations", "BOM & ingredient requirements",
+            "Inventory decisions", "Food waste monitoring"]
+
+# (page path, tab) -> step number; tab None = the page's only (or default) view. Reports & Analytics and the dashboards
+# cover several steps, so they have none.
+PAGE_STEP = {
+    ("/admin/models", "data"): 1, ("/admin/models", "models"): 2, ("/admin/models", "runs"): 2, ("/admin/catalog", None): 4,
+    ("/kitchen/prep", "prep"): 3, ("/kitchen/prep", "forecast"): 2, ("/kitchen/orders", None): 3,
+    ("/kitchen/requirements", "needs"): 4, ("/kitchen/requirements", "requests"): 5, ("/kitchen/record", None): 6,
+    ("/inventory/stock", "levels"): 5, ("/inventory/stock", "record"): 5, ("/inventory/requests", None): 5,
+    ("/inventory/reorder", "reorder"): 5, ("/inventory/reorder", "demand"): 4, ("/inventory/reorder", "orders"): 5,
+    ("/inventory/reorder", "suppliers"): 5,
+}
+
+
+def workflow_step(path: str):
+    """(number, name) of the workflow step the current page belongs to, or None."""
+    tab = None
+    if path in HUBS:
+        keys = [t[0] for t in HUBS[path]]
+        tab = request.args.get("tab") if request.args.get("tab") in keys else (DEFAULT_TAB.get(path) or keys[0])
+    n = PAGE_STEP.get((path, tab))
+    return (n, WORKFLOW[n - 1]) if n else None

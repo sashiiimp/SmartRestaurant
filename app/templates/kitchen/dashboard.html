@@ -3,7 +3,7 @@
 {% block content %}
 <div id="app" v-cloak>
   <div class="dash-head">
-    <div><h1 class="h4 m-0">[[ isToday ? "Today's kitchen" : 'Kitchen' ]]</h1><p class="dash-sub">[[ ui.date(date) ]] · forecast, plan, prepare, then record what was served and wasted</p></div>
+    <div><h1 class="h4 m-0">[[ isToday ? "Today's kitchen" : 'Kitchen' ]]</h1><p class="dash-sub">[[ ui.date(date) ]] · the forecast says how much will sell; you decide how much to prepare, check the ingredients, then record what was served and wasted</p></div>
     <div class="dash-actions">
       <sr-date-nav v-model="date" @change="load"></sr-date-nav>
       <a class="btn btn-primary btn-lg-touch" href="/kitchen/prep"><sr-icon name="clipboard" :size="16"></sr-icon> Plan &amp; prepare</a>
@@ -13,23 +13,8 @@
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
   <sr-loading v-if="loading" :tiles="3" :cards="2"></sr-loading>
   <template v-else-if="d">
-    <!-- The kitchen's day in four steps; each shows where it stands and opens the page where it is done -->
-    <ol class="steps" aria-label="Kitchen workflow for this day">
-      <li><a class="step" :class="stepClass(0)" href="/kitchen/prep?tab=forecast"><span><strong>Food demand forecast</strong><small>[[ forecastCount ]] of [[ d.plan.length ]] items forecast by the ML model</small></span></a></li>
-      <li><a class="step" :class="stepClass(1)" href="/kitchen/prep"><span><strong>Preparation plan</strong><small>[[ decidedCount ]] of [[ forecastCount ]] quantities accepted or changed</small></span></a></li>
-      <li><a class="step" :class="stepClass(2)" href="/kitchen/prep"><span><strong>Food preparation</strong><small>[[ ui.num(d.tiles.prepared_total, 0) ]] of [[ ui.num(d.tiles.planned_total, 0) ]] portions prepared ([[ preparedPct ]]%)</small></span></a></li>
-      <li><a class="step" :class="stepClass(3)" href="/kitchen/record"><span><strong>Served &amp; waste</strong><small>After service: portions served, waste and other use</small></span></a></li>
-    </ol>
-    <div class="row g-3 mb-3">
-      <div class="col-12 col-lg-6"><div class="card stat-tile h-100" :class="preparedPct >= 100 ? 'tone-success' : 'tone-accent'"><div class="card-body">
-        <div class="stat-top"><div class="stat-label">Preparation progress</div><span class="stat-icon"><sr-icon name="check" :size="18"></sr-icon></span></div>
-        <div class="value"><a href="/kitchen/prep" class="stretched-link">[[ preparedPct ]]%</a></div>
-        <div class="progress progress-thin mt-2" role="progressbar" aria-label="Portions prepared" :aria-valuenow="preparedPct" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" :class="{ 'bg-success': preparedPct >= 100 }" :style="{ width: preparedPct + '%' }"></div></div>
-        <div class="stat-hint mt-1">[[ ui.num(d.tiles.prepared_total, 0) ]] of [[ ui.num(d.tiles.planned_total, 0) ]] portions prepared<span v-if="d.tiles.items_planned"> · [[ d.tiles.items_done ]] of [[ d.tiles.items_planned ]] items done</span></div>
-      </div></div></div>
-      <div class="col-6 col-lg-3"><sr-stat-tile label="Ingredient shortages" icon="warning" :value="d.tiles.shortage_count" :hint="d.tiles.shortage_count ? 'for this plan' : 'none for this plan'" :tone="d.tiles.shortage_count ? 'danger' : 'success'" href="/kitchen/requirements"></sr-stat-tile></div>
-      <div class="col-6 col-lg-3"><sr-stat-tile label="Open alerts" icon="bell" :value="d.tiles.open_alerts" :tone="d.tiles.open_alerts ? 'warning' : 'success'" href="#alerts"></sr-stat-tile></div>
-    </div>
+    <!-- The decision chain for this day; the kitchen's steps link to the page where they are done -->
+    <sr-workflow :steps="chain" label="SmartRestaurant workflow, kitchen view"></sr-workflow>
     <div class="row g-3">
       <div class="col-12 col-xl-8"><div class="card"><div class="card-body">
         <div class="card-head"><h2 class="h6">[[ isToday ? "Today's plan" : 'Plan for ' + ui.date(date) ]]</h2><a href="/kitchen/prep">Accept or change in Plan &amp; prepare</a></div>

@@ -27,6 +27,16 @@ def login(page, username):
     note = lambda r: seen.append(f"{r.status} {r.request.method} {r.url.replace(BASE, '')}")  # noqa: E731
     page.on("response", note)
     page.click("button[type=submit]")
+    # headless WebKit now and then drops the click without sending the form; click once more only if nothing was sent
+    try:
+        page.wait_for_url(lambda u: "/login" not in u, timeout=5000, wait_until="commit")
+    except Exception:
+        if not any(" POST /login" in r for r in seen):
+            print(f"  (login as {username}: the click sent nothing, trying once more)")
+            page.goto(BASE + "/login")
+            page.fill("#username", USERS.get(username, username))
+            page.fill("#password", PASSWORD)
+            page.click("button[type=submit]")
     # wait until the browser has really left /login: WebKit can report "network idle" before the redirect starts
     try:
         page.wait_for_url(lambda u: "/login" not in u, timeout=15000, wait_until="commit")
@@ -86,8 +96,9 @@ def kitchen(browser):
     second.get_by_role("button", name="Override").click()
     second.locator("input").nth(0).fill("50")
     second.get_by_role("button", name="Save override").click()
-    page.wait_for_selector("text=Reason (required)", timeout=2000)  # reason missing -> field error shown, form stays open
-    assert "is required" in second.inner_text()
+    # reason missing -> the server answers 422 and the field error appears; the form stays open
+    second.locator("text=is required").first.wait_for(timeout=8000)
+    assert "Reason (required)" in second.inner_text(), "override form must stay open after the error"
     second.locator("input").nth(1).fill("Rain expected")
     second.get_by_role("button", name="Save override").click()
     page.wait_for_selector(".card-item.overridden", timeout=5000)
@@ -95,7 +106,8 @@ def kitchen(browser):
     first.get_by_role("button", name="+ Add").click()
     page.wait_for_selector("text=24", timeout=5000)
     visit(page, "/kitchen/prep", "k_prep_after", wait=".card-item")
-    assert page.locator(".card-item.accepted").count() == 1 and page.locator(".card-item.overridden").count() == 1
+    acc, ovr = page.locator(".card-item.accepted").count(), page.locator(".card-item.overridden").count()
+    assert (acc, ovr) == (1, 1), f"after reload: {acc} accepted and {ovr} overridden cards, expected 1 and 1"
     visit(page, "/kitchen/record", "k_record", wait="input[id^=s]")
     page.locator("input[id^=s]").first.fill("999")
     page.get_by_role("button", name="Save served quantities").click()
@@ -109,9 +121,9 @@ def kitchen(browser):
     page.get_by_role("button", name="Record waste").click()
     page.wait_for_selector("text=Waste recorded", timeout=5000)
     assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth + 1"), "horizontal scroll at 390px"
-    visit(page, "/kitchen", "k_dashboard", wait=".stat-tile")
-    assert page.locator(".stat-tile").count() == 3
-    assert page.locator(".steps .step").count() == 4, "kitchen workflow steps"
+    visit(page, "/kitchen", "k_dashboard", wait=".wf-step")
+    assert page.locator(".wf .wf-step").count() == 6, "kitchen workflow strip"
+    page.wait_for_selector(".wf-step:has-text('requests open'), .wf-step:has-text('No open requests')", timeout=8000)
     visit(page, "/kitchen/requirements", "k_requirements", wait="table")
     if page.locator("tr.table-danger").count():                          # a shortage depends on the demo date
         page.locator("tr.table-danger").first.get_by_role("link", name="Request stock").click()
@@ -129,12 +141,13 @@ def kitchen(browser):
     page = ctx.new_page()
     login(page, "kitchen1")
     visit(page, "/kitchen/prep", "k_prep_desktop", wait=".prep-table")
-    assert page.locator(".prep-table tbody tr").count() >= 10 and page.locator(".card-item").count() == 0
+    rows, cards = page.locator(".prep-table tbody tr").count(), page.locator(".card-item").count()
+    assert rows >= 10 and cards == 0, f"desktop prep plan: {rows} table rows, {cards} cards"
     row = page.locator(".prep-table tbody tr", has=page.get_by_role("button", name="Override")).first
     row.get_by_role("button", name="Override").click()
     page.wait_for_selector(".override-row", timeout=3000)
     page.locator(".override-row").get_by_role("button", name="Cancel").click()
-    assert page.locator(".override-row").count() == 0
+    assert page.locator(".override-row").count() == 0, "Cancel must close the override row"
     ctx.close()
 
 
@@ -143,7 +156,8 @@ def inventory(browser):
     page = ctx.new_page()
     login(page, "inventory1")
     assert page.url.endswith("/inventory"), page.url
-    visit(page, "/inventory", "i_dashboard", wait=".stat-tile")
+    visit(page, "/inventory", "i_dashboard", wait=".wf-step")
+    assert page.locator(".wf .wf-step.is-mine").count() == 3, "steps 4-6 belong to inventory"
     assert "Chicken" in page.inner_text("main"), "chicken alert/reorder expected on the dashboard"
     visit(page, "/inventory/stock", "i_stock", wait="table tbody tr")
     assert page.locator("table tbody tr").count() >= 20
@@ -197,8 +211,10 @@ def admin(browser):
     page.on("dialog", lambda d: d.accept())
     login(page, "admin")
     assert page.url.endswith("/admin"), page.url
-    visit(page, "/admin", "a_dashboard", wait=".stat-tile")
-    assert page.locator(".stat-tile").count() == 4
+    visit(page, "/admin", "a_dashboard", wait=".wf-step")
+    assert page.locator(".wf .wf-step").count() == 6, "admin workflow strip"
+    page.wait_for_selector(".wf-step:has-text('to prepare')", timeout=8000)            # step 3 read from the prep plan
+    assert page.locator(".wf a.wf-step").count() == 5, "steps 1, 2, 4, 5, 6 link to admin pages; 3 is the kitchen's"
     visit(page, "/admin/monitor", "a_monitor_sales", wait="canvas")
     page.get_by_role("tab", name="Forecasting").click()                 # report groups, then the report
     page.get_by_role("button", name="Forecast accuracy").click()

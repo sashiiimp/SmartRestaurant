@@ -3,6 +3,7 @@
 {% block panel %}
 <div id="app" v-cloak>
   <div class="d-flex justify-content-between align-items-center mb-3"><h2 class="h5 m-0">Users</h2><button class="btn btn-primary" @click="add">Add user</button></div>
+  <p class="page-intro">Everyone who uses the system, with one of three roles: Administrator, Food Production (kitchen) or Inventory &amp; Procurement. Users are deactivated, never deleted, so their history stays.</p>
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
   <div v-if="form" class="card mb-3"><div class="card-body"><h2 class="h6">New user</h2>
     <div class="row g-2">

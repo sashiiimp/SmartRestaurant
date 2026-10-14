@@ -418,3 +418,14 @@ one exists and otherwise opens the same pre-filled Stock requests address direct
 | Production deployment rehearsal (copy of the production dump in the isolated server) | upgrade `9b4f2c7e1d63 -> c4e1a7b9d052` in 3.3 s; all 30 other tables identical to production by `CHECKSUM TABLE`; daily forecast 70 rows; release walkthrough on production data (Chromium) pass; CSV downloads (7) all 200 with data |
 | Rollback rehearsal | A, code only: production code `56d439f` on the upgraded schema, 23 pages and 12 API calls all 200. B, schema downgrade: back to `9b4f2c7e1d63`, completed pre-orders confirmed, the 4 columns removed, other tables identical to production |
 | Not tested | logged-in pages on the live site (owner's passwords); the real systemd timer on production (rehearsed with the same command) |
+
+## 22. Viva polish: the six-step workflow on every dashboard (14 Oct 2026, branch `viva-polish` on `release-check`, staging only, not deployed)
+
+| Check | Result |
+|---|---|
+| Backup first | `/root/smartrest/backups/before_viva_polish_20261014_135323` (bundle, restored by a test clone to `9bb8c73`) |
+| Scope | templates, page scripts, `components.js`, CSS, `utils/navigation.py` (step map), the template context (one more helper); no service, ML, model, API, migration or permission change |
+| Fast suite | **432 passed**, 2 skipped (8 new: step marker on six pages, none on dashboards and reports, step map matches the menus) |
+| Browsers (fresh copy of the staging demo database per run, gunicorn `--timeout 120`) | Chromium **pass**, Firefox **pass**, WebKit **pass in 3 consecutive full runs**; the walkthrough now checks the 6-step strip on each dashboard, its links (5 of 6 for the administrator) and the figure read from the prep plan |
+| Harness races fixed | the override check waited for a label that is always shown, then read the field error before the server answered (now waits for the error); headless WebKit sometimes drops the login click without sending the form (seen twice in 3 runs; the walkthrough now reloads and tries once more, and prints that it did) |
+| Screens | 41 pages, no page scrolls sideways at 1366 or 390 px: `SmartRestaurant_Viva_Polish_Screens.pdf` |

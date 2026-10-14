@@ -148,3 +148,30 @@ def test_role_access_has_a_phone_list_with_the_same_pages(as_role):
     start = html.index('<ul class="role-list d-sm-none">')
     phone = html[start:html.index("</ul>", start)]
     assert phone.count("<li>") == 14
+
+
+# ---- NAV-8: the workflow step marker in the top bar (viva polish) ------------------------------------------------
+@pytest.mark.parametrize("role,url,step", [
+    ("admin", "/admin/models?tab=data", "Step 1 of 6 &middot; Historical sales"),
+    ("admin", "/admin/models", "Step 2 of 6 &middot; ML demand forecast"),
+    ("kitchen", "/kitchen/prep", "Step 3 of 6 &middot; Preparation recommendations"),
+    ("kitchen", "/kitchen/requirements", "Step 4 of 6 &middot; BOM &amp; ingredient requirements"),
+    ("inventory", "/inventory/reorder", "Step 5 of 6 &middot; Inventory decisions"),
+    ("kitchen", "/kitchen/record", "Step 6 of 6 &middot; Food waste monitoring"),
+])
+def test_page_shows_its_workflow_step(as_role, role, url, step):
+    assert step in as_role(role).get(url).get_data(as_text=True)
+
+
+def test_dashboards_and_reports_have_no_single_step(as_role):
+    client = as_role("admin")
+    for url in ("/admin", "/admin/monitor"):
+        assert "step-chip" not in client.get(url).get_data(as_text=True)
+
+
+def test_every_step_page_is_a_menu_page_of_its_role():
+    from app.utils.navigation import PAGE_STEP, WORKFLOW
+    for (path, tab), n in PAGE_STEP.items():
+        assert 1 <= n <= len(WORKFLOW) and path in menu(owner(path)) + [p for p in HUBS if owner(p) == owner(path)]
+        if tab:
+            assert tab in [t[0] for t in HUBS[path]], (path, tab)

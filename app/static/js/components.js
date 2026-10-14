@@ -57,6 +57,22 @@ window.SR = (function () {
         <div class="value" :class="{ 'value-long': String(value).length > 11 }"><a v-if="href" :href="href" class="stretched-link">[[ value ]]</a><span v-else>[[ value ]]</span></div>
         <div v-if="hint" class="stat-hint">[[ hint ]]</div></div></div>`,
     },
+    // The six-step decision chain (Historical sales -> ... -> Food waste monitoring). Each step: { title, value, caption,
+    // href, owner, mine, tone, progress }. The viewer's own steps are highlighted and link to their page; the others
+    // stay visible, muted, with the role that does them, so the whole chain can be read from any dashboard.
+    'sr-workflow': {
+      props: ['steps', 'label'],
+      template: `<ol class="wf" :aria-label="label || 'SmartRestaurant workflow'">
+        <li v-for="(s, i) in steps" :key="i" class="wf-item">
+          <component :is="s.href ? 'a' : 'div'" :href="s.href || null" class="wf-step" :class="[s.mine ? 'is-mine' : 'is-other', s.tone ? 'wf-' + s.tone : '']">
+            <span class="wf-top"><span class="wf-num" aria-hidden="true">[[ i + 1 ]]</span><span class="wf-title">[[ s.title ]]</span></span>
+            <strong class="wf-value">[[ s.value ]]</strong>
+            <small class="wf-cap">[[ s.caption ]]</small>
+            <span v-if="s.progress !== undefined && s.progress !== null" class="progress progress-thin wf-bar" role="progressbar" :aria-valuenow="s.progress" aria-valuemin="0" aria-valuemax="100" :aria-label="s.title + ' progress'"><span class="progress-bar" :style="{ width: s.progress + '%' }"></span></span>
+            <span class="wf-owner">[[ s.owner ]]</span>
+          </component>
+        </li></ol>`,
+    },
     'sr-field-error': {
       props: ['errors', 'name'],
       template: '<div v-if="errors && errors[name]" class="text-danger small mt-1" role="alert">[[ errors[name] ]]</div>',

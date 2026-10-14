@@ -12,11 +12,7 @@
       <button class="btn btn-outline-secondary" :class="{ active: range === 30 }" :aria-pressed="range === 30" :disabled="loading" @click="setRange(30)">Last 30 days</button>
     </div>
   </div>
-  <!-- What the system does, in one line: the decision chain behind every number on this page -->
-  <ol class="flow-line" aria-label="How SmartRestaurant works">
-    <li>Sales history</li><li>ML demand forecast</li><li>Preparation plan</li><li>Ingredient needs</li><li>Stock &amp; reorder</li>
-  </ol>
-
+  <p class="dash-purpose">SmartRestaurant turns past sales into a machine-learning demand forecast, then into how much to prepare, which ingredients are needed, what to reorder, and how much food is wasted.</p>
   <div v-if="error" class="alert alert-danger d-flex align-items-center gap-3" role="alert">
     <span class="flex-grow-1">The dashboard could not be loaded: [[ error ]]</span>
     <button class="btn btn-sm btn-outline-danger" type="button" @click="load">Try again</button>
@@ -29,26 +25,21 @@
       <p v-if="d.coverage.days_with_sales < d.coverage.days" class="dash-note note-partial" role="note"><sr-icon name="warning" :size="16"></sr-icon><span>Sales are recorded for [[ d.coverage.days_with_sales ]] of the [[ d.coverage.days ]] days in this period<template v-if="d.coverage.latest_sales_date"> (latest: [[ ui.date(d.coverage.latest_sales_date) ]])</template>. The totals cover the recorded days only.</span></p>
     </div>
 
-    <!-- 1 Summary: sales, forecast demand, food waste, inventory status -->
-    <section aria-labelledby="kpi-h" class="mb-3">
-      <h2 id="kpi-h" class="visually-hidden">Summary</h2>
-      <div class="row g-3 kpi-row">
-        <div class="col-6 col-xl-3"><sr-stat-tile label="Sales" icon="bag" :value="ui.num(d.sales.quantity, 0)" :hint="'portions sold · ' + ui.money(d.sales.revenue)" href="/admin/monitor?tab=sales"></sr-stat-tile></div>
-        <div class="col-6 col-xl-3"><sr-stat-tile label="Forecast demand, next 7 days" icon="trending" tone="info" :value="forecastDays ? ui.num(d.forecast_next7_total, 0) : 'No forecast'" :hint="forecastDays ? 'predicted portions' + (forecastDays < 7 ? ' (' + forecastDays + ' of 7 days)' : '') : 'run a forecast'" href="/admin/monitor?tab=demand"></sr-stat-tile></div>
-        <div class="col-6 col-xl-3"><sr-stat-tile label="Food waste" icon="trash" :tone="wasteTone" :value="d.waste_rate.pct === null ? 'No data' : ui.num(d.waste_rate.pct, 1) + '%'" :hint="wasteHint" href="/admin/monitor?tab=waste"></sr-stat-tile></div>
-        <div class="col-6 col-xl-3"><sr-stat-tile label="Inventory status" icon="package" :tone="d.stock.out ? 'danger' : (d.stock.low ? 'warning' : 'success')" :value="d.low_stock_count ? d.low_stock_count + ' to watch' : 'All OK'" :hint="stockHint" href="/admin/monitor?tab=stock"></sr-stat-tile></div>
-      </div>
+    <!-- 1 The decision chain with today's figures: each step links to where it is handled (step 3 is the kitchen's page) -->
+    <section aria-labelledby="wf-h">
+      <h2 id="wf-h" class="dash-section mt-0">How the system works, with today's figures</h2>
+      <sr-workflow :steps="chain" label="SmartRestaurant workflow, administrator view"></sr-workflow>
     </section>
 
     <div class="row g-3 mb-3">
       <!-- 2 Food demand forecast: predicted values, never actual sales -->
       <section class="col-12 col-xl-7" aria-labelledby="fc-h"><div class="card h-100"><div class="card-body">
         <div class="card-head">
-          <div><h2 id="fc-h" class="h6">7-day food demand forecast</h2><p class="card-sub">All menu items, [[ ui.date(d.forecast_next7[0].date) ]] to [[ ui.date(d.forecast_next7[6].date) ]]</p></div>
+          <div><h2 id="fc-h" class="h6">Sales history and 7-day ML forecast</h2><p class="card-sub">All menu items: the last 7 recorded days, then the forecast from [[ ui.date(d.forecast_next7[0].date) ]] to [[ ui.date(d.forecast_next7[6].date) ]]</p></div>
           <span class="sr-badge sr-badge-info">Prediction</span>
         </div>
         <template v-if="forecastDays">
-          <div role="img" aria-label="Bar chart of predicted portions per day for the next 7 days"><sr-bar-chart :labels="forecastLabels" :datasets="forecastData" y-title="Predicted portions" :height="230" title="" all-labels></sr-bar-chart></div>
+          <div role="img" aria-label="Recorded portions sold for the last 7 days as a line, then predicted portions for the next 7 days as bars"><sr-bar-chart :labels="hfLabels" :datasets="hfData" y-title="Portions per day" :height="240" title="" all-labels></sr-bar-chart></div>
           <div class="dash-fc-foot fc-foot-row">
             <div class="dash-fc-total"><strong>[[ ui.num(d.forecast_next7_total, 1) ]]</strong><span>predicted portions (sum of the [[ forecastDays ]] daily value[[ forecastDays === 1 ? '' : 's' ]])</span></div>
             <div class="dash-fc-model" v-if="d.active_model">
@@ -66,7 +57,7 @@
       <!-- 3 Sales and waste trends: recorded history for the reporting period -->
       <section class="col-12 col-xl-5" aria-labelledby="tr-h"><div class="card h-100"><div class="card-body">
         <div class="card-head">
-          <div><h2 id="tr-h" class="h6">Sales and waste trend</h2><p class="card-sub">Recorded portions per day, [[ ui.date(d.from) ]] to [[ ui.date(d.to) ]]</p></div>
+          <div><h2 id="tr-h" class="h6">Sales and food waste (recorded)</h2><p class="card-sub">Recorded portions per day, [[ ui.date(d.from) ]] to [[ ui.date(d.to) ]]</p></div>
           <a href="/admin/monitor?tab=sales">Reports</a>
         </div>
         <div v-if="trend && trendHasData" role="img" aria-label="Line chart of portions sold and wasted per day in the reporting period"><sr-line-chart :labels="trendLabels" :datasets="trendData" y-title="Portions" :height="230" title=""></sr-line-chart></div>

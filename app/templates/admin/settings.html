@@ -2,7 +2,8 @@
 {% block title %}Settings - SmartRestaurant{% endblock %}
 {% block panel %}
 <div id="app" v-cloak>
-  <h2 class="h5 mb-3">Settings and alert configuration</h2>
+  <h2 class="h5 mb-1">Settings and alert configuration</h2>
+  <p class="page-intro">The limits the recommendations and alerts use, such as the preparation safety buffer and the food waste limit, and which alert types are switched on.</p>
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
   <sr-loading v-if="loading"></sr-loading>
   <template v-else-if="s">
