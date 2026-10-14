@@ -302,3 +302,20 @@ Presentation only. No service, ML, model, migration, API, permission or navigati
 - **Shortened, not removed**: every page intro (one line), formulas (prep quantity, reorder suggestion, waste rate,
   daily balance), alert behaviour, CSV formats, model metrics, the accuracy method note. Warnings and empty states keep
   their meaning; the partial-sales warning stays on the admin dashboard.
+
+## 16. Role dashboards (14 Oct 2026, branch `role-dashboards`)
+
+Each role has its own dashboard, built the same way: figures, then **Needs attention** (`sr-action-list`: the issue,
+what the system recommends, one action button), then the detail. Pages, tabs, menus, permissions, ML and the database
+are unchanged; `docs/PRESERVATION_CHECKLIST.md` lists every function and where it is.
+
+- **Administrator:** workflow row (management view of the whole chain), Needs attention (management decisions),
+  Forecasting performance (active model, hold-out MAE vs baseline, accuracy on the period), one chart for recorded sales,
+  waste and the 7-day forecast, alerts, upcoming pre-orders, recent activity.
+- **Kitchen:** forecast, to prepare, prepared, served / wasted; Needs attention; the day's pre-orders; plan; shortages;
+  alerts.
+- **Inventory:** usable stock, kitchen requests, short in 7 days, expiry; Needs attention; open kitchen requests;
+  reorder; stock-out risk; expiring batches; alerts.
+- Read-only additions to `dashboard_service`: `day` on the kitchen dashboard, `totals` and `requests` on the inventory
+  dashboard, `accuracy` on the admin dashboard, all from existing service functions. Counts are no longer cut at the
+  length of the list shown.

@@ -53,44 +53,41 @@ function describe(raw) {
 }
 
 SR.createApp({
-  data() { return { range: 7, d: null, alerts: [], history: undefined, alertTab: 'open', trend: undefined, perf: null, prep: null, req: null, reorder: null, allActivity: false, allStock: false, loading: true, error: null, ui }; },
+  data() { return { range: 7, d: null, alerts: [], history: undefined, alertTab: 'open', trend: undefined, perf: null, prep: null, req: null, reorder: null, allActivity: false, loading: true, error: null, ui }; },
   async mounted() { await this.load(); this.loadPerf(); },
   computed: {
     // Food waste rate tile: amber above the waste-risk limit from Settings (the same limit the waste-risk alert uses).
     wasteTone() { const r = this.d.waste_rate.pct; return r === null ? 'neutral' : (r > this.d.waste_threshold_pct ? 'warning' : 'success'); },
-    wasteHint() {
-      const w = this.d.waste_rate;
-      return w.pct === null ? 'nothing prepared in this period'
-        : ui.num(this.d.waste.quantity, 0) + ' portions wasted of ' + ui.num(w.prepared, 0) + ' prepared · ' + ui.money(this.d.waste.value) + ' at selling price · limit ' + ui.num(this.d.waste_threshold_pct, 1) + '%';
-    },
-    stockHint() { const s = this.d.stock; return s.out + ' out of stock, ' + s.low + ' low, of ' + s.ingredients + ' ingredients'; },
-    // Recommended actions: plain rules over figures the dashboard already has; each links to the page that handles it.
+    synthetic() { return this.d && /synthetic|demo|simulated/i.test(this.d.data_source || ''); },
+    // Management decisions: what needs attention, what the system recommends, and the page that handles it. Plain
+    // rules over figures the dashboard already has; nothing is calculated anew.
     actions() {
-      const d = this.d, out = [], names = rows => rows.slice(0, 4).map(r => r.name).join(', ') + (rows.length > 4 ? ' and ' + (rows.length - 4) + ' more' : '');
-      if (!d.active_model) out.push({ key: 'model', tone: 'danger', icon: 'layers', title: 'No active forecasting model', detail: 'Train and activate one first.', href: '/admin/models?tab=models', link: 'ML models' });
-      if (this.forecastDays < 7) out.push({ key: 'fc', tone: 'warning', icon: 'trending', title: 'Run the forecast', detail: 'No forecast yet for ' + this.missingForecastText + '.', href: '/admin/models?tab=runs', link: 'Forecasting' });
-      const low = d.inventory_alerts.filter(r => r.status !== 'ok');
-      if (low.length) out.push({ key: 'low', tone: d.stock.out ? 'danger' : 'warning', icon: 'package', title: low.length + ' ingredient' + (low.length === 1 ? ' needs' : 's need') + ' reordering', detail: names(low) + '.', href: '/admin/monitor?tab=stock', link: 'Stock levels' });
-      const short = d.inventory_alerts.filter(r => r.forecast);
-      if (short.length) out.push({ key: 'short', tone: 'info', icon: 'bars', title: short.length + ' ingredient' + (short.length === 1 ? '' : 's') + ' will run short within 7 days', detail: names(short) + '.', href: '/admin/monitor?tab=ingredients', link: 'Ingredient demand' });
-      const expired = d.inventory_alerts.reduce((n, r) => n + r.expiry.filter(e => e.expired).length, 0);
-      if (expired) out.push({ key: 'exp', tone: 'danger', icon: 'clock', title: expired + ' expired batch' + (expired === 1 ? '' : 'es') + ' still in stock', detail: 'Record them as wastage.', href: '/admin/monitor?tab=batches', link: 'Batches' });
+      const d = this.d, out = [], s = (n, one, many) => n + ' ' + (n === 1 ? one : many);
+      const names = rows => rows.slice(0, 3).map(r => r.name).join(', ') + (rows.length > 3 ? ' and ' + (rows.length - 3) + ' more' : '');
+      if (!d.active_model) out.push({ key: 'model', tone: 'danger', title: 'No active forecasting model',
+        detail: 'Train a model and activate it before forecasting.', action: 'ML models', href: '/admin/models?tab=models' });
+      else if (!d.active_model.beats_baseline) out.push({ key: 'base', tone: 'warning', title: 'The active model does not beat the simple baseline',
+        detail: 'Retrain and compare the models before relying on the forecast.', action: 'ML models', href: '/admin/models?tab=models' });
+      if (this.forecastDays < 7) out.push({ key: 'fc', tone: 'warning', title: 'No forecast for ' + this.missingForecastText,
+        detail: 'Run the forecast now; it also runs once a day.', action: 'Run forecast', href: '/admin/models?tab=runs' });
       const w = d.waste_rate.pct;
-      if (w !== null && w > d.waste_threshold_pct) out.push({ key: 'waste', tone: 'warning', icon: 'trash', title: 'Food waste ' + ui.num(w, 1) + '% is above the ' + ui.num(d.waste_threshold_pct, 1) + '% limit', detail: 'See which items are wasted most.', href: '/admin/monitor?tab=waste', link: 'Waste report' });
-      if (d.items_without_recipe.length) out.push({ key: 'bom', tone: 'warning', icon: 'book', title: 'Menu items without a recipe', detail: d.items_without_recipe.join(', ') + ' (needs count as zero).', href: '/admin/catalog', link: 'Add recipes' });
-      if (d.pre_orders.count) out.push({ key: 'po', tone: 'info', icon: 'bag', title: d.pre_orders.count + ' confirmed pre-order' + (d.pre_orders.count === 1 ? '' : 's') + ', ' + d.pre_orders.portions + ' portions', detail: 'Next 7 days, already in the prep plan.', href: null });
-      if (w !== null && w <= d.waste_threshold_pct) out.push({ key: 'wasteok', tone: 'success', icon: 'check', title: 'Food waste ' + ui.num(w, 1) + '% is within the ' + ui.num(d.waste_threshold_pct, 1) + '% limit', detail: '', href: '/admin/monitor?tab=waste', link: 'Waste report' });
-      if (!out.length) out.push({ key: 'ok', tone: 'success', icon: 'check', title: 'Nothing needs attention', detail: '', href: null });
+      if (w !== null && w > d.waste_threshold_pct) out.push({ key: 'waste', tone: 'warning', title: 'Food waste ' + ui.num(w, 1) + '% is above the ' + ui.num(d.waste_threshold_pct, 1) + '% limit',
+        detail: 'Review the most wasted items with the kitchen.', action: 'Waste report', href: '/admin/monitor?tab=waste' });
+      if (d.items_without_recipe.length) out.push({ key: 'bom', tone: 'warning', title: s(d.items_without_recipe.length, 'menu item has', 'menu items have') + ' no recipe',
+        detail: d.items_without_recipe.join(', ') + ': ingredient needs count as zero until a recipe is added.', action: 'Add recipes', href: '/admin/catalog' });
+      const low = d.stock.out + d.stock.low;
+      if (low) out.push({ key: 'low', tone: d.stock.out ? 'danger' : 'warning', title: s(low, 'ingredient is', 'ingredients are') + ' low or out of stock',
+        detail: names(d.stock.rows) + '. The inventory manager reorders.', action: 'Stock levels', href: '/admin/monitor?tab=stock' });
+      const short = d.inventory_alerts.filter(r => r.forecast);
+      if (short.length) out.push({ key: 'short', tone: 'info', title: s(short.length, 'ingredient runs', 'ingredients run') + ' short within 7 days',
+        detail: names(short) + ', from the forecast and recipes.', action: 'Ingredient demand', href: '/admin/monitor?tab=ingredients' });
+      const expired = d.inventory_alerts.reduce((n, r) => n + r.expiry.filter(e => e.expired).length, 0);
+      if (expired) out.push({ key: 'exp', tone: 'warning', title: s(expired, 'expired batch is', 'expired batches are') + ' still in stock',
+        detail: 'The inventory manager records them as wastage.', action: 'Batches', href: '/admin/monitor?tab=batches' });
       return out;
     },
-    forecastShortCount() { return this.d.inventory_alerts.filter(r => r.forecast).length; },
     forecastDays() { return this.d.forecast_next7.filter(f => f.qty !== null).length; },
     forecastLabels() { return this.d.forecast_next7.map(f => shortDate(f.date, true)); },
-    // Predictions are drawn in the info blue, recorded history in the green accent, so the two are never confused.
-    forecastData() {
-      const c = getComputedStyle(document.body).getPropertyValue('--info').trim() || '#175cd3';
-      return [{ label: 'Predicted portions', data: this.d.forecast_next7.map(f => f.qty), backgroundColor: c + '59', borderColor: c, borderWidth: 1.5, hoverBackgroundColor: c + '8c' }];
-    },
     missingForecastText() { return this.d.forecast_next7.filter(f => f.qty === null).map(f => ui.date(f.date)).join(', '); },
     partialItems() { return this.d.forecast_next7.some(f => f.qty !== null && f.items < this.d.menu_items_active); },
     // Every date of the period on the x axis; a day without records is null (a gap), never a made-up zero.
@@ -103,13 +100,7 @@ SR.createApp({
       return { sold: this.trendDates.map(x => sold.has(x) ? sold.get(x) : null),
                wasted: this.trendDates.map(x => waste.has(x) ? waste.get(x) : (sold.has(x) ? 0 : null)) };
     },
-    trendHasData() { const s = this.trendSeries; return !!s && (s.sold.some(v => v !== null) || s.wasted.some(v => v !== null)); },
     trendGaps() { return !!this.trendSeries && this.trendSeries.sold.some(v => v === null); },
-    trendData() {
-      if (!this.trendSeries) return [];
-      return [{ label: 'Portions sold (recorded)', data: this.trendSeries.sold },
-              { label: 'Portions wasted (recorded)', data: this.trendSeries.wasted, borderColor: '#d97706', backgroundColor: '#d97706' }];
-    },
     // Consecutive identical events (same action, record and details) are shown once with a count, never dropped.
     activity() {
       const out = [];
@@ -147,15 +138,16 @@ SR.createApp({
           caption: 'limit ' + ui.num(d.waste_threshold_pct, 0) + '%', owner: 'Kitchen records · admin reviews' },
       ];
     },
-    // Last 7 recorded days, then the 7 forecast days, on one axis: history as a line, prediction as bars.
-    hfDays() { return this.trendDates.slice(-7); },
-    hfLabels() { return [...this.hfDays.map(x => shortDate(x, true)), ...this.forecastLabels]; },
+    // The reporting period's recorded days, then the 7 forecast days, on one axis: history as lines, prediction as bars.
+    hfLabels() { return [...this.trendDates.map(x => shortDate(x, this.d.range_days === 7)), ...this.forecastLabels]; },
     hfData() {
       const c = getComputedStyle(document.body).getPropertyValue('--info').trim() || '#175cd3';
-      const sold = this.trendSeries ? this.trendSeries.sold.slice(-7) : this.hfDays.map(() => null);
+      const n = this.trendDates.length, blank = Array(n).fill(null), s = this.trendSeries || { sold: blank, wasted: blank };
+      const line = { type: 'line', borderWidth: 2.25, tension: 0.3, pointRadius: n > 10 ? 1.5 : 3, pointBackgroundColor: '#fff', pointBorderWidth: 2, order: 0 };
       return [
-        { type: 'line', label: 'Recorded sales (history)', data: [...sold, ...Array(7).fill(null)], borderColor: '#047857', backgroundColor: '#047857', borderWidth: 2.5, tension: 0.3, pointRadius: 3, pointBackgroundColor: '#fff', pointBorderWidth: 2, order: 0 },
-        { type: 'bar', label: 'ML forecast (prediction)', data: [...Array(7).fill(null), ...this.d.forecast_next7.map(f => f.qty)], backgroundColor: c + '59', borderColor: c, borderWidth: 1.5, order: 1 },
+        { ...line, label: 'Sold (recorded)', data: [...s.sold, ...Array(7).fill(null)], borderColor: '#047857', backgroundColor: '#047857' },
+        { ...line, label: 'Wasted (recorded)', data: [...s.wasted, ...Array(7).fill(null)], borderColor: '#d97706', backgroundColor: '#d97706' },
+        { type: 'bar', label: 'ML forecast (prediction)', data: [...blank, ...this.d.forecast_next7.map(f => f.qty)], backgroundColor: c + '59', borderColor: c, borderWidth: 1.5, order: 1 },
       ];
     },
     activityShown() { return this.activity.slice(0, this.allActivity ? 10 : 5); },
@@ -166,7 +158,7 @@ SR.createApp({
     async load() {
       this.loading = true; this.error = null;
       try { this.d = (await api.get('/dashboards/admin', { range: this.range })).data; } catch (e) { this.d = null; this.error = ui.errorText(e); } finally { this.loading = false; }
-      this.trend = undefined; this.allStock = false; this.history = undefined; this.alertTab = 'open';
+      this.trend = undefined; this.history = undefined; this.alertTab = 'open';
       if (this.d) { await this.loadAlerts(); this.loadTrend(); this.loadChain(); }
     },
     // Loaded after the dashboard (never in parallel) so the alert check runs once.

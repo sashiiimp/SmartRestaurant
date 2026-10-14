@@ -39,6 +39,27 @@ Dashboard එක කියන්නේ Administrator log වුණාම මු�
 
 ## 2. What each part is for, where the value comes from, and how it is calculated
 
+> **Role dashboards (October 2026, current).** Each role now has its own dashboard, built the same way: figures at the
+> top, then **Needs attention** (each line says what is wrong, what the system recommends, and has one button to the
+> page that handles it), then the detail.
+>
+> - **Administrator:** the six-step workflow with today's figures (the management view of the whole chain), Needs
+>   attention (missing forecast, model below baseline, waste above the limit, items without a recipe, low stock,
+>   forecast shortfall, expired batches), **Forecasting performance** (active model, hold-out MAE against the simple
+>   baseline, WAPE, and the accuracy on the reporting period: actual sales against the forecast made before each day),
+>   one chart with recorded sales and waste for the period and the 7 forecast days, alerts, upcoming pre-orders and
+>   recent activity. The quick-action card was removed because its links repeated the sidebar.
+> - **Kitchen:** four figures for the chosen day (ML forecast, to prepare, prepared, served / wasted), Needs attention
+>   (items to decide, ingredient shortages, pre-orders to confirm, served not yet recorded), the day's pre-orders, the
+>   plan table, shortages with Request stock, alerts.
+> - **Inventory:** four figures (usable stock, kitchen requests, ingredients short in 7 days, expired batches), Needs
+>   attention (requests to issue, expired stock, reorder, draft and awaited purchase orders, batches expiring soon),
+>   open kitchen requests, reorder suggestions, stock-out risk, expiring batches, alerts.
+>
+> No formula changed. The new counts are taken from the same service functions as the pages behind them and are
+> checked against hand-worked examples (docs/PRESERVATION_CHECKLIST.md, section 5). The notes below describe earlier
+> layouts; every figure they explain is still on the admin dashboard or one click away.
+
 > **Since the viva polish (14 Oct 2026)** the four tiles are replaced by the six-step workflow strip (Historical sales,
 > ML demand forecast, Preparation recommendations, BOM & ingredient requirements, Inventory decisions, Food waste
 > monitoring), each with today's figure: the same tile values plus today's prep plan, ingredient shortages and reorder
@@ -216,4 +237,4 @@ The dashboard is the **monitoring layer** for the administrator. It does not for
 4. **The ML basics:** what a feature is (day of week, lag 7, rolling mean, holidays, promotions), what MAE means (the average size of the error, in portions), why a model is compared with a naive baseline, and why a hold-out period must come after the training data.
 5. **Roles (RBAC):** admin, kitchen and inventory, and why each can only do its own tasks.
 6. **Synthetic data honesty:** why it is labelled, and why its accuracy is not real-world accuracy.
-7. **Practise the demo:** switch between 7 and 30 days, point at the "Prediction" label, open one alert, and follow one quick action to its page.
+7. **Practise the demo:** switch between 7 and 30 days, point at the "Prediction" label, open one alert, and follow one Needs attention button to its page.

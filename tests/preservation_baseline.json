@@ -1,0 +1,1583 @@
+{
+ "routes": [
+  {
+   "method": "GET",
+   "path": "/",
+   "roles": [
+    "(any / public)"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/admin",
+   "roles": [
+    "admin"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/admin/catalog",
+   "roles": [
+    "admin"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/admin/data",
+   "roles": [
+    "admin"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/admin/inventory",
+   "roles": [
+    "admin"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/admin/models",
+   "roles": [
+    "admin"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/admin/monitor",
+   "roles": [
+    "admin"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/admin/settings",
+   "roles": [
+    "admin"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/admin/users",
+   "roles": [
+    "admin"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/alerts",
+   "roles": [
+    "admin",
+    "inventory",
+    "kitchen"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/v1/alerts/<int:alert_id>/acknowledge",
+   "roles": [
+    "admin",
+    "inventory",
+    "kitchen"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/v1/alerts/run",
+   "roles": [
+    "admin"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/dashboards/admin",
+   "roles": [
+    "admin"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/dashboards/inventory",
+   "roles": [
+    "admin",
+    "inventory"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/dashboards/kitchen",
+   "roles": [
+    "admin",
+    "kitchen"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/forecast-runs",
+   "roles": [
+    "admin"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/v1/forecast-runs",
+   "roles": [
+    "admin"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/forecasts",
+   "roles": [
+    "admin",
+    "inventory",
+    "kitchen"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/forecasts/accuracy",
+   "roles": [
+    "admin"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/holidays",
+   "roles": [
+    "admin"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/v1/holidays/import",
+   "roles": [
+    "admin"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/ingredients",
+   "roles": [
+    "admin",
+    "inventory",
+    "kitchen"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/v1/ingredients",
+   "roles": [
+    "inventory"
+   ]
+  },
+  {
+   "method": "PATCH",
+   "path": "/api/v1/ingredients/<int:ingredient_id>",
+   "roles": [
+    "inventory"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/kitchen/daily-summary",
+   "roles": [
+    "admin",
+    "kitchen"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/kitchen/food-usage",
+   "roles": [
+    "admin",
+    "kitchen"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/v1/kitchen/food-usage",
+   "roles": [
+    "kitchen"
+   ]
+  },
+  {
+   "method": "DELETE",
+   "path": "/api/v1/kitchen/food-usage/<int:usage_id>",
+   "roles": [
+    "kitchen"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/kitchen/ingredient-usage",
+   "roles": [
+    "admin",
+    "kitchen"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/v1/kitchen/ingredient-usage",
+   "roles": [
+    "kitchen"
+   ]
+  },
+  {
+   "method": "DELETE",
+   "path": "/api/v1/kitchen/ingredient-usage/<int:usage_id>",
+   "roles": [
+    "kitchen"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/kitchen/orders",
+   "roles": [
+    "admin",
+    "kitchen"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/v1/kitchen/orders",
+   "roles": [
+    "kitchen"
+   ]
+  },
+  {
+   "method": "PATCH",
+   "path": "/api/v1/kitchen/orders/<int:order_id>",
+   "roles": [
+    "kitchen"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/kitchen/pre-orders",
+   "roles": [
+    "admin",
+    "kitchen"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/v1/kitchen/pre-orders",
+   "roles": [
+    "kitchen"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/kitchen/pre-orders/<int:pre_order_id>",
+   "roles": [
+    "admin",
+    "kitchen"
+   ]
+  },
+  {
+   "method": "PATCH",
+   "path": "/api/v1/kitchen/pre-orders/<int:pre_order_id>",
+   "roles": [
+    "kitchen"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/v1/kitchen/prepared",
+   "roles": [
+    "kitchen"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/v1/kitchen/shortage-reports",
+   "roles": [
+    "kitchen"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/kitchen/stock-requests",
+   "roles": [
+    "admin",
+    "kitchen"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/v1/kitchen/stock-requests",
+   "roles": [
+    "kitchen"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/v1/kitchen/stock-requests/<int:request_id>/cancel",
+   "roles": [
+    "kitchen"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/v1/kitchen/waste",
+   "roles": [
+    "kitchen"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/me",
+   "roles": [
+    "admin",
+    "inventory",
+    "kitchen"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/menu-items",
+   "roles": [
+    "admin",
+    "inventory",
+    "kitchen"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/v1/menu-items",
+   "roles": [
+    "admin"
+   ]
+  },
+  {
+   "method": "PATCH",
+   "path": "/api/v1/menu-items/<int:item_id>",
+   "roles": [
+    "admin"
+   ]
+  },
+  {
+   "method": "PATCH",
+   "path": "/api/v1/menu-items/<int:item_id>/availability",
+   "roles": [
+    "kitchen"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/menu-items/<int:item_id>/recipe",
+   "roles": [
+    "admin",
+    "inventory",
+    "kitchen"
+   ]
+  },
+  {
+   "method": "PUT",
+   "path": "/api/v1/menu-items/<int:item_id>/recipe",
+   "roles": [
+    "admin"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/model-versions",
+   "roles": [
+    "admin"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/v1/model-versions",
+   "roles": [
+    "admin"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/v1/model-versions/<int:version_id>/activate",
+   "roles": [
+    "admin"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/promotions",
+   "roles": [
+    "admin"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/v1/promotions",
+   "roles": [
+    "admin"
+   ]
+  },
+  {
+   "method": "PATCH",
+   "path": "/api/v1/promotions/<int:promotion_id>",
+   "roles": [
+    "admin"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/purchase-orders",
+   "roles": [
+    "admin",
+    "inventory"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/v1/purchase-orders",
+   "roles": [
+    "inventory"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/purchase-orders/<int:po_id>",
+   "roles": [
+    "admin",
+    "inventory"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/v1/purchase-orders/<int:po_id>/cancel",
+   "roles": [
+    "inventory"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/v1/purchase-orders/<int:po_id>/receive",
+   "roles": [
+    "inventory"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/v1/purchase-orders/<int:po_id>/send",
+   "roles": [
+    "inventory"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/recommendations/ingredient-forecast",
+   "roles": [
+    "admin",
+    "inventory"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/recommendations/prep",
+   "roles": [
+    "admin",
+    "kitchen"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/v1/recommendations/prep/decisions",
+   "roles": [
+    "kitchen"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/v1/recommendations/prep/status",
+   "roles": [
+    "kitchen"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/recommendations/reorder",
+   "roles": [
+    "admin",
+    "inventory"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/recommendations/requirements",
+   "roles": [
+    "admin",
+    "inventory",
+    "kitchen"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/reports/analytics",
+   "roles": [
+    "admin"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/reports/food-usage",
+   "roles": [
+    "admin"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/reports/inventory-trend",
+   "roles": [
+    "admin"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/reports/movements",
+   "roles": [
+    "admin"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/reports/sales",
+   "roles": [
+    "admin"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/reports/stock-levels",
+   "roles": [
+    "admin"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/reports/waste",
+   "roles": [
+    "admin"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/restaurant",
+   "roles": [
+    "admin"
+   ]
+  },
+  {
+   "method": "PUT",
+   "path": "/api/v1/restaurant",
+   "roles": [
+    "admin"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/v1/sales/import",
+   "roles": [
+    "admin"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/v1/sales/served",
+   "roles": [
+    "kitchen"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/settings",
+   "roles": [
+    "admin"
+   ]
+  },
+  {
+   "method": "PUT",
+   "path": "/api/v1/settings",
+   "roles": [
+    "admin"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/stock-requests",
+   "roles": [
+    "admin",
+    "inventory"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/stock-requests/<int:request_id>",
+   "roles": [
+    "admin",
+    "inventory"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/v1/stock-requests/<int:request_id>/approve",
+   "roles": [
+    "inventory"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/v1/stock-requests/<int:request_id>/issue",
+   "roles": [
+    "inventory"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/v1/stock-requests/<int:request_id>/reject",
+   "roles": [
+    "inventory"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/v1/stock/adjustments",
+   "roles": [
+    "inventory"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/stock/batches",
+   "roles": [
+    "admin",
+    "inventory"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/stock/consistency",
+   "roles": [
+    "admin",
+    "inventory"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/v1/stock/in",
+   "roles": [
+    "inventory"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/stock/levels",
+   "roles": [
+    "admin",
+    "inventory",
+    "kitchen"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/stock/movements",
+   "roles": [
+    "admin",
+    "inventory"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/v1/stock/out",
+   "roles": [
+    "inventory"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/v1/stock/wastage",
+   "roles": [
+    "inventory"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/suppliers",
+   "roles": [
+    "admin",
+    "inventory"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/v1/suppliers",
+   "roles": [
+    "inventory"
+   ]
+  },
+  {
+   "method": "PATCH",
+   "path": "/api/v1/suppliers/<int:supplier_id>",
+   "roles": [
+    "inventory"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/users",
+   "roles": [
+    "admin"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/v1/users",
+   "roles": [
+    "admin"
+   ]
+  },
+  {
+   "method": "PATCH",
+   "path": "/api/v1/users/<int:user_id>",
+   "roles": [
+    "admin"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/v1/users/<int:user_id>/password",
+   "roles": [
+    "admin"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/weather",
+   "roles": [
+    "admin"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/v1/weather/import",
+   "roles": [
+    "admin"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/inventory",
+   "roles": [
+    "inventory"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/inventory/forecast",
+   "roles": [
+    "inventory"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/inventory/movements",
+   "roles": [
+    "inventory"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/inventory/purchase-orders",
+   "roles": [
+    "inventory"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/inventory/reorder",
+   "roles": [
+    "inventory"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/inventory/requests",
+   "roles": [
+    "inventory"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/inventory/stock",
+   "roles": [
+    "inventory"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/inventory/suppliers",
+   "roles": [
+    "inventory"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/kitchen",
+   "roles": [
+    "kitchen"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/kitchen/forecast",
+   "roles": [
+    "kitchen"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/kitchen/orders",
+   "roles": [
+    "kitchen"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/kitchen/prep",
+   "roles": [
+    "kitchen"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/kitchen/record",
+   "roles": [
+    "kitchen"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/kitchen/requirements",
+   "roles": [
+    "kitchen"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/kitchen/stock-requests",
+   "roles": [
+    "kitchen"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/login",
+   "roles": [
+    "(any / public)"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/login",
+   "roles": [
+    "(any / public)"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/logout",
+   "roles": [
+    "admin",
+    "inventory",
+    "kitchen"
+   ]
+  }
+ ],
+ "pages": [
+  {
+   "role": "admin",
+   "group": "Overview",
+   "label": "Dashboard",
+   "path": "/admin",
+   "tabs": []
+  },
+  {
+   "role": "admin",
+   "group": "Overview",
+   "label": "Reports & Analytics",
+   "path": "/admin/monitor",
+   "tabs": []
+  },
+  {
+   "role": "admin",
+   "group": "Overview",
+   "label": "Forecasting",
+   "path": "/admin/models",
+   "tabs": [
+    {
+     "key": "data",
+     "label": "Historical data",
+     "template": "admin/data.html"
+    },
+    {
+     "key": "models",
+     "label": "ML models",
+     "template": "admin/models.html"
+    },
+    {
+     "key": "runs",
+     "label": "Forecast generation",
+     "template": "admin/models.html"
+    }
+   ]
+  },
+  {
+   "role": "admin",
+   "group": "Setup",
+   "label": "Menu & recipes",
+   "path": "/admin/catalog",
+   "tabs": []
+  },
+  {
+   "role": "admin",
+   "group": "Setup",
+   "label": "Administration",
+   "path": "/admin/users",
+   "tabs": [
+    {
+     "key": "users",
+     "label": "Users",
+     "template": "admin/users.html"
+    },
+    {
+     "key": "settings",
+     "label": "Settings & alerts",
+     "template": "admin/settings.html"
+    },
+    {
+     "key": "roles",
+     "label": "Role access",
+     "template": "admin/roles.html"
+    }
+   ]
+  },
+  {
+   "role": "kitchen",
+   "group": "Today",
+   "label": "Dashboard",
+   "path": "/kitchen",
+   "tabs": []
+  },
+  {
+   "role": "kitchen",
+   "group": "Today",
+   "label": "Plan & prepare",
+   "path": "/kitchen/prep",
+   "tabs": [
+    {
+     "key": "prep",
+     "label": "Prep plan",
+     "template": "kitchen/prep.html"
+    },
+    {
+     "key": "forecast",
+     "label": "7-day forecast",
+     "template": "kitchen/forecast.html"
+    }
+   ]
+  },
+  {
+   "role": "kitchen",
+   "group": "Today",
+   "label": "Served & waste",
+   "path": "/kitchen/record",
+   "tabs": []
+  },
+  {
+   "role": "kitchen",
+   "group": "Supplies & orders",
+   "label": "Ingredients",
+   "path": "/kitchen/requirements",
+   "tabs": [
+    {
+     "key": "needs",
+     "label": "Needs & shortages",
+     "template": "kitchen/requirements.html"
+    },
+    {
+     "key": "requests",
+     "label": "Stock requests",
+     "template": "kitchen/stock_requests.html"
+    }
+   ]
+  },
+  {
+   "role": "kitchen",
+   "group": "Supplies & orders",
+   "label": "Orders & pre-orders",
+   "path": "/kitchen/orders",
+   "tabs": []
+  },
+  {
+   "role": "inventory",
+   "group": "Today",
+   "label": "Dashboard",
+   "path": "/inventory",
+   "tabs": []
+  },
+  {
+   "role": "inventory",
+   "group": "Today",
+   "label": "Kitchen requests",
+   "path": "/inventory/requests",
+   "tabs": []
+  },
+  {
+   "role": "inventory",
+   "group": "Stock & buying",
+   "label": "Stock",
+   "path": "/inventory/stock",
+   "tabs": [
+    {
+     "key": "levels",
+     "label": "Stock levels",
+     "template": "inventory/stock.html"
+    },
+    {
+     "key": "record",
+     "label": "Record stock",
+     "template": "inventory/movements.html"
+    }
+   ]
+  },
+  {
+   "role": "inventory",
+   "group": "Stock & buying",
+   "label": "Purchasing",
+   "path": "/inventory/reorder",
+   "tabs": [
+    {
+     "key": "reorder",
+     "label": "Reorder",
+     "template": "inventory/reorder.html"
+    },
+    {
+     "key": "demand",
+     "label": "Ingredient demand",
+     "template": "inventory/forecast.html"
+    },
+    {
+     "key": "orders",
+     "label": "Purchase orders",
+     "template": "inventory/purchase_orders.html"
+    },
+    {
+     "key": "suppliers",
+     "label": "Suppliers",
+     "template": "inventory/suppliers.html"
+    }
+   ]
+  }
+ ],
+ "report_tabs": [
+  {
+   "key": "sales",
+   "label": "Sales and revenue"
+  },
+  {
+   "key": "demand",
+   "label": "Demand forecast"
+  },
+  {
+   "key": "forecast",
+   "label": "Forecast accuracy"
+  },
+  {
+   "key": "analytics",
+   "label": "Analytics"
+  },
+  {
+   "key": "waste",
+   "label": "Waste reports"
+  },
+  {
+   "key": "stock",
+   "label": "Stock levels"
+  },
+  {
+   "key": "ingredients",
+   "label": "Ingredient demand"
+  },
+  {
+   "key": "batches",
+   "label": "Batches and expiry"
+  },
+  {
+   "key": "inventory",
+   "label": "Stock trends"
+  },
+  {
+   "key": "movements",
+   "label": "Stock movements"
+  }
+ ],
+ "redirects": {
+  "/admin/data": "/admin/models?tab=data",
+  "/admin/inventory": "/admin/monitor?tab=stock",
+  "/admin/settings": "/admin/users?tab=settings",
+  "/inventory/forecast": "/inventory/reorder?tab=demand",
+  "/inventory/movements": "/inventory/stock?tab=record",
+  "/inventory/purchase-orders": "/inventory/reorder?tab=orders",
+  "/inventory/suppliers": "/inventory/reorder?tab=suppliers",
+  "/kitchen/forecast": "/kitchen/prep?tab=forecast",
+  "/kitchen/stock-requests": "/kitchen/requirements?tab=requests"
+ },
+ "cli": [
+  "activate",
+  "check-stock",
+  "create-user",
+  "demo-reset",
+  "evaluate",
+  "forecast",
+  "forecast-daily",
+  "generate-data",
+  "seed",
+  "set-setting",
+  "train"
+ ],
+ "ui": {
+  "/admin": {
+   "template": "admin/dashboard.html",
+   "script": "admin_dashboard.js",
+   "actions": [
+    "(alert list with Acknowledge)",
+    "History",
+    "Last 30 days",
+    "Last 7 days",
+    "Open ([[ alerts.length ]])",
+    "Try again"
+   ],
+   "api": [
+    "GET /alerts",
+    "GET /dashboards/admin",
+    "GET /model-versions",
+    "GET /recommendations/prep",
+    "GET /recommendations/reorder",
+    "GET /recommendations/requirements",
+    "GET /reports/sales",
+    "GET /reports/waste",
+    "POST /alerts/<id>"
+   ]
+  },
+  "/admin/catalog": {
+   "template": "admin/catalog.html",
+   "script": "admin_catalog.js",
+   "actions": [
+    "Add ingredient",
+    "Add menu item",
+    "Cancel",
+    "Edit",
+    "Edit recipe",
+    "Remove",
+    "Save",
+    "Save recipe",
+    "[[ i.is_active ? 'Deactivate' : 'Activate' ]]",
+    "[[ i.name ]]",
+    "[[ view && view.item.id === i.id ? 'Hide recipe' : 'Recipe' ]]"
+   ],
+   "api": [
+    "GET /ingredients",
+    "GET /menu-items",
+    "GET /menu-items/<id>",
+    "PATCH /menu-items/<id>",
+    "POST /menu-items",
+    "PUT /menu-items/<id>"
+   ]
+  },
+  "/admin/models?tab=data": {
+   "template": "admin/data.html",
+   "script": "admin_data.js",
+   "actions": [
+    "(CSV import /holidays/import)",
+    "(CSV import /sales/import)",
+    "(CSV import /weather/import)",
+    "Add promotion",
+    "Cancel",
+    "Save",
+    "[[ t[1] ]]"
+   ],
+   "api": [
+    "GET /menu-items",
+    "GET /promotions",
+    "PATCH /promotions/<id>",
+    "POST /promotions"
+   ]
+  },
+  "/admin/models?tab=models": {
+   "template": "admin/models.html",
+   "script": "admin_models.js",
+   "actions": [
+    "Activate",
+    "Run forecast now",
+    "Train new model"
+   ],
+   "api": [
+    "GET /forecast-runs",
+    "GET /model-versions",
+    "POST /forecast-runs",
+    "POST /model-versions",
+    "POST /model-versions/<id>"
+   ]
+  },
+  "/admin/models?tab=runs": {
+   "template": "admin/models.html",
+   "script": "admin_models.js",
+   "actions": [
+    "Activate",
+    "Run forecast now",
+    "Train new model"
+   ],
+   "api": [
+    "GET /forecast-runs",
+    "GET /model-versions",
+    "POST /forecast-runs",
+    "POST /model-versions",
+    "POST /model-versions/<id>"
+   ]
+  },
+  "/admin/monitor": {
+   "template": "admin/monitor.html",
+   "script": "admin_monitor.js",
+   "actions": [
+    "Download CSV",
+    "Download stock levels (CSV)",
+    "[[ g[1] ]]",
+    "[[ t[1] ]]"
+   ],
+   "api": [
+    "CSV /api/v1/forecasts/accuracy",
+    "CSV /api/v1/reports/inventory-trend",
+    "CSV /api/v1/reports/movements",
+    "GET /forecasts",
+    "GET /forecasts/accuracy",
+    "GET /ingredients",
+    "GET /menu-items",
+    "GET /recommendations/ingredient-forecast",
+    "GET /reports/analytics",
+    "GET /reports/food-usage",
+    "GET /reports/inventory-trend",
+    "GET /reports/movements",
+    "GET /reports/sales",
+    "GET /reports/waste",
+    "GET /stock/batches",
+    "GET /stock/levels"
+   ]
+  },
+  "/admin/users?tab=roles": {
+   "template": "admin/roles.html",
+   "script": null,
+   "actions": [],
+   "api": []
+  },
+  "/admin/users?tab=settings": {
+   "template": "admin/settings.html",
+   "script": "admin_settings.js",
+   "actions": [
+    "Check alerts now",
+    "Save restaurant information",
+    "Save settings"
+   ],
+   "api": [
+    "GET /restaurant",
+    "GET /settings",
+    "POST /alerts/run",
+    "PUT /restaurant",
+    "PUT /settings"
+   ]
+  },
+  "/admin/users?tab=users": {
+   "template": "admin/users.html",
+   "script": "admin_users.js",
+   "actions": [
+    "Add user",
+    "Cancel",
+    "Create",
+    "[[ u.is_active ? 'Deactivate' : 'Reactivate' ]]"
+   ],
+   "api": [
+    "GET /users",
+    "PATCH /users/<id>",
+    "POST /users"
+   ]
+  },
+  "/inventory": {
+   "template": "inventory/dashboard.html",
+   "script": "inventory_dashboard.js",
+   "actions": [
+    "(alert list with Acknowledge)",
+    "Record stock",
+    "Reorder"
+   ],
+   "api": [
+    "GET /alerts",
+    "GET /dashboards/inventory",
+    "GET /recommendations/reorder",
+    "POST /alerts/<id>"
+   ]
+  },
+  "/inventory/reorder?tab=demand": {
+   "template": "inventory/forecast.html",
+   "script": "inventory_forecast.js",
+   "actions": [],
+   "api": [
+    "GET /recommendations/ingredient-forecast"
+   ]
+  },
+  "/inventory/reorder?tab=orders": {
+   "template": "inventory/purchase_orders.html",
+   "script": "inventory_purchase_orders.js",
+   "actions": [
+    "Add ingredient",
+    "Cancel",
+    "Cancel order",
+    "Close",
+    "Mark as sent",
+    "New purchase order",
+    "Open",
+    "Receive stock",
+    "Record receipt",
+    "Remove",
+    "Save as draft"
+   ],
+   "api": [
+    "GET /alerts",
+    "GET /ingredients",
+    "GET /purchase-orders",
+    "GET /purchase-orders/<id>",
+    "GET /suppliers",
+    "POST /purchase-orders",
+    "POST /purchase-orders/<id>"
+   ]
+  },
+  "/inventory/reorder?tab=reorder": {
+   "template": "inventory/reorder.html",
+   "script": "inventory_reorder.js",
+   "actions": [
+    "Create purchase order 1\">s ([[ supplierCount ]] suppliers)"
+   ],
+   "api": [
+    "GET /recommendations/reorder",
+    "POST /purchase-orders"
+   ]
+  },
+  "/inventory/reorder?tab=suppliers": {
+   "template": "inventory/suppliers.html",
+   "script": "inventory_suppliers.js",
+   "actions": [
+    "Add supplier",
+    "Cancel",
+    "Edit",
+    "Save",
+    "[[ r.is_active ? 'Deactivate' : 'Activate' ]]"
+   ],
+   "api": [
+    "GET /suppliers",
+    "PATCH /suppliers/<id>",
+    "POST /suppliers"
+   ]
+  },
+  "/inventory/requests": {
+   "template": "inventory/requests.html",
+   "script": "inventory_requests.js",
+   "actions": [
+    "Approve",
+    "Cancel",
+    "Close",
+    "Issue",
+    "Issue stock",
+    "Open",
+    "Reject",
+    "Reject request"
+   ],
+   "api": [
+    "GET /alerts",
+    "GET /stock-requests",
+    "GET /stock-requests/<id>",
+    "POST /stock-requests/<id>"
+   ]
+  },
+  "/inventory/stock?tab=levels": {
+   "template": "inventory/stock.html",
+   "script": "inventory_stock.js",
+   "actions": [
+    "Add ingredient",
+    "Cancel",
+    "Edit",
+    "Run data check",
+    "Save"
+   ],
+   "api": [
+    "GET /stock/consistency",
+    "GET /stock/levels",
+    "GET /suppliers",
+    "PATCH /ingredients/<id>",
+    "POST /ingredients"
+   ]
+  },
+  "/inventory/stock?tab=record": {
+   "template": "inventory/movements.html",
+   "script": "inventory_movements.js",
+   "actions": [
+    "Adjustment",
+    "Save",
+    "Stock in",
+    "Stock out",
+    "Wastage"
+   ],
+   "api": [
+    "GET /alerts",
+    "GET /ingredients",
+    "GET /stock/batches",
+    "GET /stock/levels",
+    "GET /stock/movements"
+   ]
+  },
+  "/kitchen": {
+   "template": "kitchen/dashboard.html",
+   "script": "kitchen_dashboard.js",
+   "actions": [
+    "(alert list with Acknowledge)",
+    "(date navigation)",
+    "Plan & prepare",
+    "Record served & waste",
+    "Request stock"
+   ],
+   "api": [
+    "GET /alerts",
+    "GET /dashboards/kitchen",
+    "GET /kitchen/daily-summary",
+    "GET /kitchen/stock-requests",
+    "POST /alerts/<id>"
+   ]
+  },
+  "/kitchen/orders": {
+   "template": "kitchen/orders.html",
+   "script": "kitchen_orders.js",
+   "actions": [
+    "(date navigation)",
+    "Add pre-order",
+    "Cancel",
+    "Close",
+    "Complete",
+    "Details",
+    "Edit",
+    "Fulfilled",
+    "Save",
+    "[[ actionLabel(s) ]]",
+    "[[ oform.id ? 'Save changes' : 'Add order' ]]",
+    "[[ t[1] ]]"
+   ],
+   "api": [
+    "GET /kitchen/orders",
+    "GET /kitchen/pre-orders",
+    "GET /kitchen/pre-orders/<id>",
+    "GET /menu-items",
+    "PATCH /kitchen/orders/<id>",
+    "PATCH /kitchen/pre-orders/<id>",
+    "POST /kitchen/orders",
+    "POST /kitchen/pre-orders"
+   ]
+  },
+  "/kitchen/prep?tab=forecast": {
+   "template": "kitchen/forecast.html",
+   "script": "kitchen_forecast.js",
+   "actions": [
+    "(date navigation)"
+   ],
+   "api": [
+    "GET /forecasts"
+   ]
+  },
+  "/kitchen/prep?tab=prep": {
+   "template": "kitchen/prep.html",
+   "script": "kitchen_prep.js",
+   "actions": [
+    "(date navigation)",
+    "+ Add",
+    "Accept [[ it.recommended_qty ]]",
+    "Cancel",
+    "Mark done",
+    "Override",
+    "Reopen",
+    "Save override",
+    "Start",
+    "[[ it.is_available ? 'Mark unavailable' : 'Mark available' ]]"
+   ],
+   "api": [
+    "GET /recommendations/prep",
+    "PATCH /menu-items/<id>",
+    "POST /kitchen/prepared",
+    "POST /recommendations/prep/decisions",
+    "POST /recommendations/prep/status"
+   ]
+  },
+  "/kitchen/record": {
+   "template": "kitchen/record.html",
+   "script": "kitchen_record.js",
+   "actions": [
+    "(date navigation)",
+    "Add row",
+    "Clear",
+    "Overwrite",
+    "Record other use",
+    "Record waste",
+    "Save",
+    "Save served quantities",
+    "[[ t.label ]]"
+   ],
+   "api": [
+    "GET /ingredients",
+    "GET /kitchen/daily-summary",
+    "GET /kitchen/food-usage",
+    "GET /kitchen/ingredient-usage",
+    "POST /kitchen/food-usage",
+    "POST /kitchen/ingredient-usage",
+    "POST /kitchen/waste",
+    "POST /sales/served"
+   ]
+  },
+  "/kitchen/requirements?tab=needs": {
+   "template": "kitchen/requirements.html",
+   "script": "kitchen_requirements.js",
+   "actions": [
+    "(date navigation)",
+    "Report shortage",
+    "Request stock"
+   ],
+   "api": [
+    "GET /recommendations/requirements",
+    "POST /kitchen/shortage-reports"
+   ]
+  },
+  "/kitchen/requirements?tab=requests": {
+   "template": "kitchen/stock_requests.html",
+   "script": "kitchen_stock_requests.js",
+   "actions": [
+    "Add ingredient",
+    "Cancel",
+    "Cancel request",
+    "New request",
+    "Remove",
+    "Send request"
+   ],
+   "api": [
+    "GET /ingredients",
+    "GET /kitchen/stock-requests",
+    "POST /kitchen/stock-requests",
+    "POST /kitchen/stock-requests/<id>"
+   ]
+  }
+ }
+}

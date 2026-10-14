@@ -11,10 +11,34 @@
     </div>
   </div>
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
-  <sr-loading v-if="loading" :tiles="3" :cards="2"></sr-loading>
+  <sr-loading v-if="loading" :tiles="4" :cards="2"></sr-loading>
   <template v-else-if="d">
-    <!-- The decision chain for this day; the kitchen's steps link to the page where they are done -->
-    <sr-workflow :steps="chain" label="SmartRestaurant workflow, kitchen view"></sr-workflow>
+    <!-- the day in four figures, all from the plan rows below (dashboard_service._kitchen_day) -->
+    <div class="kpis">
+      <sr-stat-tile label="ML forecast" :value="day.items_forecast ? ui.num(day.forecast_total, 0) + ' portions' : 'No forecast'" :hint="day.items_forecast + ' of ' + day.items_total + ' items forecast'" :tone="day.items_forecast ? 'info' : 'warning'" icon="trending" href="/kitchen/prep?tab=forecast"></sr-stat-tile>
+      <sr-stat-tile label="To prepare" :value="ui.num(d.tiles.planned_total, 0) + ' portions'" :hint="(day.items_forecast - day.undecided) + ' of ' + day.items_forecast + ' items decided'" :tone="day.undecided ? 'warning' : 'success'" icon="clipboard" href="/kitchen/prep"></sr-stat-tile>
+      <sr-stat-tile label="Prepared" :value="ui.num(day.prepared_total, 0) + ' portions'" :hint="preparedPct + '% of the plan'" :tone="preparedPct >= 100 ? 'success' : 'accent'" icon="check" href="/kitchen/prep"></sr-stat-tile>
+      <sr-stat-tile label="Served / wasted" :value="day.served_total === null ? 'Not recorded' : ui.num(day.served_total, 0) + ' / ' + ui.num(day.wasted_total, 0)" :hint="servedHint" :tone="day.wasted_total ? 'warning' : 'neutral'" icon="trash" href="/kitchen/record"></sr-stat-tile>
+    </div>
+
+    <div class="row g-3 mb-3">
+      <section class="col-12 col-xl-7" aria-labelledby="na-h"><div class="card h-100"><div class="card-body">
+        <h2 id="na-h" class="h6">Needs attention</h2>
+        <sr-action-list :items="actions" empty="Everything for this day is on track."></sr-action-list>
+      </div></div></section>
+      <section class="col-12 col-xl-5" aria-labelledby="po-h"><div class="card h-100"><div class="card-body">
+        <div class="card-head"><h2 id="po-h" class="h6">Pre-orders</h2><a href="/kitchen/orders">Orders &amp; pre-orders</a></div>
+        <sr-empty v-if="!day.pre_orders.rows.length" message="No pre-orders for this day." icon="bag"></sr-empty>
+        <ul v-else class="mini-list">
+          <li v-for="p in day.pre_orders.rows" :key="p.id">
+            <span class="mini-main"><strong>[[ p.quantity ]] x [[ p.item ]]</strong><small>[[ p.pickup_time || 'no pickup time' ]] · [[ p.customer_name || ('#' + p.id) ]]</small></span>
+            <sr-status-badge :status="p.status"></sr-status-badge>
+          </li>
+        </ul>
+        <p v-if="day.pre_orders.portions" class="table-note mb-0">[[ day.pre_orders.portions ]] confirmed portions are included in the plan.</p>
+      </div></div></section>
+    </div>
+
     <div class="row g-3">
       <div class="col-12 col-xl-8"><div class="card"><div class="card-body">
         <div class="card-head"><h2 class="h6">[[ isToday ? "Today's plan" : 'Plan for ' + ui.date(date) ]]</h2><a href="/kitchen/prep">Plan &amp; prepare</a></div>

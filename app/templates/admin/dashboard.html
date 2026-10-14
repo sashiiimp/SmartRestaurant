@@ -19,55 +19,51 @@
   <sr-loading v-if="loading" :tiles="4" :cards="2"></sr-loading>
 
   <template v-else-if="d">
-    <div class="dash-notes">
-      <p v-if="d.coverage.days_with_sales < d.coverage.days" class="dash-note note-partial" role="note"><sr-icon name="warning" :size="16"></sr-icon><span>Sales recorded on [[ d.coverage.days_with_sales ]] of [[ d.coverage.days ]] days<template v-if="d.coverage.latest_sales_date"> (latest [[ ui.date(d.coverage.latest_sales_date) ]])</template>; totals cover those days only.</span></p>
-    </div>
+    <p v-if="d.coverage.days_with_sales < d.coverage.days" class="dash-note note-partial mb-3" role="note"><sr-icon name="warning" :size="16"></sr-icon><span>Sales recorded on [[ d.coverage.days_with_sales ]] of [[ d.coverage.days ]] days<template v-if="d.coverage.latest_sales_date"> (latest [[ ui.date(d.coverage.latest_sales_date) ]])</template>; totals cover those days only.</span></p>
 
-    <!-- 1 The decision chain with today's figures: each step links to where it is handled (step 3 is the kitchen's page) -->
+    <!-- the whole chain at a glance: the management view of every role's work (each step links to its report) -->
     <section aria-labelledby="wf-h">
       <h2 id="wf-h" class="dash-section mt-0">Workflow today</h2>
       <sr-workflow :steps="chain" label="SmartRestaurant workflow, administrator view"></sr-workflow>
     </section>
 
     <div class="row g-3 mb-3">
-      <!-- 2 Food demand forecast: predicted values, never actual sales -->
-      <section class="col-12 col-xl-7" aria-labelledby="fc-h"><div class="card h-100"><div class="card-body">
-        <div class="card-head">
-          <h2 id="fc-h" class="h6">Sales history and 7-day ML forecast</h2>
-          <span class="sr-badge sr-badge-info">Prediction</span>
-        </div>
-        <template v-if="forecastDays">
-          <div role="img" aria-label="Recorded portions sold for the last 7 days as a line, then predicted portions for the next 7 days as bars"><sr-bar-chart :labels="hfLabels" :datasets="hfData" y-title="Portions per day" :height="240" title="" all-labels></sr-bar-chart></div>
-          <div class="dash-fc-foot fc-foot-row">
-            <div class="dash-fc-total"><strong>[[ ui.num(d.forecast_next7_total, 1) ]]</strong><span>portions predicted, next [[ forecastDays ]] day[[ forecastDays === 1 ? '' : 's' ]]</span></div>
-            <div class="dash-fc-model" v-if="d.active_model">
-              <span><strong>[[ algoName(d.active_model.algorithm) ]]</strong> [[ d.active_model.label ]]</span>
-              <span v-if="perf" :title="'Hold-out ' + ui.date(perf.from) + ' to ' + ui.date(perf.to) + ', portions per item per day'">MAE [[ ui.num(perf.model, 1) ]] vs [[ ui.num(perf.baseline, 1) ]] baseline<template v-if="perf.wape != null"> · WAPE [[ ui.num(perf.wape, 1) ]]%</template></span>
-              <span v-if="d.last_run" class="text-muted">Last run [[ ui.dateTime(d.last_run.started_at) ]]<template v-if="d.last_run.status !== 'ok'"> ([[ d.last_run.status ]])</template></span>
-            </div>
-          </div>
-          <p v-if="partialItems && forecastDays === 7" class="dash-note note-partial mt-2 mb-0" role="note"><sr-icon name="warning" :size="16"></sr-icon><span>Some days cover fewer than [[ d.menu_items_active ]] items; their totals are partial.</span></p>
-        </template>
-        <sr-empty v-else message="No forecast for the next 7 days. Run one under Forecasting." icon="trending"></sr-empty>
+      <section class="col-12 col-xl-7" aria-labelledby="na-h"><div class="card h-100"><div class="card-body">
+        <h2 id="na-h" class="h6">Needs attention</h2>
+        <sr-action-list :items="actions" empty="Forecast, recipes, stock and waste are within their limits."></sr-action-list>
       </div></div></section>
 
-      <!-- 3 Sales and waste trends: recorded history for the reporting period -->
-      <section class="col-12 col-xl-5" aria-labelledby="tr-h"><div class="card h-100"><div class="card-body">
-        <div class="card-head">
-          <h2 id="tr-h" class="h6">Sales and food waste</h2>
-          <a href="/admin/monitor?tab=sales">Reports</a>
-        </div>
-        <div v-if="trend && trendHasData" role="img" aria-label="Line chart of portions sold and wasted per day in the reporting period"><sr-line-chart :labels="trendLabels" :datasets="trendData" y-title="Portions" :height="230" title=""></sr-line-chart></div>
-        <div v-else-if="trend === undefined" class="sk" style="height: 230px" role="status"><span class="visually-hidden">Loading</span></div>
-        <sr-empty v-else-if="trend" message="No sales or waste were recorded in this period." icon="activity"></sr-empty>
-        <sr-empty v-else message="The trend could not be loaded." icon="activity"></sr-empty>
-        <p v-if="trend && trendHasData && trendGaps" class="chart-legend-note mt-2 mb-0">Gaps are days with no records.</p>
+      <!-- ML forecasting performance: hold-out error from training, and accuracy on the reporting period -->
+      <section class="col-12 col-xl-5" aria-labelledby="pf-h"><div class="card h-100"><div class="card-body">
+        <div class="card-head"><h2 id="pf-h" class="h6">Forecasting performance</h2><a href="/admin/monitor?tab=forecast">Accuracy report</a></div>
+        <sr-empty v-if="!d.active_model" message="No active model." icon="layers"></sr-empty>
+        <dl v-else class="perf-list">
+          <div><dt>Active model</dt><dd><strong>[[ algoName(d.active_model.algorithm) ]]</strong> [[ d.active_model.label ]]
+            <span class="sr-badge ms-1" :class="d.active_model.beats_baseline ? 'sr-badge-success' : 'sr-badge-warning'">[[ d.active_model.beats_baseline ? 'beats baseline' : 'below baseline' ]]</span></dd></div>
+          <div v-if="perf"><dt>Hold-out error</dt><dd><strong>MAE [[ ui.num(perf.model, 1) ]]</strong> vs [[ ui.num(perf.baseline, 1) ]] baseline<template v-if="perf.wape != null"> · WAPE [[ ui.num(perf.wape, 1) ]]%</template>
+            <small class="d-block text-muted">[[ ui.date(perf.from) ]] – [[ ui.date(perf.to) ]], not used in training</small></dd></div>
+          <div><dt>This period</dt><dd v-if="d.accuracy"><strong>MAE [[ ui.num(d.accuracy.mae, 1) ]]</strong><template v-if="d.accuracy.wape != null"> · WAPE [[ ui.num(d.accuracy.wape, 1) ]]%</template>
+            <small class="d-block text-muted">actual vs forecast on [[ d.accuracy.days ]] day[[ d.accuracy.days === 1 ? '' : 's' ]], [[ d.accuracy.pairs ]] item-days</small></dd>
+            <dd v-else class="text-muted">No forecast with recorded sales in this period.</dd></div>
+          <div><dt>Last forecast run</dt><dd v-if="d.last_run">[[ ui.dateTime(d.last_run.started_at) ]] <sr-status-badge :status="d.last_run.status === 'ok' ? 'ok' : d.last_run.status"></sr-status-badge></dd><dd v-else class="text-muted">None yet</dd></div>
+        </dl>
+        <p class="table-note mb-0">MAE: average error in portions per item per day. WAPE: total error as a share of sales.<template v-if="synthetic"> Measured on synthetic demo data.</template></p>
       </div></div></section>
     </div>
 
-    <h2 class="dash-section">Needs attention</h2>
-    <div class="row g-3 mb-3">
-      <!-- 4 Alerts (the bell in the top bar links here): stock, forecast stock-out, expiry, waste risk; open now or closed -->
+    <!-- recorded sales and food waste for the period, then the 7-day ML forecast (predictions, never actual sales) -->
+    <section class="card mb-3" aria-labelledby="fc-h"><div class="card-body">
+      <div class="card-head"><h2 id="fc-h" class="h6">Sales, food waste and 7-day forecast</h2><a href="/admin/monitor?tab=sales">Reports</a></div>
+      <div v-if="trend === undefined" class="sk" style="height: 260px" role="status"><span class="visually-hidden">Loading</span></div>
+      <div v-else role="img" aria-label="Recorded portions sold and wasted per day in the period as lines, then predicted portions for the next 7 days as bars">
+        <sr-bar-chart :labels="hfLabels" :datasets="hfData" y-title="Portions per day" :height="260" title="" :all-labels="d.range_days === 7"></sr-bar-chart></div>
+      <p v-if="trend === null" class="chart-legend-note mt-2 mb-0">The recorded history could not be loaded; the forecast is shown.</p>
+      <p v-else-if="trendGaps" class="chart-legend-note mt-2 mb-0">Gaps are days with no records.</p>
+      <p v-if="partialItems && forecastDays === 7" class="dash-note note-partial mt-2 mb-0" role="note"><sr-icon name="warning" :size="16"></sr-icon><span>Some days cover fewer than [[ d.menu_items_active ]] items; their totals are partial.</span></p>
+    </div></section>
+
+    <div class="row g-3">
+      <!-- Alerts (the bell in the top bar links here): open now, or closed -->
       <section class="col-12 col-xl-7" aria-labelledby="al-h"><div class="card h-100" id="alerts"><div class="card-body">
         <div class="card-head"><h2 id="al-h" class="h6">Alerts</h2>
           <span class="count-chips"><span class="chip chip-critical">[[ d.alert_counts.critical ]] critical</span><span class="chip chip-warning">[[ d.alert_counts.warning ]] warning</span></span></div>
@@ -86,57 +82,25 @@
         </template>
       </div></div></section>
 
-      <!-- 5 Recommended actions: each line is worked out from the figures above and links to where it is handled -->
-      <section class="col-12 col-xl-5" aria-labelledby="rec-h"><div class="card h-100"><div class="card-body">
-        <h2 id="rec-h" class="h6">Recommended actions</h2>
-        <ul class="rec-list">
-          <li v-for="r in actions" :key="r.key" :class="'rec-' + r.tone">
-            <span class="rec-icon"><sr-icon :name="r.icon" :size="16"></sr-icon></span>
-            <span class="rec-text"><strong>[[ r.title ]]</strong><small v-if="r.detail">[[ r.detail ]]</small></span>
-            <a v-if="r.href" :href="r.href" class="rec-link">[[ r.link ]]</a>
-          </li>
-        </ul>
-      </div></div></section>
-    </div>
+      <div class="col-12 col-xl-5">
+        <!-- confirmed pre-orders: committed demand that the prep plan already counts -->
+        <section class="card mb-3" aria-labelledby="po-h"><div class="card-body">
+          <div class="card-head"><h2 id="po-h" class="h6">Upcoming pre-orders</h2><span v-if="d.pre_orders.count" class="sr-badge sr-badge-success">[[ d.pre_orders.count ]] · [[ d.pre_orders.portions ]] portions</span></div>
+          <sr-empty v-if="!d.pre_orders.rows.length" message="No confirmed pre-orders for the next 7 days." icon="bag"></sr-empty>
+          <ul v-else class="mini-list">
+            <li v-for="p in d.pre_orders.rows.slice(0, 4)" :key="p.id"><span class="mini-main"><strong>[[ p.quantity ]] x [[ p.item ]]</strong><small>[[ ui.date(p.target_date) + (p.pickup_time ? ', ' + p.pickup_time : '') ]][[ p.customer_name ? ' · ' + p.customer_name : '' ]]</small></span></li>
+          </ul>
+          <p v-if="d.pre_orders.rows.length > 4" class="small text-muted mb-0">and [[ d.pre_orders.rows.length - 4 ]] more</p>
+          <p class="table-note mb-0">Confirmed pre-orders are already in the kitchen's prep plan.</p>
+        </div></section>
 
-    <div class="row g-3">
-      <!-- Upcoming confirmed pre-orders: committed demand that the prep plan already counts -->
-      <section class="col-12 col-md-6 col-xl-4" aria-labelledby="po-h"><div class="card h-100"><div class="card-body">
-        <div class="card-head">
-          <div><h2 id="po-h" class="h6">Upcoming pre-orders</h2><p class="card-sub">Confirmed, next 7 days · in the prep plan</p></div>
-        </div>
-        <div class="stock-counts" v-if="d.pre_orders.count"><span class="sr-badge sr-badge-success">[[ d.pre_orders.count ]] order[[ d.pre_orders.count === 1 ? '' : 's' ]], [[ d.pre_orders.portions ]] portions</span></div>
-        <ul v-if="d.pre_orders.rows.length" class="po-list">
-          <li v-for="p in d.pre_orders.rows.slice(0, 5)" :key="p.id">
-            <span class="po-when">[[ ui.date(p.target_date) + (p.pickup_time ? ', ' + p.pickup_time : '') ]]</span>
-            <span class="po-what"><strong>[[ p.quantity ]] x [[ p.item ]]</strong><small>#[[ p.id ]][[ p.customer_name ? ' · ' + p.customer_name : '' ]]</small></span>
-          </li>
-        </ul>
-        <p v-if="d.pre_orders.rows.length > 5" class="small text-muted mb-0">and [[ d.pre_orders.rows.length - 5 ]] more</p>
-        <div v-if="d.pre_orders.by_item.length > 1" class="po-items">
-          <h3 class="h6">Portions by item</h3>
-          <div class="po-bar" v-for="i in d.pre_orders.by_item.slice(0, 5)" :key="i.item"><span>[[ i.item ]]</span><span class="progress progress-thin"><span class="progress-bar" :style="{ width: (i.quantity / d.pre_orders.by_item[0].quantity * 100) + '%' }"></span></span><strong>[[ i.quantity ]]</strong></div>
-        </div>
-        <sr-empty v-if="!d.pre_orders.rows.length" message="No confirmed pre-orders for the next 7 days." icon="bag"></sr-empty>
-      </div></div></section>
-
-      <section class="col-12 col-md-6 col-xl-5" aria-labelledby="ra-h"><div class="card h-100"><div class="card-body">
-        <h2 id="ra-h" class="h6">Recent activity</h2>
-        <ul v-if="activity.length" class="activity small"><li v-for="(a, i) in activityShown" :key="i"><span class="when">[[ ui.dateTime(a.time) ]]<template v-if="a.user"> &middot; [[ a.user ]]</template></span><span class="what">[[ a.text ]]<template v-if="a.times > 1"> ([[ a.times ]] times)</template></span></li></ul>
-        <sr-empty v-else message="No activity recorded yet." icon="activity"></sr-empty>
-        <button v-if="activity.length > 5" class="btn btn-sm btn-link alert-more" type="button" :aria-expanded="allActivity ? 'true' : 'false'" @click="allActivity = !allActivity">[[ allActivity ? 'Show fewer' : 'Show ' + activity.length ]]</button>
-      </div></div></section>
-
-      <!-- Quick actions: links to pages that already exist for the administrator -->
-      <section class="col-12 col-xl-3" aria-labelledby="qa-h"><div class="card h-100"><div class="card-body">
-        <h2 id="qa-h" class="h6">Quick actions</h2>
-        <nav class="quick-actions qa-stack" aria-label="Quick actions">
-          <a href="/admin/models?tab=runs"><span class="qa-icon"><sr-icon name="trending" :size="18"></sr-icon></span><span><strong>Generate forecast</strong></span></a>
-          <a href="/admin/catalog"><span class="qa-icon"><sr-icon name="book" :size="18"></sr-icon></span><span><strong>Manage recipes (BOM)</strong></span></a>
-          <a href="/admin/monitor?tab=stock"><span class="qa-icon"><sr-icon name="package" :size="18"></sr-icon></span><span><strong>View inventory</strong></span></a>
-          <a href="/admin/monitor"><span class="qa-icon"><sr-icon name="bars" :size="18"></sr-icon></span><span><strong>Reports &amp; analytics</strong></span></a>
-        </nav>
-      </div></div></section>
+        <section class="card" aria-labelledby="ra-h"><div class="card-body">
+          <h2 id="ra-h" class="h6">Recent activity</h2>
+          <ul v-if="activity.length" class="activity small"><li v-for="(a, i) in activityShown" :key="i"><span class="when">[[ ui.dateTime(a.time) ]]<template v-if="a.user"> &middot; [[ a.user ]]</template></span><span class="what">[[ a.text ]]<template v-if="a.times > 1"> ([[ a.times ]] times)</template></span></li></ul>
+          <sr-empty v-else message="No activity recorded yet." icon="activity"></sr-empty>
+          <button v-if="activity.length > 5" class="btn btn-sm btn-link alert-more" type="button" :aria-expanded="allActivity ? 'true' : 'false'" @click="allActivity = !allActivity">[[ allActivity ? 'Show fewer' : 'Show ' + activity.length ]]</button>
+        </div></section>
+      </div>
     </div>
   </template>
 </div>

@@ -244,20 +244,21 @@ Every arrow is a function call within one Flask process. There are no background
 Before the demo: log in as admin, open **Forecasting → Forecast generation** and check that the last run is today. If
 not, press **Run forecast now** once. Point out the **Synthetic demo data** label in the top bar at the start.
 
-1. **Admin → Dashboard (purpose in 30 seconds).** Read the one-sentence purpose, then the six numbered steps with
-   today's figures: Historical sales → ML demand forecast → Preparation recommendations → BOM & ingredient
-   requirements → Inventory decisions → Food waste monitoring. Each card says who does that step; step 3 is the
-   kitchen's, so it is shown but not linked for the administrator.
-2. **Sales history and ML forecast chart.** Recorded sales as a green line, then seven predicted days as blue bars
-   (prediction, never sales), the model (XGBoost) and its hold-out MAE against the simple baseline.
-3. **Needs attention.** One alert (Acknowledge = "seen", it closes only when fixed) and the **Recommended actions**
-   (reorder, forecast shortfall, expired batches, waste), each linking to the report behind it.
+1. **Admin → Dashboard (purpose in 30 seconds).** The six numbered steps with today's figures: Historical sales → ML
+   demand forecast → Preparation recommendations → BOM & ingredient requirements → Inventory decisions → Food waste
+   monitoring. Hovering a step shows who does it; step 3 is the kitchen's, so it is shown but not linked.
+2. **Needs attention and Forecasting performance.** Each line: the problem, what the system recommends, one button.
+   Next to it the active model (XGBoost), its hold-out MAE against the simple baseline, and its accuracy on the
+   period (actual sales against the forecast made before each day). Synthetic data, as the card says.
+3. **Chart and alerts.** Recorded sales and waste as lines, then seven predicted days as blue bars (prediction, never
+   sales). One alert: Acknowledge = "seen", it closes only when the cause is fixed.
 4. **Forecasting.** The three steps: **Historical data** (sales, promotions, holidays, weather) → **ML models** (the
    comparison table: baselines vs Random Forest vs XGBoost; MAE, RMSE, MAPE, WAPE, R2) → **Forecast generation**
    (Run forecast now, history of runs).
 5. **Menu & recipes.** Open Chicken Burger: the recipe (BOM) per portion and per batch. This is what turns portions into
    ingredients.
-6. Log in as **kitchen** → **Dashboard**: the four workflow steps (forecast, plan, prepare, record) and the shortages.
+6. Log in as **kitchen** → **Dashboard**: the day's forecast, to prepare, prepared and served / wasted; Needs attention
+   (items to decide, shortages, pre-orders to confirm); the day's pre-orders; the plan and the shortages.
 7. **Orders & pre-orders → Pre-orders:** add a confirmed pre-order for today (customer, Chicken Burger, quantity larger
    than the forecast, pickup time). It is part of the prep plan; it is not added on top of the forecast.
 8. **Plan & prepare → Prep plan:** compare the rows; Chicken Burger's Recommended rose to cover the pre-order. Open

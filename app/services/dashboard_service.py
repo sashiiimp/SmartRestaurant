@@ -51,13 +51,30 @@ def kitchen_dashboard(outlet_id: int, day: date, role: str = "kitchen") -> dict:
     rows = summary["items"]
     planned = sum((r["final_qty"] if r["final_qty"] is not None else (r["recommended_qty"] or 0)) for r in rows)
     shorts = [r for r in reqs["ingredients"] if r["status"] == "short"]
-    return {"date": day.isoformat(),
+    return {"date": day.isoformat(), "day": _kitchen_day(outlet_id, day, rows),
             "tiles": {"items_to_prepare": sum(1 for r in rows if (r["recommended_qty"] or 0) > 0),
                       "planned_total": planned, "prepared_total": sum(r["prepared"] for r in rows),
                       "items_planned": sum(1 for r in rows if r["prep_status"]),
                       "items_done": sum(1 for r in rows if r["prep_status"] == "done"),
                       "shortage_count": len(shorts), "open_alerts": len(alerts["rows"])},
             "plan": rows, "shortages": shorts, "cannot_compute": reqs["cannot_compute"], "alerts": alerts["rows"][:8]}
+
+
+def _kitchen_day(outlet_id: int, day: date, rows: list[dict]) -> dict:
+    """The day at a glance for the kitchen dashboard, from the same rows as the plan table: the forecast, how many
+    items still wait for a decision, what was prepared, served and wasted, and the day's pre-orders. Served is None
+    until something is recorded, so "not recorded yet" is never shown as 0 sold."""
+    forecast = [r for r in rows if r["status"] != "no_forecast"]
+    served = [r["served"] for r in rows if r["served"] is not None]
+    pre = [p for p in kit.list_pre_orders(outlet_id, day, day) if p["status"] != "cancelled"]
+    return {"forecast_total": round(sum(float(r["forecast_qty"] or 0) for r in forecast), 1),
+            "items_forecast": len(forecast), "items_total": len(rows),
+            "undecided": sum(1 for r in forecast if r["status"] not in ("accepted", "overridden")),
+            "prepared_total": sum(r["prepared"] for r in rows),
+            "served_total": sum(served) if served else None,
+            "wasted_total": sum(r["wasted"] for r in rows),
+            "pre_orders": {"rows": pre, "pending": sum(1 for p in pre if p["status"] == "pending"),
+                           "portions": sum(p["quantity"] for p in pre if p["status"] in ("confirmed", "completed"))}}
 
 
 def inventory_dashboard(outlet_id: int, role: str = "inventory") -> dict:
@@ -71,10 +88,23 @@ def inventory_dashboard(outlet_id: int, role: str = "inventory") -> dict:
     need_vs_stock = sorted(({"name": r["name"], "unit": r["unit"], "need": r["total_need"], "usable": r["usable_stock"]}
                             for r in forecast["ingredients"] if r["total_need"] > 0),
                            key=lambda r: r["usable"] - r["need"])[:10]
+    reorder = rec.get_reorder_suggestions(outlet_id, day)
+    expiring = inv.list_batches(outlet_id, expiring_within_days=3)
+    open_requests = inv.list_stock_requests(outlet_id, "pending") + inv.list_stock_requests(outlet_id, "approved")
+    pos = inv.list_purchase_orders(outlet_id)
     return {"date": day.isoformat(), "counts": counts, "alerts": alerts["rows"][:8], "alert_counts": alerts["counts"],
-            "reorder": rec.get_reorder_suggestions(outlet_id, day)[:5], "need_vs_stock": need_vs_stock,
-            "expiring": inv.list_batches(outlet_id, expiring_within_days=3)[:10],
-            "pending_requests": inv.pending_request_count(outlet_id)}
+            "reorder": reorder[:5], "need_vs_stock": need_vs_stock,
+            "expiring": expiring[:10],
+            "pending_requests": inv.pending_request_count(outlet_id),
+            # full counts behind the shortened lists above, so a figure never stops at the list length
+            "totals": {"reorder": len(reorder),
+                       "at_risk": sum(1 for r in forecast["ingredients"] if r["total_need"] > r["usable_stock"]),
+                       "expired_batches": sum(1 for b in expiring if b["expired"]),
+                       "expiring_batches": sum(1 for b in expiring if not b["expired"]),
+                       "approved_requests": sum(1 for r in open_requests if r["status"] == "approved"),
+                       "po_draft": sum(1 for p in pos if p["status"] == "draft"),
+                       "po_awaiting": sum(1 for p in pos if p["status"] in ("sent", "partially_received"))},
+            "requests": open_requests[:5]}
 
 
 # ---- reports (A8, A11) and the admin dashboard (A1) ------------------------------------------------
@@ -233,7 +263,18 @@ def admin_dashboard(outlet_id: int, range_days: int = 7) -> dict:
                                                       "beats_baseline": active.beats_baseline},
             "last_run": last_run[0] if last_run else None,
             "recent_activity": recent_activity(outlet_id),
+            # actual sales against the forecast made before each day (the Forecast accuracy report, same period)
+            "accuracy": _recent_accuracy(outlet_id, start, end),
             "data_source": settings_label(outlet_id)}
+
+
+def _recent_accuracy(outlet_id: int, start: date, end: date) -> dict | None:
+    acc = fs.accuracy(outlet_id, start, end)
+    if not acc["overall"]:
+        return None
+    o = acc["overall"]
+    return {"mae": o.get("mae"), "wape": o.get("wape"), "bias": o.get("bias"), "pairs": acc["pairs"],
+            "days": len(acc["series"]), "run_types": acc.get("run_types", [])}
 
 
 ALERT_INGREDIENT_TYPES = ("low_stock", "critical_stock", "projected_stockout", "expiry_warning", "manual_shortage")

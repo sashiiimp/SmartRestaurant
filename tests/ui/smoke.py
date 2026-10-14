@@ -121,9 +121,11 @@ def kitchen(browser):
     page.get_by_role("button", name="Record waste").click()
     page.wait_for_selector("text=Waste recorded", timeout=5000)
     assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth + 1"), "horizontal scroll at 390px"
-    visit(page, "/kitchen", "k_dashboard", wait=".wf-step")
-    assert page.locator(".wf .wf-step").count() == 6, "kitchen workflow strip"
-    page.wait_for_selector(".wf-step:has-text(' open')", timeout=8000)
+    visit(page, "/kitchen", "k_dashboard", wait=".kpis")
+    assert page.locator(".kpis .stat-tile").count() == 4 and page.locator(".wf").count() == 0, "kitchen figures, no shared strip"
+    page.wait_for_selector("h2:has-text('Needs attention')", timeout=8000)
+    page.wait_for_selector(".act-list, .act-clear", timeout=8000)
+    assert "Not recorded" not in page.locator(".kpis").inner_text(), "served was recorded above"
     visit(page, "/kitchen/requirements", "k_requirements", wait="table")
     if page.locator("tr.table-danger").count():                          # a shortage depends on the demo date
         page.locator("tr.table-danger").first.get_by_role("link", name="Request stock").click()
@@ -156,8 +158,10 @@ def inventory(browser):
     page = ctx.new_page()
     login(page, "inventory1")
     assert page.url.endswith("/inventory"), page.url
-    visit(page, "/inventory", "i_dashboard", wait=".wf-step")
-    assert page.locator(".wf .wf-step.is-mine").count() == 3, "steps 4-6 belong to inventory"
+    visit(page, "/inventory", "i_dashboard", wait=".kpis")
+    assert page.locator(".kpis .stat-tile").count() == 4 and page.locator(".wf").count() == 0, "inventory figures, no shared strip"
+    page.wait_for_selector("h2:has-text('Kitchen requests')", timeout=8000)
+    page.wait_for_selector(".act-list, .act-clear", timeout=8000)
     assert "Chicken" in page.inner_text("main"), "chicken alert/reorder expected on the dashboard"
     visit(page, "/inventory/stock", "i_stock", wait="table tbody tr")
     assert page.locator("table tbody tr").count() >= 20
@@ -215,6 +219,8 @@ def admin(browser):
     assert page.locator(".wf .wf-step").count() == 6, "admin workflow strip"
     page.wait_for_selector(".wf-step:has-text('to prepare')", timeout=8000)            # step 3 read from the prep plan
     assert page.locator(".wf a.wf-step").count() == 5, "steps 1, 2, 4, 5, 6 link to admin pages; 3 is the kitchen's"
+    page.wait_for_selector("h2:has-text('Forecasting performance')", timeout=8000)
+    page.wait_for_selector("text=Hold-out error", timeout=8000)                        # read from the active model
     visit(page, "/admin/monitor", "a_monitor_sales", wait="canvas")
     page.get_by_role("tab", name="Forecasting").click()                 # report groups, then the report
     page.get_by_role("button", name="Forecast accuracy").click()

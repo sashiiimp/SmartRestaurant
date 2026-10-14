@@ -12,12 +12,35 @@
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
   <sr-loading v-if="loading" :tiles="4" :cards="2"></sr-loading>
   <template v-else-if="d">
-    <!-- The decision chain: forecasting and planning happen before inventory; steps 4-6 are this role's work -->
-    <sr-workflow :steps="chain" label="SmartRestaurant workflow, inventory view"></sr-workflow>
+    <!-- usable stock, requests, the 7-day demand and expiry: full counts from dashboard_service.inventory_dashboard -->
+    <div class="kpis">
+      <sr-stat-tile label="Usable stock" :value="d.counts.ok + ' of ' + stockTotal + ' OK'" :hint="d.counts.low + ' low · ' + d.counts.out + ' out of stock'" :tone="d.counts.out ? 'danger' : (d.counts.low ? 'warning' : 'success')" icon="package" href="/inventory/stock"></sr-stat-tile>
+      <sr-stat-tile label="Kitchen requests" :value="d.pending_requests + ' waiting'" :hint="t.approved_requests + ' approved, not issued'" :tone="d.pending_requests ? 'warning' : 'success'" icon="inbox" href="/inventory/requests"></sr-stat-tile>
+      <sr-stat-tile label="Short in 7 days" :value="t.at_risk + ' ingredient' + (t.at_risk === 1 ? '' : 's')" hint="forecast x recipes vs usable stock" :tone="t.at_risk ? 'danger' : 'success'" icon="bars" href="/inventory/reorder?tab=demand"></sr-stat-tile>
+      <sr-stat-tile label="Expiry" :value="t.expired_batches + ' expired'" :hint="t.expiring_batches + ' more expire within 3 days'" :tone="t.expired_batches ? 'danger' : (t.expiring_batches ? 'warning' : 'success')" icon="clock" href="/inventory/stock?tab=record"></sr-stat-tile>
+    </div>
+
+    <div class="row g-3 mb-3">
+      <section class="col-12 col-xl-7" aria-labelledby="na-h"><div class="card h-100"><div class="card-body">
+        <h2 id="na-h" class="h6">Needs attention</h2>
+        <sr-action-list :items="actions" empty="Stock, requests and orders are up to date."></sr-action-list>
+      </div></div></section>
+      <section class="col-12 col-xl-5" aria-labelledby="rq-h"><div class="card h-100"><div class="card-body">
+        <div class="card-head"><h2 id="rq-h" class="h6">Kitchen requests</h2><a href="/inventory/requests">All requests</a></div>
+        <sr-empty v-if="!d.requests.length" message="No open requests from the kitchen." icon="inbox"></sr-empty>
+        <ul v-else class="mini-list">
+          <li v-for="r in d.requests" :key="r.id">
+            <span class="mini-main"><strong>#[[ r.id ]] [[ r.summary ]]</strong><small>[[ r.requested_by ]][[ r.needed_date ? ' · needed by ' + ui.date(r.needed_date) : '' ]]</small></span>
+            <sr-status-badge :status="r.status"></sr-status-badge>
+          </li>
+        </ul>
+      </div></div></section>
+    </div>
+
     <div class="row g-3">
       <div class="col-12 col-xl-7">
         <div class="card mb-3"><div class="card-body">
-          <div class="card-head"><h2 class="h6">Reorder now</h2><a href="/inventory/reorder">All suggestions</a></div>
+          <div class="card-head"><h2 class="h6">Reorder now</h2><a href="/inventory/reorder">All [[ t.reorder ]] suggestions</a></div>
           <sr-empty v-if="!d.reorder.length" message="Nothing to reorder." icon="check"></sr-empty>
           <div v-else class="table-responsive"><table class="table table-sm align-middle mb-0"><thead><tr><th>Ingredient</th><th class="text-end">Order</th><th>Supplier</th></tr></thead>
             <tbody><tr v-for="r in d.reorder" :key="r.ingredient_id"><td class="fw-semibold">[[ r.name ]]</td><td class="text-end">[[ ui.qty(r.suggested_qty, r.unit) ]]</td><td>[[ r.supplier ]] <span class="text-muted small">· [[ r.lead_time_days ]] d lead time</span></td></tr></tbody></table></div>
@@ -32,23 +55,23 @@
                 <div class="progress-bar" :class="cover(r) < 50 ? 'bg-danger' : 'bg-warning'" :style="{ width: cover(r) + '%' }"></div></div>
               <small class="text-muted">[[ cover(r) ]]% covered · short by [[ ui.qty(Math.round((r.need - r.usable) * 1000) / 1000, r.unit) ]]</small>
             </div>
+            <p v-if="t.at_risk > risks.length" class="small text-muted mb-0 mt-2">and [[ t.at_risk - risks.length ]] more on Ingredient demand</p>
           </div>
         </div></div>
-        <div class="card mt-3"><div class="card-body">
+      </div>
+      <div class="col-12 col-xl-5">
+        <div class="card mb-3"><div class="card-body">
           <div class="card-head"><h2 class="h6">Expiring soon</h2><a href="/inventory/stock?tab=record">Batches</a></div>
           <sr-empty v-if="!d.expiring.length" message="No batches expire in the next 3 days." icon="check"></sr-empty>
           <ul v-else class="exp-list"><li v-for="b in d.expiring.slice(0, 5)" :key="b.id" :class="{ expired: b.expired }">
             <span><strong>[[ b.ingredient ]]</strong> <small class="text-muted">[[ ui.qty(b.qty_remaining, b.unit) ]] · [[ b.batch_no ]]</small></span>
             <span :class="b.expired ? 'sr-badge sr-badge-danger' : 'exp-date'">[[ b.expired ? 'Expired ' + ui.date(b.expiry_date) : ui.date(b.expiry_date) ]]</span></li></ul>
-          <a v-if="d.expiring.length > 5" class="small fw-semibold" href="/inventory/stock?tab=record">See all [[ d.expiring.length >= 10 ? '10+' : d.expiring.length ]] batches</a>
+          <a v-if="expiryTotal > 5" class="small fw-semibold" href="/inventory/stock?tab=record">See all [[ expiryTotal ]] batches</a>
         </div></div>
-      </div>
-      <div class="col-12 col-xl-5">
         <div class="card" id="alerts"><div class="card-body">
-          <div class="card-head"><h2 class="h6">Needs attention</h2>
+          <div class="card-head"><h2 class="h6">Alerts</h2>
             <span class="count-chips"><span class="chip chip-critical">[[ d.alert_counts.critical ]] critical</span><span class="chip chip-warning">[[ d.alert_counts.warning ]] warning</span></span></div>
-          <sr-alert-list :alerts="alerts" :limit="5" @acknowledge="ack"></sr-alert-list></div></div>
-
+          <sr-alert-list :alerts="alerts" :limit="4" @acknowledge="ack"></sr-alert-list></div></div>
       </div>
     </div>
   </template>

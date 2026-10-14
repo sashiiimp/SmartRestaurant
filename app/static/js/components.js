@@ -72,6 +72,18 @@ window.SR = (function () {
           </component>
         </li></ol>`,
     },
+    // What needs attention, what the system recommends, and the action that handles it. Each item:
+    // { key, tone: danger|warning|info, title, detail, action, href }. Empty list -> a calm "all clear" line.
+    'sr-action-list': {
+      props: { items: Array, empty: { type: String, default: 'Nothing needs attention.' } },
+      template: `<div><p v-if="!items || !items.length" class="act-clear"><sr-icon name="check" :size="18"></sr-icon>[[ empty ]]</p>
+        <ul v-else class="act-list">
+          <li v-for="a in items" :key="a.key" class="act-item" :class="'act-' + (a.tone || 'info')">
+            <span class="act-dot" aria-hidden="true"></span>
+            <span class="act-text"><strong>[[ a.title ]]</strong><small v-if="a.detail">[[ a.detail ]]</small></span>
+            <a v-if="a.href" :href="a.href" class="btn btn-sm act-btn" :class="a.tone === 'danger' ? 'btn-primary' : 'btn-outline-primary'">[[ a.action ]]</a>
+          </li></ul></div>`,
+    },
     'sr-field-error': {
       props: ['errors', 'name'],
       template: '<div v-if="errors && errors[name]" class="text-danger small mt-1" role="alert">[[ errors[name] ]]</div>',
