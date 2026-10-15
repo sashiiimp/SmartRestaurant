@@ -1106,10 +1106,16 @@ a.wf-step:focus-visible { outline: 3px solid rgba(var(--accent-rgb), .35); outli
 .pp-figs .pp-l { font-size: .64rem; letter-spacing: 0; text-transform: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pp-figs strong.pp-t-done { font-size: .85rem; }
 .pp-figs strong { display: inline-block; font-size: 1.15rem; font-weight: 750; font-variant-numeric: tabular-nums; }
+.pp-card-row { display: flex; justify-content: space-between; align-items: flex-start; gap: .5rem; margin-bottom: .5rem; }
+.pp-card-row details { flex: 1 1 auto; min-width: 0; }
+.pp-card-row .btn { flex: none; }
 .pp-avail { display: flex; justify-content: space-between; align-items: center; margin-top: .6rem; padding-top: .45rem; border-top: 1px solid var(--border); font-size: .76rem; color: var(--muted); }
 .pp-avail .btn-link { font-size: .76rem; text-decoration: none; }
 @media (max-width: 575.98px) {
   .pp-sum { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem .75rem; }
   .pp-sum strong { font-size: 1.15rem; }
   .pp-figs strong { font-size: 1rem; }
+  .pp-figs .pp-l { font-size: .56rem; }
+  .pp-figs { gap: .3rem; grid-template-columns: 1.35fr 1fr 1fr 1fr; }
+  .pp-figs > div { padding: .35rem .1rem; }
 }

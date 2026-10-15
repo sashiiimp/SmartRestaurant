@@ -90,9 +90,11 @@ def kitchen(browser):
     n = page.locator(".card-item").count()
     print("prep cards:", n)
     first = page.locator(".card-item").first
-    first.get_by_role("button", name="Accept").click()
+    assert page.get_by_role("button", name="Accept").count() == 0, "no separate Accept button"
+    first.locator("input[inputmode=numeric]").last.fill("24")          # the first portions accept the recommendation
+    first.get_by_role("button", name="Add prepared").click()
     page.wait_for_function("document.querySelector('.card-item.accepted') !== null", timeout=8000)
-    assert page.locator(".card-item.accepted").first.get_by_role("button", name="Accept").count() == 0, "no second Accept once accepted"
+    assert "Auto-accepted" in page.locator(".card-item.accepted").first.inner_text(), "accepted automatically"
     page.wait_for_selector(".card-item.accepted", timeout=5000)
     second = page.locator(".card-item").nth(1)
     second.get_by_role("button", name="Change plan").click()
@@ -104,11 +106,11 @@ def kitchen(browser):
     second.locator("input").nth(1).fill("Rain expected")
     second.get_by_role("button", name="Save plan").click()
     page.wait_for_selector(".card-item.overridden", timeout=5000)
-    first.locator("input[inputmode=numeric]").last.fill("24")
+    first.locator("input[inputmode=numeric]").last.fill("6")
     first.get_by_role("button", name="Add prepared").click()             # added to the total, never replaces it
-    page.wait_for_selector("text=Adds to the 24 already prepared", timeout=5000)
+    page.wait_for_selector("text=Adds to the 30 already prepared", timeout=5000)
     first.get_by_role("button", name="Finish preparation").click()      # asks first, showing actual against planned
-    assert "Prepared 24 of" in first.locator(".pp-confirm").inner_text(), "finish confirmation shows actual vs planned"
+    assert "Prepared 30 of" in first.locator(".pp-confirm").inner_text(), "finish confirmation shows actual vs planned"
     first.locator(".pp-confirm").get_by_role("button", name="Cancel").click()
     visit(page, "/kitchen/prep", "k_prep_after", wait=".card-item")
     acc, ovr = page.locator(".card-item.accepted").count(), page.locator(".card-item.overridden").count()

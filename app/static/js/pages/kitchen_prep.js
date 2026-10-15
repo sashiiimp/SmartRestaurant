@@ -28,12 +28,10 @@ SR.createApp({
   },
   async mounted() { window.matchMedia(WIDE).addEventListener('change', e => { this.wide = e.matches; }); await this.load(); },
   methods: {
-    // Accept is offered only when it would change something: not yet decided, changed, or accepted earlier at a
-    // quantity the recommendation has since moved away from (for example after a new pre-order).
-    acceptLabel(it) {
-      if (it.status === 'accepted' && it.final_qty === it.recommended_qty) return null;
-      return (it.status === 'accepted' ? 'Accept new ' : 'Accept ') + it.recommended_qty;
-    },
+    // There is no general Accept button: the first Add prepared accepts the recommendation (recorded as automatic).
+    // One case keeps a button: an accepted plan whose recommendation has since moved (for example after a new confirmed
+    // pre-order) can take the new figure without counting as a change of plan.
+    acceptLabel(it) { return this.moved(it) ? 'Use new ' + it.recommended_qty : null; },
     canDecide(it) { return it.status !== 'no_forecast' && !this.isPast && it.prep_status !== 'done'; },
     // planned = the decided quantity, or the suggestion while nothing is decided (null without a forecast)
     planned(it) { return it.final_qty !== null && it.final_qty !== undefined ? it.final_qty : (it.status === 'no_forecast' ? null : it.recommended_qty); },
@@ -88,7 +86,7 @@ SR.createApp({
         const { data } = await api.post('/recommendations/prep/decisions', body);
         s.changing = false;
         await this.refresh();
-        ui.toast(action === 'accept' ? item.name + ': accepted ' + data.final_qty : item.name + ': plan changed to ' + data.final_qty);
+        ui.toast(action === 'accept' ? item.name + ': plan updated to ' + data.final_qty : item.name + ': plan changed to ' + data.final_qty);
         if (data.warnings && data.warnings.length) ui.toast(data.warnings[0], 'warning');
       } catch (e) { s.errors = e.fields || {}; s.message = ui.errorText(e); } finally { s.busy = false; }
     },

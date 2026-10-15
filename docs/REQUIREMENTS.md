@@ -207,6 +207,11 @@ Format: story, priority, traces, acceptance criteria (AC).
   first prepared quantity (or *Start*) puts it in progress; *Mark done* needs a prepared quantity above 0 and warns when
   it differs from the plan; *Reopen* goes back to in progress. A finished item's plan cannot change until it is reopened.
   Statuses are stored on the decision row (`recommendations.prep_status`). Tests PREP-1 to PREP-6.
+- *Simplified 16 Oct 2026 (staging branch prep-simplify):* the Plan & prepare page has no separate Accept button. The
+  first *Add prepared* of an undecided item accepts today's recommendation (same stored snapshot; audit entry marked
+  `auto`); *Change plan* (the override, reason required) sets another quantity; *Use new N* takes a recommendation that
+  moved after acceptance. The accept API is unchanged. *Finish preparation* (done) asks first, showing prepared against
+  planned. The forecast is in each item's breakdown and on the 7-day forecast tab. Tests PREP-AUTO-0 to 15.
 
 ### K5 Record prepared quantity (P1), FR8
 *Covers: Preparation Quantity Recording.*

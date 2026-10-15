@@ -39,7 +39,7 @@
                 <small v-if="moved(it)" class="pp-moved">Recommendation is now [[ it.recommended_qty ]]</small>
                 <small v-if="it.override_reason" class="pp-note">Why: [[ it.override_reason ]]</small>
                 <div v-if="canDecide(it)" class="pp-btns">
-                  <button v-if="acceptLabel(it)" class="btn btn-sm btn-success" type="button" :disabled="st(it.menu_item_id).busy" @click="decide(it, 'accept')">[[ acceptLabel(it) ]]</button>
+                  <button v-if="acceptLabel(it)" class="btn btn-sm btn-outline-warning" type="button" :disabled="st(it.menu_item_id).busy" @click="decide(it, 'accept')">[[ acceptLabel(it) ]]</button>
                   <button class="btn btn-sm btn-outline-secondary" type="button" :aria-expanded="st(it.menu_item_id).changing ? 'true' : 'false'" @click="openChange(it)">Change plan</button></div>
               </template>
               <span v-else class="text-muted small">-</span></td>
@@ -97,14 +97,14 @@
           <p v-if="it.forecast_method === 'baseline'" class="pp-note mb-1">Simple estimate (same day last week)</p>
           <p v-if="moved(it)" class="pp-moved mb-1">Recommendation is now [[ it.recommended_qty ]]</p>
           <p v-if="it.override_reason" class="pp-note mb-1">Why: [[ it.override_reason ]]</p>
-          <details v-if="it.status !== 'no_forecast'" class="calc mb-2">
-            <summary>How was [[ it.recommended_qty ]] worked out?</summary>
-            <p class="small text-muted mb-0 mt-1">[[ ui.num(it.forecast_qty, 1) ]] forecast + [[ it.buffer_pct ]]% = [[ ui.num(it.forecast_qty * (1 + it.buffer_pct / 100), 1) ]]<span v-if="it.preorder_qty"> (or [[ it.preorder_qty ]] pre-ordered, if higher)</span>, rounded up to a multiple of [[ it.batch_size ]] = [[ it.recommended_qty ]].</p>
-          </details>
-          <div v-if="canDecide(it)" class="d-flex gap-2 mb-2">
-            <button v-if="acceptLabel(it)" class="btn btn-success btn-lg-touch flex-fill" type="button" :disabled="st(it.menu_item_id).busy" @click="decide(it, 'accept')">[[ acceptLabel(it) ]]</button>
-            <button class="btn btn-outline-secondary btn-lg-touch flex-fill" type="button" :aria-expanded="st(it.menu_item_id).changing ? 'true' : 'false'" @click="openChange(it)">Change plan</button>
+          <div v-if="it.status !== 'no_forecast'" class="pp-card-row">
+            <details class="calc">
+              <summary>How was [[ it.recommended_qty ]] worked out?</summary>
+              <p class="small text-muted mb-0 mt-1">[[ ui.num(it.forecast_qty, 1) ]] forecast + [[ it.buffer_pct ]]% = [[ ui.num(it.forecast_qty * (1 + it.buffer_pct / 100), 1) ]]<span v-if="it.preorder_qty"> (or [[ it.preorder_qty ]] pre-ordered, if higher)</span>, rounded up to a multiple of [[ it.batch_size ]] = [[ it.recommended_qty ]].</p>
+            </details>
+            <button v-if="canDecide(it)" class="btn btn-sm btn-outline-secondary" type="button" :aria-expanded="st(it.menu_item_id).changing ? 'true' : 'false'" @click="openChange(it)">Change plan</button>
           </div>
+          <button v-if="canDecide(it) && acceptLabel(it)" class="btn btn-outline-warning btn-lg-touch w-100 mb-2" type="button" :disabled="st(it.menu_item_id).busy" @click="decide(it, 'accept')">[[ acceptLabel(it) ]]</button>
           <div v-if="st(it.menu_item_id).changing" class="border rounded p-2 mb-2">
             <label class="form-label small mb-1" :for="'q' + it.menu_item_id">New plan (higher or lower)</label>
             <input :id="'q' + it.menu_item_id" class="form-control mb-1" inputmode="numeric" v-model="st(it.menu_item_id).qty">
