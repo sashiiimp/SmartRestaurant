@@ -8,7 +8,7 @@
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
   <div v-if="tab === 'pre'">
   <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
-    <p class="text-muted small m-0"><strong>Confirmed</strong> and <strong>completed</strong> pre-orders count in the prep plan; pending and cancelled do not.</p>
+    <p class="text-muted small m-0"><strong>Confirmed</strong> and <strong>completed</strong> pre-orders count in the prep plan; pending and cancelled do not. Completing a pre-order records no sale: include its portions in the day's <a href="/kitchen/record">served total</a>.</p>
     <button class="btn btn-primary" type="button" @click="startNew">Add pre-order</button>
   </div>
   <div v-if="notice" class="alert alert-warning py-2" role="status">[[ notice ]] <a href="/kitchen/prep">Open the prep plan</a></div>

@@ -111,6 +111,7 @@ def kitchen(browser):
     acc, ovr = page.locator(".card-item.accepted").count(), page.locator(".card-item.overridden").count()
     assert (acc, ovr) == (1, 1), f"after reload: {acc} accepted and {ovr} overridden cards, expected 1 and 1"
     visit(page, "/kitchen/record", "k_record", wait="input[id^=s]")
+    assert "including collected pre-orders" in page.locator(".rec-hint").inner_text(), "served includes pre-orders"
     page.locator("input[id^=s]").first.fill("999")
     page.get_by_role("button", name="Save served quantities").click()
     page.wait_for_selector("text=served above prepared", timeout=5000)

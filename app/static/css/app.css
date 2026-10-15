@@ -942,3 +942,11 @@ a.wf-step:focus-visible { outline: 3px solid rgba(var(--accent-rgb), .35); outli
   .use-calc-list { max-width: none; }
   .use-calc-list li { flex-wrap: wrap; gap: 0 .75rem; }
 }
+
+/* ---- 20 served includes collected pre-orders (Oct 2026) ---------------------------------------------------------- */
+.rec-hint { margin: 0 0 .6rem; font-size: .8rem; color: var(--text-2); }
+.rec-hint strong { color: var(--text); font-weight: 650; }
+.rec-table thead .th-sub { display: block; font-size: .62rem; font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--accent-strong); }
+.rec-pre { display: block; font-size: .7rem; color: var(--accent-strong); margin-top: .15rem; white-space: nowrap; }
+.rec-pre.is-below { color: var(--danger); font-weight: 650; }
+@media (max-width: 1199.98px) { .rec-pre { text-align: center; } }

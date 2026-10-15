@@ -201,3 +201,32 @@ def test_detail_and_upcoming_confirmed(burger, app):
     assert d["created_by"] and set(d["allowed_status"]) == {"pending", "completed", "cancelled"}
     up = kit.upcoming_pre_orders(1, 7)
     assert (up["count"], up["portions"], up["by_item"]) == (1, 7, [{"item": "Burger", "quantity": 7}])
+
+
+# ---- served must include collected pre-orders (they record no sale; the forecast learns from served totals) -------
+def test_served_below_collected_pre_orders_warns_and_saves_as_entered(burger):
+    collected = add(burger, TODAY, 20, status="confirmed")
+    kit.update_pre_order(1, collected["id"], {"status": "completed"})
+    add(burger, TODAY, 5, status="confirmed")                    # confirmed, not collected yet: not part of served
+    plan_before = recommended(burger, TODAY)
+    out = kit.record_served(1, {"date": TODAY.isoformat(), "lines": [{"menu_item_id": burger.id, "quantity": 12}]})
+    below = [w for w in out["warnings"] if "pre-ordered" in w]
+    assert below == ["Burger: served (12) is lower than the 20 pre-ordered portions collected today. "
+                     "Served must include collected pre-orders. Saved; please check."]
+    assert SalesRecord.query.one().quantity_sold == 12            # saved as entered, nothing added
+    out = kit.record_served(1, {"date": TODAY.isoformat(), "lines": [{"menu_item_id": burger.id, "quantity": 20}],
+                                "confirm_overwrite": True})
+    assert not [w for w in out["warnings"] if "pre-ordered" in w]  # equal to the collected portions: fine
+    assert recommended(burger, TODAY) == plan_before == 48        # plan unchanged: max(40 x 1.10 = 44, 25 committed) -> 48
+
+
+def test_daily_summary_shows_collected_pre_orders_and_flags_served_below(burger):
+    from app.services import dashboard_service as dash
+    p = add(burger, TODAY, 8, status="confirmed")
+    kit.update_pre_order(1, p["id"], {"status": "completed"})
+    row = lambda: next(r for r in dash.kitchen_daily_summary(1, TODAY)["items"] if r["menu_item_id"] == burger.id)  # noqa: E731
+    assert row()["preorders_collected"] == 8 and "served_below_preorders" not in row()["flags"]   # served not recorded yet
+    kit.record_served(1, {"date": TODAY.isoformat(), "lines": [{"menu_item_id": burger.id, "quantity": 5}]})
+    assert "served_below_preorders" in row()["flags"]
+    kit.record_served(1, {"date": TODAY.isoformat(), "lines": [{"menu_item_id": burger.id, "quantity": 11}], "confirm_overwrite": True})
+    assert "served_below_preorders" not in row()["flags"]

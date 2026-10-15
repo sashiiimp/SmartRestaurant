@@ -96,8 +96,11 @@ SR.createApp({
       if (b < 0) return Math.abs(b) + ' more used than prepared';
       return b ? b + ' prepared but not accounted for' : 'Everything prepared is accounted for';
     },
-    rowWarn(i) { const b = this.balance(i); return (b !== null && b < 0) || i.flags.length > 0; },
+    // served (typed or saved) below the day's collected pre-orders: those portions were handed over, so served must include them
+    belowPre(i) { const s = this.servedValue(i); return s !== null && s < num(i.preorders_collected); },
+    rowWarn(i) { const b = this.balance(i); return (b !== null && b < 0) || i.flags.length > 0 || this.belowPre(i); },
     rowState(i) {
+      if (this.belowPre(i)) return 'warn';
       if (this.isDirty(i)) return 'dirty';
       if (i.flags.length || (this.balance(i) !== null && this.balance(i) < 0)) return 'warn';
       return saved(i.served) ? 'saved' : 'none';
@@ -106,6 +109,7 @@ SR.createApp({
       const s = this.rowState(i);
       if (s === 'dirty') return 'Not saved yet';
       if (s === 'warn') {
+        if (this.belowPre(i)) return 'Below the ' + i.preorders_collected + ' pre-ordered collected';
         if (i.flags.includes('served_exceeds_prepared')) return 'Served above prepared';
         if (i.flags.includes('waste_exceeds_prepared')) return 'Waste above prepared';
         return 'More used than prepared';

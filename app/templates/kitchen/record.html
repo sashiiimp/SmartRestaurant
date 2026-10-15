@@ -24,10 +24,11 @@
         <li v-else-if="status.servedDone" class="is-done">Balanced</li>
         <li v-if="dirtyCount" class="is-now">[[ dirtyCount ]] unsaved</li>
       </ul>
+      <p class="rec-hint"><strong>Sold / served</strong> = every portion sold or handed over today, <strong>including collected pre-orders</strong>. Pre-orders are never added automatically.</p>
       <sr-empty v-if="!items.length" message="No menu items for this date." icon="clipboard"></sr-empty>
       <div v-else class="card" id="sec-served">
         <table class="table rec-table align-middle mb-0">
-          <thead><tr><th scope="col">Item</th><th scope="col" class="text-end">Prepared</th><th scope="col" class="rec-in">Sold / served</th>
+          <thead><tr><th scope="col">Item</th><th scope="col" class="text-end">Prepared</th><th scope="col" class="rec-in">Sold / served<span class="th-sub">incl. pre-orders</span></th>
             <th scope="col" class="text-end">Wasted</th><th scope="col" class="text-end">Other use</th><th scope="col" class="text-end">Balance</th><th scope="col"><span class="visually-hidden">Waste and other use</span></th></tr></thead>
           <tbody><template v-for="i in items" :key="i.menu_item_id">
             <tr class="rec-row" :class="{ 'is-open': open === i.menu_item_id, 'is-warn': rowWarn(i) }">
@@ -35,7 +36,8 @@
                 <small :class="'rec-state rec-' + rowState(i)">[[ stateText(i) ]]</small></td>
               <td class="text-end rec-num rc-prep" data-label="Prep">[[ i.prepared ]]</td>
               <td class="rec-in" data-label="Served"><input :id="'s' + i.menu_item_id" class="form-control" inputmode="numeric" placeholder="-" autocomplete="off"
-                     :class="{ 'is-dirty': isDirty(i) }" v-model="served[i.menu_item_id]" @keydown.enter.prevent="saveServed(false)"></td>
+                     :class="{ 'is-dirty': isDirty(i) }" v-model="served[i.menu_item_id]" @keydown.enter.prevent="saveServed(false)">
+                <small v-if="i.preorders_collected" class="rec-pre" :class="{ 'is-below': belowPre(i) }">incl. [[ i.preorders_collected ]] pre-ordered</small></td>
               <td class="text-end rec-num rc-waste" data-label="Waste">[[ i.wasted ]]</td>
               <td class="text-end rec-num rc-other" data-label="Other">[[ i.other_use ]]</td>
               <td class="text-end rec-bal" data-label="Balance" :title="balanceTitle(i)"><span :class="balanceClass(i)">[[ balanceText(i) ]]</span></td>

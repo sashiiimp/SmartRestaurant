@@ -26,6 +26,7 @@ def kitchen_daily_summary(outlet_id: int, day: date) -> dict:
         FoodWaste.outlet_id == outlet_id, FoodWaste.waste_date == day).group_by(FoodWaste.menu_item_id)}
     other = {i: int(q) for i, q in db.session.query(FoodUsage.menu_item_id, db.func.sum(FoodUsage.quantity)).filter(
         FoodUsage.outlet_id == outlet_id, FoodUsage.usage_date == day).group_by(FoodUsage.menu_item_id)}
+    collected = kit.collected_pre_orders(outlet_id, day)      # handed-over pre-orders: part of the served total
     rows = []
     for r in plan["items"]:
         flags = []
@@ -34,11 +35,14 @@ def kitchen_daily_summary(outlet_id: int, day: date) -> dict:
         wasted, used_other = waste.get(r["menu_item_id"], 0), other.get(r["menu_item_id"], 0)
         if wasted > r["prepared_so_far"]:
             flags.append("waste_exceeds_prepared")
+        pre_done = collected.get(r["menu_item_id"], 0)
+        if r["served_so_far"] is not None and r["served_so_far"] < pre_done:
+            flags.append("served_below_preorders")
         unaccounted = None if r["served_so_far"] is None else r["prepared_so_far"] - r["served_so_far"] - wasted - used_other
         rows.append({"menu_item_id": r["menu_item_id"], "name": r["name"], "forecast_qty": r["forecast_qty"],
                      "recommended_qty": r["recommended_qty"], "final_qty": r["final_qty"], "status": r["status"],
                      "prep_status": r["prep_status"], "prepared": r["prepared_so_far"], "served": r["served_so_far"], "wasted": wasted,
-                     "other_use": used_other, "unaccounted": unaccounted, "flags": flags,
+                     "other_use": used_other, "unaccounted": unaccounted, "flags": flags, "preorders_collected": pre_done,
                      "is_available": r["is_available"]})
     return {"date": day.isoformat(), "items": rows}
 

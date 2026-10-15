@@ -38,6 +38,15 @@ def _waste_total(outlet_id: int, item_id: int, day) -> int:
         FoodWaste.outlet_id == outlet_id, FoodWaste.menu_item_id == item_id, FoodWaste.waste_date == day).scalar())
 
 
+def collected_pre_orders(outlet_id: int, day) -> dict:
+    """{menu_item_id: portions} of the day's completed (handed over) pre-orders. They record no sale, so the served
+    total for the day must include them; the forecast learns total demand from served totals (ML_PLAN.md B1)."""
+    rows = (db.session.query(PreOrder.menu_item_id, db.func.sum(PreOrder.quantity))
+            .filter(PreOrder.outlet_id == outlet_id, PreOrder.target_date == day, PreOrder.status == "completed")
+            .group_by(PreOrder.menu_item_id).all())
+    return {i: int(q) for i, q in rows}
+
+
 def record_prepared(outlet_id: int, data: dict, actor_id: int | None = None) -> dict:
     """K5: several entries per item and day are summed."""
     f = Fields(data)
@@ -92,6 +101,7 @@ def record_served(outlet_id: int, data: dict, actor_id: int | None = None) -> di
         raise ConflictError("A different quantity is already recorded for some items on this date.",
                             code="duplicate_record", extra={"conflicts": conflicts})
     warnings, saved = [], 0
+    collected = collected_pre_orders(outlet_id, day)
     for item, qty in clean:
         cur = existing.get(item.id)
         if cur is None:
@@ -104,6 +114,9 @@ def record_served(outlet_id: int, data: dict, actor_id: int | None = None) -> di
         prepared = _prepared_total(outlet_id, item.id, day)
         if qty > prepared:
             warnings.append(f"{item.name}: served ({qty}) is higher than prepared ({prepared}). Saved, and flagged for review.")
+        if qty < collected.get(item.id, 0):     # a warning only: the figure is saved as entered, nothing is added to it
+            warnings.append(f"{item.name}: served ({qty}) is lower than the {collected[item.id]} pre-ordered portions "
+                            f"collected today. Served must include collected pre-orders. Saved; please check.")
     audit.record(outlet_id, actor_id, "sales.served", "sales_records", None, {"date": day.isoformat(), "lines": saved})
     db.session.commit()
     return {"date": day.isoformat(), "saved": saved, "warnings": warnings}
