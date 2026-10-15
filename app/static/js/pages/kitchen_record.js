@@ -6,7 +6,7 @@ SR.createApp({
       served: {}, savingServed: false, servedErrors: {}, conflicts: null, servedMessages: [],
       open: null,
       waste: { menu_item_id: '', quantity: '', reason: 'overproduction', note: '' }, wasteErrors: {}, savingWaste: false,
-      usage: null, use: {}, usageErrors: {}, allIngredients: [], otherIng: '',
+      usage: null, use: {}, usageErrors: {}, allIngredients: [], otherIng: '', calcOpen: {}, showAllCalc: false, confirming: false,
       foodUsage: null, usageTypes: ['staff_meal', 'complimentary', 'sample', 'other'],
       food: { menu_item_id: '', usage_type: 'staff_meal', quantity: '', note: '' }, foodErrors: {}, savingFood: false,
     };
@@ -43,6 +43,14 @@ SR.createApp({
     dirtyCount() { return this.items.filter(i => this.isDirty(i)).length; },
     // the other-use figure the form would replace (one per item, day and type)
     replacing() { return this.foodEntry(this.open, this.food.usage_type); },
+    // ingredient usage: confirmed rows, rows that differ from expected, amounts typed but not saved
+    useStats() {
+      const rows = this.usage ? this.usage.rows : [];
+      return { confirmed: rows.filter(r => r.recorded !== null).length, differ: rows.filter(r => r.recorded !== null && r.variance !== 0).length,
+               dirty: rows.filter(r => this.useDirty(r)).length };
+    },
+    // rows "Confirm all as expected" records: nothing recorded or typed yet, and something expected
+    toConfirm() { return this.usage ? this.usage.rows.filter(r => this.canMatch(r) && this.use[r.ingredient_id].quantity === '') : []; },
     otherIngredients() { const shown = new Set(this.usage ? this.usage.rows.map(r => r.ingredient_id) : []); return this.allIngredients.filter(g => !shown.has(g.id)); },
   },
   methods: {
@@ -64,7 +72,7 @@ SR.createApp({
         this.served = {};
         data.items.forEach(i => { this.served[i.menu_item_id] = i.menu_item_id in drafts ? drafts[i.menu_item_id] : (saved(i.served) ? String(i.served) : ''); });
       } catch (e) { this.error = ui.errorText(e); } finally { this.loading = false; }
-      await this.loadUsage();
+      await this.loadUsage(keep === true);
       await this.loadFood();
     },
     // ---- one row per item ----
@@ -175,28 +183,95 @@ SR.createApp({
       } finally { this.savingServed = false; }
     },
     // ---- ingredient usage ----
-    async loadUsage() {
+    // keep=true (after a save) keeps amounts typed in other rows and rows added with "Add row" that are not saved yet
+    async loadUsage(keep) {
+      const drafts = keep === true && this.usage ? this.usage.rows.filter(r => this.useDirty(r) || (r.recorded === null && !r.sources.length))
+        .map(r => ({ row: r, entry: { ...this.use[r.ingredient_id] } })) : [];
       try {
         const u = (await api.get('/kitchen/ingredient-usage', { date: this.date })).data;
         this.use = {}; this.usageErrors = {};
         u.rows.forEach(r => { this.use[r.ingredient_id] = { quantity: r.recorded === null ? '' : String(r.recorded), note: r.note || '' }; });
+        drafts.forEach(d => {
+          if (!u.rows.some(r => r.ingredient_id === d.row.ingredient_id)) u.rows.push(d.row);
+          if (d.row.recorded === null || d.entry.quantity !== '') this.use[d.row.ingredient_id] = d.entry;
+        });
+        if (keep !== true) { this.calcOpen = {}; }
         this.usage = u;
       } catch (e) { this.usage = null; ui.toast(ui.errorText(e), 'danger'); }
     },
     addOther() {
       const g = this.allIngredients.find(x => x.id === this.otherIng); if (!g) return;
       this.use[g.id] = { quantity: '', note: '' };
-      this.usage.rows.push({ ingredient_id: g.id, ingredient: g.name, unit: g.unit, expected: 0, recorded: null, variance: null, note: null, usage_id: null });
+      this.usage.rows.push({ ingredient_id: g.id, ingredient: g.name, unit: g.unit, expected: 0, recorded: null, variance: null, note: null, usage_id: null, sources: [] });
       this.otherIng = '';
+    },
+    // the amount typed in a row as a number, or null when blank or not a number
+    typed(r) { const v = this.use[r.ingredient_id] && this.use[r.ingredient_id].quantity; return v === '' || v === undefined || isNaN(Number(v)) ? null : Number(v); },
+    useDirty(r) {
+      const f = this.use[r.ingredient_id]; if (!f || f.quantity === '') return false;
+      const t = this.typed(r); return t === null || r.recorded === null || t !== r.recorded;
+    },
+    // actual - expected: the saved variance, or a preview of the amount typed
+    diff(r) {
+      const t = this.typed(r);
+      if (this.useDirty(r) && t !== null) return Math.round((t - r.expected) * 1000) / 1000;
+      return r.variance === null ? null : r.variance;
+    },
+    diffText(r) {
+      const d = this.diff(r);
+      if (d === null) return '-';
+      return d === 0 ? '0 ' + r.unit : (d > 0 ? '+' : '−') + ui.qty(Math.abs(d), r.unit);
+    },
+    diffPct(r) { const d = this.diff(r); return d === null || d === 0 || !r.expected ? null : (d > 0 ? '+' : '−') + ui.num(Math.abs(d) / r.expected * 100, 1) + '%'; },
+    diffClass(r) { const d = this.diff(r); return ['use-d', d === null ? 'is-none' : d === 0 ? 'is-ok' : d > 0 ? 'is-over' : 'is-under', this.useDirty(r) ? 'is-draft' : '']; },
+    useState(r) {
+      if (this.useDirty(r)) return 'dirty';
+      if (r.recorded === null) return r.expected ? 'open' : 'none';
+      return r.variance === 0 ? 'match' : (r.variance > 0 ? 'over' : 'under');
+    },
+    useStateText(r) {
+      return { dirty: 'Not saved yet', open: 'To confirm', none: 'No expected use', match: 'Matches expected', over: 'More than expected', under: 'Less than expected' }[this.useState(r)];
+    },
+    canMatch(r) { return r.recorded === null && r.expected > 0 && !this.useDirty(r); },
+    calcShown(r) { return !!(r.sources && r.sources.length) && (this.showAllCalc || !!this.calcOpen[r.ingredient_id]); },
+    toggleCalc(r) {
+      if (this.showAllCalc) { this.showAllCalc = false; this.calcOpen = Object.fromEntries(this.usage.rows.map(x => [x.ingredient_id, x.ingredient_id !== r.ingredient_id])); return; }
+      this.calcOpen = { ...this.calcOpen, [r.ingredient_id]: !this.calcOpen[r.ingredient_id] };
+    },
+    // "Matches": the actual use is the expected figure; recorded like any other amount and cleared the same way
+    async confirmMatch(r) {
+      this.confirming = true; this.usageErrors[r.ingredient_id] = '';
+      try {
+        const note = this.use[r.ingredient_id].note;
+        await api.post('/kitchen/ingredient-usage', { date: this.date, ingredient_id: r.ingredient_id, quantity: r.expected, note: note || undefined });
+        ui.toast(r.ingredient + ': ' + ui.qty(r.expected, r.unit) + ' confirmed as expected.');
+        await this.loadUsage(true);
+      } catch (e) { this.usageErrors[r.ingredient_id] = Object.values(e.fields || {}).join('; ') || ui.errorText(e); }
+      finally { this.confirming = false; }
+    },
+    async confirmAll() {
+      this.confirming = true; let done = 0;
+      for (const r of this.toConfirm) {
+        try {
+          const note = this.use[r.ingredient_id].note;
+          await api.post('/kitchen/ingredient-usage', { date: this.date, ingredient_id: r.ingredient_id, quantity: r.expected, note: note || undefined });
+          done += 1;
+        } catch (e) { this.usageErrors[r.ingredient_id] = Object.values(e.fields || {}).join('; ') || ui.errorText(e); }
+      }
+      const errors = { ...this.usageErrors };
+      await this.loadUsage(true);
+      Object.assign(this.usageErrors, errors);
+      ui.toast(done + (done === 1 ? ' ingredient' : ' ingredients') + ' confirmed as expected.', done ? 'success' : 'danger');
+      this.confirming = false;
     },
     async saveUsage(r) {
       const f = this.use[r.ingredient_id]; this.usageErrors[r.ingredient_id] = '';
       if (f.quantity === '') { this.usageErrors[r.ingredient_id] = 'Enter the amount used.'; return; }
-      try { await api.post('/kitchen/ingredient-usage', { date: this.date, ingredient_id: r.ingredient_id, quantity: f.quantity, note: f.note || undefined }); ui.toast(r.ingredient + ': usage recorded.'); await this.loadUsage(); }
+      try { await api.post('/kitchen/ingredient-usage', { date: this.date, ingredient_id: r.ingredient_id, quantity: f.quantity, note: f.note || undefined }); ui.toast(r.ingredient + ': usage recorded.'); await this.loadUsage(true); }
       catch (e) { this.usageErrors[r.ingredient_id] = Object.values(e.fields || {}).join('; ') || ui.errorText(e); }
     },
     async clearUsage(r) {
-      try { await api.delete('/kitchen/ingredient-usage/' + r.usage_id); ui.toast(r.ingredient + ': back to the expected usage.'); await this.loadUsage(); }
+      try { await api.delete('/kitchen/ingredient-usage/' + r.usage_id); ui.toast(r.ingredient + ': back to the expected usage.'); await this.loadUsage(true); }
       catch (e) { ui.toast(ui.errorText(e), 'danger'); }
     },
   },

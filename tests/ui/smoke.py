@@ -130,6 +130,13 @@ def kitchen(browser):
     page.wait_for_selector(".rec-entries li", timeout=5000)
     assert page.locator("input[id^=s]").nth(1).input_value() == "1", "unsaved served quantity kept after recording waste"
     page.wait_for_function("document.querySelectorAll('.rec-status li.is-done').length >= 2", timeout=5000)   # waste and other use
+    page.get_by_role("tab", name="Ingredient usage").click()            # expected = prepared x recipe, one click to see how
+    page.wait_for_selector(".use-row .use-exp-btn", timeout=5000)
+    page.locator(".use-row .use-exp-btn").first.click()
+    page.wait_for_selector(".use-calc-list li", timeout=3000)
+    page.locator(".use-row").first.get_by_role("button", name="Matches").click()   # actual = expected in one click
+    page.wait_for_selector(".use-row .use-state.use-match", timeout=5000)
+    assert page.locator(".use-row").first.locator(".use-d.is-ok").count() == 1, "difference 0 after Matches"
     assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth + 1"), "horizontal scroll at 390px"
     visit(page, "/kitchen", "k_dashboard", wait=".kpis")
     assert page.locator(".kpis .stat-tile").count() == 4 and page.locator(".wf").count() == 0, "kitchen figures, no shared strip"

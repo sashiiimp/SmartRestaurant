@@ -878,3 +878,67 @@ a.wf-step:focus-visible { outline: 3px solid rgba(var(--accent-rgb), .35); outli
   .rec-f-btn .btn { width: 100%; }
   .rec-save { padding: .6rem .75rem; } .rec-save .btn { flex: 1 1 auto; }
 }
+
+/* ---- 19 ingredient usage (Oct 2026) ----------------------------------------------------------------------------- */
+/* Expected (prepared x recipe, with its calculation one click away), the amount actually used with its unit, and the
+   difference in the unit and in percent. Over expected is red, under is amber, equal is green. */
+.use-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem; margin-bottom: .75rem; }
+.use-formula { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .25rem 1rem; padding: .7rem .9rem; border-bottom: 1px solid var(--border); font-size: .82rem; color: var(--text-2); }
+.use-formula strong { color: var(--text); }
+.use-table > :not(caption) > * > * { padding: .5rem .7rem; }
+.use-table thead th { top: var(--topbar-h, 0); }
+.use-name strong { display: block; font-weight: 650; line-height: 1.25; }
+.use-state { display: block; font-size: .74rem; color: var(--muted); }
+.use-state.use-match { color: var(--success); } .use-state.use-over { color: var(--danger); font-weight: 600; }
+.use-state.use-under { color: var(--warning); font-weight: 600; } .use-state.use-dirty { color: var(--accent-strong); }
+.use-state.use-open { color: var(--text-2); }
+.use-exp { white-space: nowrap; }
+.use-exp-btn { border: 0; background: none; padding: 0; font-weight: 650; color: var(--accent-strong); font-variant-numeric: tabular-nums; border-bottom: 1px dashed currentColor; }
+.use-exp-btn:hover { color: var(--accent); }
+.use-exp-btn:focus-visible { outline: 2px solid rgba(var(--accent-rgb), .45); outline-offset: 2px; border-radius: 3px; }
+.use-chev { font-size: .7em; margin-left: .25rem; }
+.use-exp-btn[aria-expanded="true"] .use-chev { display: inline-block; transform: rotate(180deg); }
+.use-exp-none { font-weight: 600; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.use-from { display: block; font-size: .72rem; color: var(--muted); }
+.use-act { width: 10.5rem; }
+.use-act .form-control { text-align: right; font-weight: 650; font-variant-numeric: tabular-nums; }
+.use-act .form-control.is-dirty { border-color: var(--accent); background: var(--accent-soft); }
+.use-act .input-group-text { font-size: .78rem; color: var(--text-2); background: var(--surface-2); }
+.use-diff { white-space: nowrap; }
+.use-d { display: inline-block; padding: .1rem .45rem; border-radius: 6px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.use-d.is-none { color: var(--muted); font-weight: 500; }
+.use-d.is-ok { color: var(--success); background: var(--success-bg); }
+.use-d.is-over { color: var(--danger); background: var(--danger-bg); }
+.use-d.is-under { color: var(--warning); background: var(--warning-bg); }
+.use-d.is-draft { font-style: italic; outline: 1px dashed currentColor; outline-offset: -1px; }
+.use-pct { display: block; font-size: .72rem; color: var(--muted); margin-top: .1rem; }
+.use-note { min-width: 8rem; }
+.use-btns { width: 1%; white-space: nowrap; }
+.use-row.is-over > td:first-child { box-shadow: inset 3px 0 0 var(--danger); }
+.use-row.is-under > td:first-child { box-shadow: inset 3px 0 0 #d9931a; }
+.use-calc > td { background: var(--surface-2) !important; padding-top: .35rem !important; padding-bottom: .6rem !important; }
+.use-calc-list { list-style: none; margin: 0 0 0 auto; padding: 0; max-width: 30rem; font-size: .82rem; }
+.use-calc-list li { display: flex; justify-content: space-between; gap: 1rem; padding: .2rem 0; border-bottom: 1px dashed var(--border); }
+.use-calc-math { color: var(--text-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.use-calc-math strong { color: var(--text); }
+.use-calc-total { border-bottom: 0 !important; border-top: 1px solid var(--border-strong); font-weight: 650; }
+.use-add { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; padding: .75rem .9rem; border-top: 1px solid var(--border); }
+.use-add .form-select { max-width: 16rem; }
+@media (max-width: 1199.98px) {
+  /* cards: name, status and buttons, then expected / actually used / difference, then the note */
+  .use-table thead { display: none; }
+  .use-table, .use-table tbody { display: block; }
+  .use-table tr.use-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr) minmax(0, 1fr); grid-template-areas: "name name btns" "exp act diff" "note note note";
+    gap: .45rem .6rem; padding: .65rem .75rem; border-bottom: 1px solid var(--border); align-items: start; }
+  .use-table tr.use-row > td { display: block; padding: 0 !important; border: 0; width: auto; background: transparent; }
+  .use-table tr.use-row > td[data-label]:not(.use-note)::before { content: attr(data-label); display: block; font-size: .64rem; text-transform: uppercase; letter-spacing: .03em; font-weight: 650; color: var(--muted); margin-bottom: .15rem; line-height: 1.2; }
+  .use-table .use-name { grid-area: name; } .use-table tr.use-row > td.use-exp { grid-area: exp; text-align: left !important; }
+  .use-table .use-act { grid-area: act; } .use-table tr.use-row > td.use-diff { grid-area: diff; text-align: right !important; }
+  .use-table .use-note { grid-area: note; min-width: 0; } .use-table .use-btns { grid-area: btns; align-self: start; }
+  .use-table tr.use-row.is-over, .use-table tr.use-row.is-under { box-shadow: inset 3px 0 0 var(--danger); }
+  .use-table tr.use-row.is-under { box-shadow: inset 3px 0 0 #d9931a; }
+  .use-row > td:first-child { box-shadow: none !important; }
+  .use-table tr.use-calc, .use-table tr.use-calc > td { display: block; padding: 0 .75rem .6rem !important; }
+  .use-calc-list { max-width: none; }
+  .use-calc-list li { flex-wrap: wrap; gap: 0 .75rem; }
+}

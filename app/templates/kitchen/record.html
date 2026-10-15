@@ -98,24 +98,58 @@
       </div>
     </div>
     <div v-show="tab === 'ingredients'" class="tab-panel" role="tabpanel" id="panel-ingredients" aria-labelledby="tab-ingredients">
-      <div class="card"><div class="card-body">
-        <p class="text-muted small">Expected = prepared x recipe. Enter actual use where it differs; stock is not changed.</p>
-        <div v-if="usage && usage.items_without_recipe.length" class="alert alert-warning py-2 small">No recipe, so no expected usage for: [[ usage.items_without_recipe.join(', ') ]].</div>
-        <sr-empty v-if="usage && !usage.rows.length" message="Nothing prepared on this date yet, so there is no expected usage." icon="clipboard"></sr-empty>
-        <div v-else-if="usage" class="table-responsive"><table class="table table-sm align-middle mb-2">
-          <thead><tr><th>Ingredient</th><th class="text-end">Expected</th><th style="min-width: 8rem">Actually used</th><th class="text-end">Difference</th><th>Note</th><th></th></tr></thead>
-          <tbody><tr v-for="r in usage.rows" :key="r.ingredient_id">
-            <td>[[ r.ingredient ]]</td><td class="text-end">[[ ui.qty(r.expected, r.unit) ]]</td>
-            <td><input class="form-control form-control-sm" inputmode="decimal" :aria-label="'Actual use of ' + r.ingredient" v-model="use[r.ingredient_id].quantity"></td>
-            <td class="text-end" :class="r.variance > 0 ? 'text-danger' : (r.variance < 0 ? 'text-success' : '')">[[ r.variance === null ? '' : (r.variance > 0 ? '+' : '') + ui.num(r.variance, 3) ]]</td>
-            <td><input class="form-control form-control-sm" maxlength="255" :aria-label="'Note for ' + r.ingredient" v-model="use[r.ingredient_id].note"></td>
-            <td class="text-nowrap"><button class="btn btn-sm btn-outline-primary me-1" type="button" @click="saveUsage(r)">Save</button>
-              <button v-if="r.usage_id" class="btn btn-sm btn-outline-secondary" type="button" @click="clearUsage(r)">Clear</button>
-              <div v-if="usageErrors[r.ingredient_id]" class="text-danger small">[[ usageErrors[r.ingredient_id] ]]</div></td></tr></tbody></table></div>
-        <div v-if="usage" class="d-flex flex-wrap gap-2 align-items-center">
-          <select class="form-select form-select-sm" style="max-width: 14rem" aria-label="Another ingredient" v-model.number="otherIng"><option value="">Another ingredient...</option><option v-for="g in otherIngredients" :key="g.id" :value="g.id">[[ g.name ]] ([[ g.unit ]])</option></select>
-          <button class="btn btn-sm btn-outline-primary" type="button" :disabled="!otherIng" @click="addOther">Add row</button></div>
-      </div></div>
+      <!-- Expected = portions prepared x the recipe (bill of materials) the admin set for each item. The kitchen confirms
+           what was actually used: "Matches" records the expected figure, or a different amount is typed and saved.
+           Recording usage never moves stock. -->
+      <div v-if="usage && usage.rows.length" class="use-head">
+        <ul class="rec-status m-0" aria-label="Usage status">
+          <li :class="useStats.confirmed === usage.rows.length ? 'is-done' : (useStats.confirmed ? 'is-now' : '')">Confirmed <strong>[[ useStats.confirmed ]]/[[ usage.rows.length ]]</strong></li>
+          <li v-if="useStats.differ" class="is-warn">[[ useStats.differ ]] differ from expected</li>
+          <li v-if="useStats.dirty" class="is-now">[[ useStats.dirty ]] unsaved</li>
+        </ul>
+        <button v-if="toConfirm.length" class="btn btn-sm btn-outline-success" type="button" :disabled="confirming" @click="confirmAll">Confirm all as expected ([[ toConfirm.length ]])</button>
+      </div>
+      <div class="card">
+        <div class="use-formula">
+          <span><strong>Expected</strong> = portions prepared &times; recipe quantity per portion (bill of materials set by the admin). Stock is not changed.</span>
+          <button v-if="usage && usage.rows.some(r => r.sources && r.sources.length)" class="btn btn-sm btn-link p-0" type="button" @click="showAllCalc = !showAllCalc">[[ showAllCalc ? 'Hide calculations' : 'Show calculations' ]]</button>
+        </div>
+        <div v-if="usage && usage.items_without_recipe.length" class="alert alert-warning py-2 small m-3 mb-0">No recipe, so no expected usage for: [[ usage.items_without_recipe.join(', ') ]].</div>
+        <div v-if="usage && !usage.rows.length" class="p-3"><sr-empty message="Nothing prepared on this date yet, so there is no expected usage." icon="clipboard"></sr-empty></div>
+        <table v-else-if="usage" class="table use-table align-middle mb-0">
+          <thead><tr><th scope="col">Ingredient</th><th scope="col" class="text-end">Expected</th><th scope="col">Actually used</th><th scope="col" class="text-end">Difference</th><th scope="col">Note</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
+          <tbody><template v-for="r in usage.rows" :key="r.ingredient_id">
+            <tr class="use-row" :class="'is-' + useState(r)">
+              <td class="use-name"><strong>[[ r.ingredient ]]</strong><small :class="'use-state use-' + useState(r)">[[ useStateText(r) ]]</small></td>
+              <td class="use-exp text-end" data-label="Expected">
+                <button v-if="r.sources && r.sources.length" class="use-exp-btn" type="button" :aria-expanded="calcShown(r) ? 'true' : 'false'" :aria-controls="'calc-' + r.ingredient_id" @click="toggleCalc(r)"
+                        :title="'How ' + ui.qty(r.expected, r.unit) + ' is worked out'">[[ ui.qty(r.expected, r.unit) ]]<span class="use-chev" aria-hidden="true">&#9662;</span></button>
+                <span v-else class="use-exp-none">[[ ui.qty(r.expected, r.unit) ]]</span>
+                <small class="use-from">[[ r.sources && r.sources.length ? 'from ' + r.sources.length + (r.sources.length === 1 ? ' item' : ' items') : 'not in a recipe' ]]</small></td>
+              <td class="use-act" data-label="Actually used"><div class="input-group input-group-sm">
+                <input class="form-control" inputmode="decimal" :aria-label="'Actual use of ' + r.ingredient + ' in ' + r.unit"
+                       :class="{ 'is-dirty': useDirty(r) }" v-model="use[r.ingredient_id].quantity" @keydown.enter.prevent="saveUsage(r)">
+                <span class="input-group-text">[[ r.unit ]]</span></div></td>
+              <td class="use-diff text-end" data-label="Difference"><span :class="diffClass(r)">[[ diffText(r) ]]</span><small v-if="diffPct(r) !== null" class="use-pct">[[ diffPct(r) ]]</small></td>
+              <td class="use-note" data-label="Note"><input class="form-control form-control-sm" maxlength="255" placeholder="Note (optional)" :aria-label="'Note for ' + r.ingredient" v-model="use[r.ingredient_id].note"></td>
+              <td class="use-btns"><div class="d-flex gap-1 justify-content-end">
+                <button v-if="canMatch(r)" class="btn btn-sm btn-outline-success" type="button" :disabled="confirming" @click="confirmMatch(r)" :title="'Record ' + ui.qty(r.expected, r.unit) + ' as used'">Matches</button>
+                <button class="btn btn-sm" :class="useDirty(r) ? 'btn-primary' : 'btn-outline-primary'" type="button" @click="saveUsage(r)">Save</button>
+                <button v-if="r.usage_id" class="btn btn-sm btn-outline-secondary" type="button" @click="clearUsage(r)">Clear</button></div>
+                <div v-if="usageErrors[r.ingredient_id]" class="text-danger small text-end">[[ usageErrors[r.ingredient_id] ]]</div></td>
+            </tr>
+            <tr v-if="calcShown(r)" class="use-calc" :id="'calc-' + r.ingredient_id"><td colspan="6">
+              <ul class="use-calc-list">
+                <li v-for="s in r.sources" :key="s.menu_item_id"><span>[[ s.item ]]</span><span class="use-calc-math">[[ s.prepared ]] portions &times; [[ ui.qty(s.per_portion, r.unit) ]] = <strong>[[ ui.qty(s.quantity, r.unit) ]]</strong></span></li>
+                <li v-if="r.sources.length > 1" class="use-calc-total"><span>Expected</span><strong>[[ ui.qty(r.expected, r.unit) ]]</strong></li>
+              </ul></td></tr>
+          </template></tbody>
+        </table>
+        <div v-if="usage" class="use-add">
+          <select class="form-select form-select-sm" aria-label="Another ingredient" v-model.number="otherIng"><option value="">Another ingredient...</option><option v-for="g in otherIngredients" :key="g.id" :value="g.id">[[ g.name ]] ([[ g.unit ]])</option></select>
+          <button class="btn btn-sm btn-outline-primary" type="button" :disabled="!otherIng" @click="addOther">Add row</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>

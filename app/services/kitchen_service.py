@@ -372,11 +372,17 @@ def ingredient_usage_for(outlet_id: int, day) -> dict:
     if prepared:
         for line in RecipeLine.query.filter(RecipeLine.menu_item_id.in_(list(prepared))):
             recipes.setdefault(line.menu_item_id, []).append(line)
+    names = {m.id: m.name for m in MenuItem.query.filter(MenuItem.id.in_(list(prepared)))} if prepared else {}
     expected: dict = {}
+    sources: dict = {}      # where each expected figure comes from: item, portions prepared x recipe quantity (display only)
     for item_id, qty in prepared.items():
         for line in recipes.get(item_id, []):
             expected[line.ingredient_id] = expected.get(line.ingredient_id, Decimal(0)) + Decimal(int(qty)) * line.quantity_per_portion
-    no_recipe = [m.name for m in MenuItem.query.filter(MenuItem.id.in_(list(prepared))) if m.id not in recipes] if prepared else []
+            sources.setdefault(line.ingredient_id, []).append(
+                {"menu_item_id": item_id, "item": names.get(item_id, ""), "prepared": int(qty),
+                 "per_portion": float(line.quantity_per_portion),
+                 "quantity": float((Decimal(int(qty)) * line.quantity_per_portion).quantize(_Q3))})
+    no_recipe = [name for item_id, name in names.items() if item_id not in recipes]
     recorded = {u.ingredient_id: u for u in IngredientUsage.query.filter_by(outlet_id=outlet_id, usage_date=day)}
     ids = set(expected) | set(recorded)
     ings = {i.id: i for i in Ingredient.query.filter(Ingredient.id.in_(ids))} if ids else {}
@@ -387,7 +393,8 @@ def ingredient_usage_for(outlet_id: int, day) -> dict:
         rows.append({"ingredient_id": ing_id, "ingredient": ings[ing_id].name, "unit": ings[ing_id].unit,
                      "expected": float(exp_q), "recorded": float(rec.quantity) if rec else None,
                      "variance": float(rec.quantity - exp_q) if rec else None, "note": rec.note if rec else None,
-                     "usage_id": rec.id if rec else None})
+                     "usage_id": rec.id if rec else None,
+                     "sources": sorted(sources.get(ing_id, []), key=lambda s: s["item"])})
     return {"date": day.isoformat(), "rows": rows, "items_without_recipe": sorted(no_recipe),
             "prepared_items": len(prepared)}
 

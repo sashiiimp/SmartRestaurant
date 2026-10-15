@@ -109,6 +109,18 @@ def test_expected_usage_is_prepared_times_recipe(kitchen):
     assert out["items_without_recipe"] == ["Iced Milo"] and out["prepared_items"] == 3
 
 
+def test_expected_usage_shows_where_it_comes_from(kitchen):
+    by, _ = rows()
+    chicken = {s["item"]: s for s in by["Chicken"]["sources"]}
+    assert chicken["Chicken Burger"] == {"menu_item_id": chicken["Chicken Burger"]["menu_item_id"], "item": "Chicken Burger",
+                                         "prepared": 54, "per_portion": 0.12, "quantity": 6.48}    # 24 + 30 portions
+    assert chicken["Fried Chicken"]["prepared"] == 30 and chicken["Fried Chicken"]["quantity"] == 9.0
+    for r in by.values():                                       # the parts add up to the expected figure
+        assert round(sum(s["quantity"] for s in r["sources"]), 3) == r["expected"]
+    kit.record_ingredient_usage(1, {"ingredient_id": make_ingredient(name="Detergent", unit="L").id, "quantity": 1})
+    assert rows()[0]["Detergent"]["sources"] == []              # recorded without a recipe: nothing expected
+
+
 def test_record_variance_replace_and_clear(kitchen):
     w = kitchen
     first = kit.record_ingredient_usage(1, {"ingredient_id": w["chicken"].id, "quantity": "16.000", "note": "extra for a big order"})
