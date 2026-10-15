@@ -26,6 +26,11 @@ MOVED = {
     ("/inventory/stock?tab=record", "Wastage"): ("/inventory/stock?tab=record", "Stock wastage"),
     # final checks: Accept is shown only when it changes the plan ("Accept 84", or "Accept new 90" after a change)
     ("/kitchen/prep?tab=prep", "Accept [[ it.recommended_qty ]]"): ("/kitchen/prep?tab=prep", "[[ acceptLabel(it) ]]"),
+    # prep simplification (approved 16 Oct 2026): plain words for the same operations and the same API calls
+    ("/kitchen/prep?tab=prep", "Override"): ("/kitchen/prep?tab=prep", "Change plan"),
+    ("/kitchen/prep?tab=prep", "Save override"): ("/kitchen/prep?tab=prep", "Save plan"),
+    ("/kitchen/prep?tab=prep", "+ Add"): ("/kitchen/prep?tab=prep", "Add prepared"),
+    ("/kitchen/prep?tab=prep", "Mark done"): ("/kitchen/prep?tab=prep", "Finish preparation"),
 }
 
 # Removed with approval, each with the reason the capability is still there (checked by the named test).

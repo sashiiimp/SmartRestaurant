@@ -95,18 +95,21 @@ def kitchen(browser):
     assert page.locator(".card-item.accepted").first.get_by_role("button", name="Accept").count() == 0, "no second Accept once accepted"
     page.wait_for_selector(".card-item.accepted", timeout=5000)
     second = page.locator(".card-item").nth(1)
-    second.get_by_role("button", name="Override").click()
-    second.locator("input").nth(0).fill("50")
-    second.get_by_role("button", name="Save override").click()
+    second.get_by_role("button", name="Change plan").click()
+    second.locator("input").nth(0).fill("50")             # prefilled with the plan; a new figure replaces it
+    second.get_by_role("button", name="Save plan").click()
     # reason missing -> the server answers 422 and the field error appears; the form stays open
     second.locator("text=is required").first.wait_for(timeout=8000)
-    assert "Reason (required)" in second.inner_text(), "override form must stay open after the error"
+    assert "Why? (required" in second.inner_text(), "Change plan form must stay open after the error"
     second.locator("input").nth(1).fill("Rain expected")
-    second.get_by_role("button", name="Save override").click()
+    second.get_by_role("button", name="Save plan").click()
     page.wait_for_selector(".card-item.overridden", timeout=5000)
     first.locator("input[inputmode=numeric]").last.fill("24")
-    first.get_by_role("button", name="+ Add").click()
-    page.wait_for_selector("text=24", timeout=5000)
+    first.get_by_role("button", name="Add prepared").click()             # added to the total, never replaces it
+    page.wait_for_selector("text=Adds to the 24 already prepared", timeout=5000)
+    first.get_by_role("button", name="Finish preparation").click()      # asks first, showing actual against planned
+    assert "Prepared 24 of" in first.locator(".pp-confirm").inner_text(), "finish confirmation shows actual vs planned"
+    first.locator(".pp-confirm").get_by_role("button", name="Cancel").click()
     visit(page, "/kitchen/prep", "k_prep_after", wait=".card-item")
     acc, ovr = page.locator(".card-item.accepted").count(), page.locator(".card-item.overridden").count()
     assert (acc, ovr) == (1, 1), f"after reload: {acc} accepted and {ovr} overridden cards, expected 1 and 1"
@@ -169,11 +172,13 @@ def kitchen(browser):
     visit(page, "/kitchen/prep", "k_prep_desktop", wait=".prep-table")
     rows, cards = page.locator(".prep-table tbody tr").count(), page.locator(".card-item").count()
     assert rows >= 10 and cards == 0, f"desktop prep plan: {rows} table rows, {cards} cards"
-    row = page.locator(".prep-table tbody tr", has=page.get_by_role("button", name="Override")).first
-    row.get_by_role("button", name="Override").click()
-    page.wait_for_selector(".override-row", timeout=3000)
-    page.locator(".override-row").get_by_role("button", name="Cancel").click()
-    assert page.locator(".override-row").count() == 0, "Cancel must close the override row"
+    row = page.locator(".prep-table tbody tr", has=page.get_by_role("button", name="Change plan")).first
+    row.get_by_role("button", name="Change plan").click()
+    page.wait_for_selector(".change-row", timeout=3000)
+    page.locator(".change-row").get_by_role("button", name="Cancel").click()
+    assert page.locator(".change-row").count() == 0, "Cancel must close the Change plan row"
+    assert page.locator(".pp-sum").count() == 1 and page.locator(".pp-table thead").inner_text().upper().split() == \
+        ["ITEM", "RECOMMENDED", "PLANNED", "PREPARED", "REMAINING", "PREPARE"], "four figures per item"
     ctx.close()
 
 

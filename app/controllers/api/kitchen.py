@@ -6,6 +6,7 @@ from app.services import alert_service as alerts
 from app.services import dashboard_service as dash
 from app.services import inventory_service as inv
 from app.services import kitchen_service as kit
+from app.services import recommendation_service as rec
 from app.utils.dates import today
 from app.utils.responses import date_arg, int_arg, json_body, ok
 from app.utils.security import current_outlet_id, roles_required
@@ -14,7 +15,9 @@ from app.utils.security import current_outlet_id, roles_required
 @bp.route("/kitchen/prepared", methods=["POST"])
 @roles_required("kitchen")
 def prepared():
-    return ok(kit.record_prepared(current_outlet_id(), json_body(), current_user.id), status=201)
+    # the first prepared portions of an undecided item accept today's recommendation (same transaction, marked auto)
+    return ok(kit.record_prepared(current_outlet_id(), json_body(), current_user.id,
+                                  decide_first=rec.accept_on_first_prepared), status=201)
 
 
 @bp.route("/kitchen/waste", methods=["POST"])
