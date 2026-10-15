@@ -1,27 +1,55 @@
 SR.createApp({
-  data() { return { date: ui.todayIso(), d: null, alerts: [], requests: null, loading: true, error: null, ui }; },
-  async mounted() { await this.load(); },
+  data() { return { date: ui.todayIso(), d: null, alerts: [], requests: null, loading: true, error: null, ui, allAlerts: location.hash === '#alerts' }; },
+  async mounted() {
+    await this.load();
+    // the navbar bell opens /kitchen#alerts: show every open alert and scroll to them once they are drawn
+    if (location.hash === '#alerts') this.$nextTick(() => { const el = document.getElementById('alerts'); if (el) el.scrollIntoView({ block: 'start' }); });
+  },
   computed: {
     isToday() { return this.date === ui.todayIso(); },
     day() { return this.d.day; },
-    preparedPct() { const t = this.d && this.d.tiles; return t && Number(t.planned_total) ? Math.min(100, Math.round(Number(t.prepared_total) / Number(t.planned_total) * 100)) : 0; },
-    servedHint() {
+    // display only: the same figures as the plan table (planned = accepted or changed quantity, else the suggestion)
+    approvedPortions() { return this.d.plan.filter(r => ['accepted', 'overridden'].includes(r.status)).reduce((t, r) => t + Number(this.toPrepare(r) || 0), 0); },
+    suggestedPortions() { return this.d.plan.filter(r => r.status === 'suggested').reduce((t, r) => t + Number(r.recommended_qty || 0), 0); },
+    decisionHint() {
       const x = this.day;
-      if (x.served_total !== null) return 'portions served / wasted';
-      return x.wasted_total ? x.wasted_total + ' portions wasted so far' : 'record after service';
+      if (!x.items_forecast) return 'no forecast yet';
+      if (!x.undecided) return 'approved for all ' + x.items_forecast + ' items';
+      if (x.undecided === x.items_forecast) return 'suggested · not approved yet';
+      return ui.num(this.approvedPortions, 0) + ' approved · ' + ui.num(this.suggestedPortions, 0) + ' suggested';
+    },
+    preparedPct() { const t = this.d && this.d.tiles; return t && Number(t.planned_total) ? Math.min(100, Math.round(Number(t.prepared_total) / Number(t.planned_total) * 100)) : 0; },
+    preparedHint() {
+      const plan = this.day.items_forecast && !this.day.undecided ? 'approved' : 'recommended';
+      return this.preparedPct + '% of the ' + plan + ' plan · ' + this.d.tiles.items_done + ' of ' + this.d.plan.length + ' items done';
+    },
+    recorded() { return this.d.plan.filter(r => r.served !== null && r.served !== undefined).length; },
+    recordHint() {
+      const x = this.day;
+      if (x.served_total === null) return 'record after service' + (x.wasted_total ? ' · ' + x.wasted_total + ' wasted so far' : '');
+      return ui.num(x.wasted_total, 0) + ' wasted · recorded for ' + this.recorded + ' of ' + this.d.plan.length + ' items';
+    },
+    recordTone() {
+      if (this.d.plan.length && this.recorded === this.d.plan.length) return 'success';
+      if (this.recorded || (this.day.prepared_total > 0 && this.date <= ui.todayIso())) return 'warning';
+      return 'neutral';
     },
     openRequests() { return this.requests ? this.requests.filter(r => r.status === 'pending' || r.status === 'approved').length : 0; },
+    // alerts: stock-out alerts about ingredients already in the shortage table repeat it, so the preview shows the others;
+    // "Show all" lists every open alert (nothing is changed or hidden for good)
+    covered() {
+      const short = new Set(this.d.shortages.map(s => s.ingredient_id));
+      return this.alerts.filter(a => a.alert_type === 'projected_stockout' && a.entity_type === 'ingredient' && short.has(a.entity_id));
+    },
+    preview() { const c = new Set(this.covered.map(a => a.id)); return this.alerts.filter(a => !c.has(a.id)).slice(0, 3); },
     // What needs attention for this day, what the system recommends, and the page that handles it. Plain rules over
-    // the figures above; nothing is calculated anew.
+    // the figures above; nothing is calculated anew. Shortages have their own table with the Request stock action.
     actions() {
       const d = this.d, x = this.day, out = [], s = (n, one, many) => n + ' ' + (n === 1 ? one : many);
       if (d.plan.length && !x.items_forecast) out.push({ key: 'nofc', tone: 'danger', title: 'No forecast for ' + ui.date(this.date),
         detail: 'The administrator runs the forecast. You can still set quantities by hand.', action: 'Plan & prepare', href: '/kitchen/prep' });
       if (x.undecided) out.push({ key: 'decide', tone: 'warning', title: s(x.undecided, 'item needs', 'items need') + ' a preparation decision',
         detail: 'Accept the recommended quantity or change it.', action: 'Decide quantities', href: '/kitchen/prep' });
-      if (d.shortages.length) out.push({ key: 'short', tone: 'danger', title: s(d.shortages.length, 'ingredient is', 'ingredients are') + ' short for this plan',
-        detail: this.openRequests ? 'Request the missing quantity. ' + s(this.openRequests, 'request is', 'requests are') + ' already open.' : 'Request the missing quantity from inventory.',
-        action: 'Request stock', href: '/kitchen/requirements?tab=requests' });
       if (x.pre_orders.pending) out.push({ key: 'po', tone: 'warning', title: s(x.pre_orders.pending, 'pre-order waits', 'pre-orders wait') + ' for confirmation',
         detail: 'Only confirmed pre-orders count in the plan.', action: 'Pre-orders', href: '/kitchen/orders' });
       const left = Number(d.tiles.planned_total) - Number(x.prepared_total);
@@ -44,6 +72,13 @@ SR.createApp({
     },
     toPrepare(r) { return r.final_qty === null || r.final_qty === undefined ? r.recommended_qty : r.final_qty; },
     pct(r) { const t = Number(this.toPrepare(r)); return t ? Math.min(100, Math.round(Number(r.prepared) / t * 100)) : (r.prepared > 0 ? 100 : 0); },
+    // the decision on an item (recommendations.status) and, once preparation has started, its progress (prep_status)
+    decision(r) { return ['accepted', 'overridden'].includes(r.status) ? r.status : (r.status === 'no_forecast' ? 'none' : 'suggested'); },
+    state(r) { return r.prep_status === 'done' ? 'done' : (r.prep_status === 'in_progress' ? 'progress' : this.decision(r)); },
+    stateLabel(r) { return { done: 'Completed', progress: 'In progress', accepted: 'Accepted', overridden: 'Overridden', suggested: 'Suggested', none: 'No forecast' }[this.state(r)]; },
+    qtyTitle(r) {
+      return { accepted: 'Accepted recommendation', overridden: 'Changed from the recommended ' + r.recommended_qty, suggested: 'Suggested, not approved yet', none: '' }[this.decision(r)];
+    },
     async ack(a) {
       try { await api.post('/alerts/' + a.id + '/acknowledge'); await this.load(); } catch (e) { ui.toast(ui.errorText(e), 'danger'); }
     },

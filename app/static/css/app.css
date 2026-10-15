@@ -950,3 +950,35 @@ a.wf-step:focus-visible { outline: 3px solid rgba(var(--accent-rgb), .35); outli
 .rec-pre { display: block; font-size: .7rem; color: var(--accent-strong); margin-top: .15rem; white-space: nowrap; }
 .rec-pre.is-below { color: var(--danger); font-weight: 650; }
 @media (max-width: 1199.98px) { .rec-pre { text-align: center; } }
+
+/* ---- 21 kitchen dashboard (Oct 2026) ------------------------------------------------------------------------------ */
+/* Two columns: what to do and today's plan on the left; shortages, pre-orders and alerts on the right (stacked on
+   smaller screens). Suggested quantities look unapproved (muted, dashed); accepted or changed ones are firm. */
+.kd-main, .kd-side { display: flex; flex-direction: column; gap: 1rem; }
+.kd-grid .card-body { padding: 1rem 1.1rem; }
+.kd-none { margin: 0; font-size: .85rem; color: var(--muted); }
+.kd-ok::before { content: "\2713"; color: var(--success); font-weight: 700; margin-right: .4rem; }
+.stat-progress { height: 5px !important; margin-top: .4rem; }
+.plan-qty { font-variant-numeric: tabular-nums; }
+.plan-qty.is-accepted, .plan-qty.is-overridden { font-weight: 750; color: var(--text); }
+.plan-qty.is-suggested { font-weight: 500; color: var(--text-2); border-bottom: 1px dashed var(--border-strong); }
+.plan-qty.is-none { color: var(--muted); }
+.plan-was, .plan-state { display: block; font-size: .7rem; color: var(--muted); line-height: 1.2; }
+.plan-badge { display: inline-block; padding: .12rem .55rem; border-radius: 999px; font-size: .74rem; font-weight: 650; white-space: nowrap; border: 1px solid transparent; }
+.plan-badge.is-suggested { color: var(--text-2); background: transparent; border: 1px dashed var(--border-strong); }
+.plan-badge.is-accepted { color: var(--success); background: var(--success-bg); border-color: var(--success-line); }
+.plan-badge.is-overridden { color: var(--warning); background: var(--warning-bg); border-color: var(--warning-line); }
+.plan-badge.is-progress { color: var(--info); background: var(--info-bg); border-color: var(--info-line); }
+.plan-badge.is-done { color: #fff; background: var(--success); }
+.plan-badge.is-done::before { content: "\2713 "; }
+.plan-badge.is-none { color: var(--muted); background: var(--neutral-bg); }
+.short-table { font-size: .8rem; table-layout: auto; width: 100%; }
+.short-table > :not(caption) > * > * { padding: .32rem .35rem; }
+.short-table thead th { white-space: normal; font-size: .6rem; line-height: 1.2; vertical-align: bottom; }
+.short-table td { white-space: nowrap; }
+.short-table td:first-child { font-weight: 600; white-space: normal; }
+.short-table .short-by { color: var(--danger); font-weight: 700; white-space: nowrap; }
+.kd-foot { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .75rem; margin-top: .65rem; }
+.kd-foot small { color: var(--text-2); font-size: .78rem; }
+#alerts .card-head .btn-link { font-size: .82rem; font-weight: 600; text-decoration: none; }
+#alerts .kd-none + .kd-none, #alerts .alert-item + .kd-none, #alerts div + .kd-none { margin-top: .5rem; }

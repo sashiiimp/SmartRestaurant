@@ -144,6 +144,8 @@ def kitchen(browser):
     page.wait_for_selector("h2:has-text('Needs attention')", timeout=8000)
     page.wait_for_selector(".act-list, .act-clear", timeout=8000)
     assert "Not recorded" not in page.locator(".kpis").inner_text(), "served was recorded above"
+    assert page.locator(".plan-table .plan-state, .plan-table .plan-badge").count() >= 1, "plan rows show their decision"
+    assert page.locator(".short-table, .kd-ok").count() >= 1 and page.locator("#alerts").count() == 1, "shortage table and alerts"
     visit(page, "/kitchen/requirements", "k_requirements", wait="table")
     first = page.locator("tbody tr").first
     first.get_by_role("button", name="Ask inventory").click()          # one action, two choices
