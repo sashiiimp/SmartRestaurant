@@ -6,7 +6,6 @@
     <h1 class="h4 m-0">Served &amp; waste</h1>
     <sr-date-nav v-model="date" @change="load"></sr-date-nav>
   </div>
-  <p class="page-intro">After service, record what was served, wasted and used otherwise. <strong>Daily balance</strong> checks it all adds up.</p>
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
   <div class="sr-tabs" role="tablist" aria-label="End of day records" @keydown.right.prevent="moveTab(1)" @keydown.left.prevent="moveTab(-1)">
     <button v-for="t in tabs" :key="t.id" type="button" role="tab" class="sr-tab" :id="'tab-' + t.id" :aria-controls="'panel-' + t.id"
@@ -14,89 +13,92 @@
   </div>
   <sr-loading v-if="loading"></sr-loading>
   <div v-else>
-    <!-- End of day: served, food waste and other use on one page (three records, three saves) -->
+    <!-- Daily record: one row per item. Served is typed in the row and saved for all items at once; waste and other
+         use are recorded for one item at a time in the panel that opens under its row. -->
     <div v-show="tab === 'day'" class="tab-panel" role="tabpanel" id="panel-day" aria-labelledby="tab-day">
-      <!-- the order to record in; a tick means something is already recorded for this day -->
-      <ol class="req-steps eod-steps mb-3" aria-label="End of day steps">
-        <li v-for="(s, n) in eodSteps" :key="s.id" :class="s.done ? 'is-done' : ''"><a :href="'#' + s.id" @click.prevent="go(s.id)">[[ n + 1 ]] [[ s.label ]]<span v-if="s.done" aria-label="recorded"> &#10003;</span></a></li>
-      </ol>
-      <div class="card mb-3" id="sec-served"><div class="card-body">
-        <h2 class="h6">1. Portions served or sold</h2>
-        <p class="text-muted small">Total served or sold per item; blank skips. <a href="#balance" @click.prevent="setTab('balance')">Daily balance</a> shows how each item adds up.</p>
-        <div class="table-responsive served-table"><table class="table table-sm align-middle mb-0">
-          <thead><tr><th scope="col">Item</th><th scope="col" class="text-end">Prepared</th><th scope="col" class="text-end">Waste</th><th scope="col" class="col-served">Served or sold</th></tr></thead>
-          <tbody><tr v-for="i in items" :key="i.menu_item_id">
-            <td><label :for="'s' + i.menu_item_id" class="form-label m-0 fw-semibold">[[ i.name ]]</label>
-              <span v-if="i.flags.includes('served_exceeds_prepared')" class="badge text-bg-warning ms-1">served above prepared</span></td>
-            <td class="text-end">[[ i.prepared ]]</td><td class="text-end">[[ i.wasted ]]</td>
-            <td class="col-served"><input :id="'s' + i.menu_item_id" class="form-control" inputmode="numeric" placeholder="-" v-model="served[i.menu_item_id]"></td>
-          </tr></tbody>
-          <tfoot><tr><td>Total</td><td class="text-end">[[ totals.prepared ]]</td><td class="text-end">[[ totals.wasted ]]</td><td class="col-served">[[ totals.served ]]<span class="text-muted fw-normal small"> entered</span></td></tr></tfoot>
-        </table></div>
-        <sr-field-error :errors="servedErrors" name="date"></sr-field-error>
-        <sr-field-error :errors="servedErrors" name="lines"></sr-field-error>
-        <div v-for="(w, n) in servedMessages" :key="n" class="alert alert-warning py-2 small mt-2" role="status">[[ w ]]</div>
-        <div v-if="conflicts" class="alert alert-warning mt-2" role="alert">
-          A different quantity is already saved for: [[ conflicts.map(c => c.item + ' (' + c.existing + ')').join(', ') ]].
-          <button class="btn btn-sm btn-warning ms-2" type="button" @click="saveServed(true)">Overwrite</button>
+      <ul class="rec-status" aria-label="Recording status">
+        <li :class="status.servedDone ? 'is-done' : (status.served ? 'is-now' : '')">Served <strong>[[ status.served ]]/[[ items.length ]]</strong></li>
+        <li :class="totals.wasted ? 'is-done' : ''">Waste <strong>[[ totals.wasted ]]</strong></li>
+        <li :class="totals.other ? 'is-done' : ''">Other use <strong>[[ totals.other ]]</strong></li>
+        <li v-if="status.warnings" class="is-warn">[[ status.warnings ]] to check</li>
+        <li v-else-if="status.servedDone" class="is-done">Balanced</li>
+        <li v-if="dirtyCount" class="is-now">[[ dirtyCount ]] unsaved</li>
+      </ul>
+      <sr-empty v-if="!items.length" message="No menu items for this date." icon="clipboard"></sr-empty>
+      <div v-else class="card" id="sec-served">
+        <table class="table rec-table align-middle mb-0">
+          <thead><tr><th scope="col">Item</th><th scope="col" class="text-end">Prepared</th><th scope="col" class="rec-in">Sold / served</th>
+            <th scope="col" class="text-end">Wasted</th><th scope="col" class="text-end">Other use</th><th scope="col" class="text-end">Balance</th><th scope="col"><span class="visually-hidden">Waste and other use</span></th></tr></thead>
+          <tbody><template v-for="i in items" :key="i.menu_item_id">
+            <tr class="rec-row" :class="{ 'is-open': open === i.menu_item_id, 'is-warn': rowWarn(i) }">
+              <td class="rec-name"><label :for="'s' + i.menu_item_id" class="m-0">[[ i.name ]]</label>
+                <small :class="'rec-state rec-' + rowState(i)">[[ stateText(i) ]]</small></td>
+              <td class="text-end rec-num rc-prep" data-label="Prep">[[ i.prepared ]]</td>
+              <td class="rec-in" data-label="Served"><input :id="'s' + i.menu_item_id" class="form-control" inputmode="numeric" placeholder="-" autocomplete="off"
+                     :class="{ 'is-dirty': isDirty(i) }" v-model="served[i.menu_item_id]" @keydown.enter.prevent="saveServed(false)"></td>
+              <td class="text-end rec-num rc-waste" data-label="Waste">[[ i.wasted ]]</td>
+              <td class="text-end rec-num rc-other" data-label="Other">[[ i.other_use ]]</td>
+              <td class="text-end rec-bal" data-label="Balance" :title="balanceTitle(i)"><span :class="balanceClass(i)">[[ balanceText(i) ]]</span></td>
+              <td class="rec-act"><button class="btn btn-sm" :class="open === i.menu_item_id ? 'btn-primary' : 'btn-outline-secondary'" type="button"
+                      :aria-expanded="open === i.menu_item_id ? 'true' : 'false'" :aria-controls="'rec-' + i.menu_item_id" @click="toggle(i)">Waste / other</button></td>
+            </tr>
+            <tr v-if="open === i.menu_item_id" class="rec-detail" :id="'rec-' + i.menu_item_id"><td colspan="7"><div class="rec-panel">
+              <!-- food waste: every entry adds to the day's total for the item -->
+              <form class="rec-form" id="sec-waste" @submit.prevent="saveWaste">
+                <div class="rec-form-head"><strong>Waste</strong><small>[[ i.wasted ? i.wasted + ' recorded today; this adds to it' : 'Prepared portions thrown away' ]]</small></div>
+                <div class="rec-fields">
+                  <div class="rec-f-qty"><label class="form-label" for="w-qty">Portions</label>
+                    <input id="w-qty" class="form-control form-control-sm" inputmode="numeric" v-model="waste.quantity"><sr-field-error :errors="wasteErrors" name="quantity"></sr-field-error></div>
+                  <div class="rec-f-sel"><label class="form-label" for="w-reason">Reason</label>
+                    <select id="w-reason" class="form-select form-select-sm" v-model="waste.reason"><option value="overproduction">Overproduction</option><option value="quality">Quality</option><option value="expired">Expired</option><option value="other">Other</option></select></div>
+                  <div class="rec-f-note"><label class="form-label" for="w-note">Note</label><input id="w-note" class="form-control form-control-sm" maxlength="255" placeholder="Optional" v-model="waste.note"></div>
+                  <div class="rec-f-btn"><button class="btn btn-sm btn-outline-danger" type="submit" :disabled="savingWaste">Record waste</button></div>
+                </div>
+                <sr-field-error :errors="wasteErrors" name="menu_item_id"></sr-field-error><sr-field-error :errors="wasteErrors" name="date"></sr-field-error>
+              </form>
+              <!-- other use: one figure per type; recording a type again replaces it -->
+              <form class="rec-form" id="sec-other" @submit.prevent="saveFood">
+                <div class="rec-form-head"><strong>Other use</strong><small>Staff meals, complimentary, samples. Not counted as sales.</small></div>
+                <ul v-if="itemEntries(i).length" class="rec-entries">
+                  <li v-for="e in itemEntries(i)" :key="e.usage_id"><span>[[ usageLabel(e.usage_type) ]] <strong>[[ e.quantity ]]</strong><span v-if="e.note" class="text-muted"> · [[ e.note ]]</span></span>
+                    <span class="d-flex gap-1"><button class="btn btn-sm btn-link p-0 px-1" type="button" @click="editFood(e)" :aria-label="'Change ' + usageLabel(e.usage_type)">Change</button>
+                      <button class="btn btn-sm btn-link text-secondary p-0 px-1" type="button" @click="clearFood(e)">Clear</button></span></li></ul>
+                <div class="rec-fields">
+                  <div class="rec-f-sel"><label class="form-label" for="u-type">Use</label>
+                    <select id="u-type" class="form-select form-select-sm" v-model="food.usage_type" @change="prefillFood"><option v-for="t in usageTypes" :key="t" :value="t">[[ usageLabel(t) ]]</option></select>
+                    <sr-field-error :errors="foodErrors" name="usage_type"></sr-field-error></div>
+                  <div class="rec-f-qty"><label class="form-label" for="u-qty">Portions</label>
+                    <input id="u-qty" class="form-control form-control-sm" inputmode="numeric" v-model="food.quantity"><sr-field-error :errors="foodErrors" name="quantity"></sr-field-error></div>
+                  <div class="rec-f-note"><label class="form-label" for="u-note">Note</label><input id="u-note" class="form-control form-control-sm" maxlength="255" placeholder="Optional" v-model="food.note"></div>
+                  <div class="rec-f-btn"><button class="btn btn-sm btn-outline-primary" type="submit" :disabled="savingFood">Record other use</button></div>
+                </div>
+                <small v-if="replacing" class="text-muted d-block mt-1">Replaces the [[ replacing.quantity ]] recorded.</small>
+                <sr-field-error :errors="foodErrors" name="menu_item_id"></sr-field-error><sr-field-error :errors="foodErrors" name="date"></sr-field-error>
+              </form>
+            </div></td></tr>
+          </template></tbody>
+          <tfoot><tr class="rec-row"><td class="rec-name">Total</td><td class="text-end rec-num rc-prep" data-label="Prep">[[ totals.prepared ]]</td>
+            <td class="rec-in rec-num" data-label="Served">[[ totals.served ]]</td><td class="text-end rec-num rc-waste" data-label="Waste">[[ totals.wasted ]]</td>
+            <td class="text-end rec-num rc-other" data-label="Other">[[ totals.other ]]</td><td class="text-end rec-bal" data-label="Balance">[[ totals.balance === null ? '-' : totals.balance ]]</td><td class="rec-act"></td></tr></tfoot>
+        </table>
+        <!-- saving served quantities, with the overwrite confirmation; stays in view at the bottom of the screen -->
+        <div class="rec-save">
+          <sr-field-error :errors="servedErrors" name="date"></sr-field-error>
+          <sr-field-error :errors="servedErrors" name="lines"></sr-field-error>
+          <div v-for="(w, n) in servedMessages" :key="n" class="alert alert-warning py-2 small mb-2" role="status">[[ w ]]</div>
+          <div v-if="conflicts" class="alert alert-warning py-2 mb-2" role="alert">
+            A different quantity is already saved for: [[ conflicts.map(c => c.item + ' (' + c.existing + ')').join(', ') ]].
+            <button class="btn btn-sm btn-warning ms-2" type="button" @click="saveServed(true)">Overwrite</button>
+          </div>
+          <div class="d-flex align-items-center gap-3">
+            <button class="btn btn-primary btn-lg-touch" type="button" :disabled="savingServed" @click="saveServed(false)">Save served quantities</button>
+            <small class="text-muted">[[ dirtyCount ? dirtyCount + ' changed' : 'Blank skips an item' ]]</small>
+          </div>
         </div>
-        <button class="btn btn-primary btn-lg-touch mt-2" type="button" :disabled="savingServed" @click="saveServed(false)">Save served quantities</button>
-      </div></div>
-      <div class="row g-3">
-      <div class="col-12 col-lg-6">
-      <div class="card h-100" id="sec-waste"><div class="card-body">
-        <h2 class="h6">2. Food waste</h2>
-        <p class="text-muted small">Prepared portions thrown away, with a reason.</p>
-        <div class="mb-2"><label class="form-label" for="w-item">Item</label>
-          <select id="w-item" class="form-select" v-model.number="waste.menu_item_id"><option v-for="i in items" :key="i.menu_item_id" :value="i.menu_item_id">[[ i.name ]]</option></select>
-          <sr-field-error :errors="wasteErrors" name="menu_item_id"></sr-field-error></div>
-        <div class="mb-2"><label class="form-label" for="w-qty">Quantity</label>
-          <input id="w-qty" class="form-control" inputmode="numeric" v-model="waste.quantity"><sr-field-error :errors="wasteErrors" name="quantity"></sr-field-error></div>
-        <div class="mb-2"><label class="form-label" for="w-reason">Reason</label>
-          <select id="w-reason" class="form-select" v-model="waste.reason"><option value="overproduction">Overproduction</option><option value="quality">Quality</option><option value="expired">Expired</option><option value="other">Other</option></select></div>
-        <div class="mb-2"><label class="form-label" for="w-note">Note (optional)</label><input id="w-note" class="form-control" maxlength="255" v-model="waste.note"></div>
-        <sr-field-error :errors="wasteErrors" name="date"></sr-field-error>
-        <button class="btn btn-outline-danger btn-lg-touch" type="button" :disabled="savingWaste" @click="saveWaste">Record waste</button>
-      </div></div>
-      </div>
-      <div class="col-12 col-lg-6">
-      <div class="card h-100" id="sec-other"><div class="card-body">
-        <h2 class="h6">3. Other food use</h2>
-        <p class="text-muted small">Staff meals, complimentary portions, samples. Recording a type again replaces it; sales and forecast are unchanged.</p>
-        <div class="mb-2"><label class="form-label" for="u-item">Item</label>
-          <select id="u-item" class="form-select" v-model.number="food.menu_item_id"><option v-for="i in items" :key="i.menu_item_id" :value="i.menu_item_id">[[ i.name ]]</option></select>
-          <sr-field-error :errors="foodErrors" name="menu_item_id"></sr-field-error></div>
-        <div class="row g-2 mb-2">
-          <div class="col-7"><label class="form-label" for="u-type">Use</label>
-            <select id="u-type" class="form-select" v-model="food.usage_type"><option v-for="t in usageTypes" :key="t" :value="t">[[ usageLabel(t) ]]</option></select>
-            <sr-field-error :errors="foodErrors" name="usage_type"></sr-field-error></div>
-          <div class="col-5"><label class="form-label" for="u-qty">Portions</label>
-            <input id="u-qty" class="form-control" inputmode="numeric" v-model="food.quantity"><sr-field-error :errors="foodErrors" name="quantity"></sr-field-error></div>
-        </div>
-        <div class="mb-2"><label class="form-label" for="u-note">Note (optional)</label><input id="u-note" class="form-control" maxlength="255" v-model="food.note"></div>
-        <sr-field-error :errors="foodErrors" name="date"></sr-field-error>
-        <button class="btn btn-outline-primary btn-lg-touch" type="button" :disabled="savingFood" @click="saveFood">Record other use</button>
-        <ul v-if="foodUsage && foodUsage.entries.length" class="list-group list-group-flush mt-3 small">
-          <li class="list-group-item d-flex justify-content-between align-items-center px-0" v-for="e in foodUsage.entries" :key="e.usage_id">
-            <span>[[ e.item ]]: [[ usageLabel(e.usage_type) ]] [[ e.quantity ]]<span v-if="e.note" class="text-muted"> ([[ e.note ]])</span></span>
-            <button class="btn btn-sm btn-outline-secondary" type="button" @click="clearFood(e)">Clear</button></li></ul>
-      </div></div>
-      </div>
       </div>
     </div>
-    <div v-show="tab === 'balance'" class="tab-panel" role="tabpanel" id="panel-balance" aria-labelledby="tab-balance">
-      <div class="card mb-3"><div class="card-body">
-        <h2 class="h6">Daily balance</h2>
-        <p class="text-muted small">Prepared = served + waste + other use + unaccounted (negative: more used than prepared).</p>
-        <div v-if="foodUsage" class="table-responsive"><table class="table table-sm align-middle mb-0">
-          <thead><tr><th>Item</th><th class="text-end">Prepared</th><th class="text-end">Served</th><th class="text-end">Waste</th><th class="text-end">Other use</th><th class="text-end">Unaccounted</th></tr></thead>
-          <tbody><tr v-for="b in foodUsage.balance" :key="b.menu_item_id" :class="b.flags.length ? 'table-warning' : ''">
-            <td>[[ b.name ]]</td><td class="text-end">[[ b.prepared ]]</td><td class="text-end">[[ b.served === null ? '-' : b.served ]]</td>
-            <td class="text-end">[[ b.wasted ]]</td><td class="text-end">[[ b.other_total ]]</td>
-            <td class="text-end" :class="b.unaccounted < 0 ? 'text-danger fw-semibold' : ''">[[ b.unaccounted === null ? '-' : b.unaccounted ]]</td></tr></tbody></table></div>
-      </div></div>
+    <div v-show="tab === 'ingredients'" class="tab-panel" role="tabpanel" id="panel-ingredients" aria-labelledby="tab-ingredients">
       <div class="card"><div class="card-body">
-        <h2 class="h6">Ingredient usage</h2>
         <p class="text-muted small">Expected = prepared x recipe. Enter actual use where it differs; stock is not changed.</p>
         <div v-if="usage && usage.items_without_recipe.length" class="alert alert-warning py-2 small">No recipe, so no expected usage for: [[ usage.items_without_recipe.join(', ') ]].</div>
         <sr-empty v-if="usage && !usage.rows.length" message="Nothing prepared on this date yet, so there is no expected usage." icon="clipboard"></sr-empty>

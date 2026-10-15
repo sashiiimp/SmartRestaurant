@@ -114,15 +114,22 @@ def kitchen(browser):
     page.locator("input[id^=s]").first.fill("999")
     page.get_by_role("button", name="Save served quantities").click()
     page.wait_for_selector("text=served above prepared", timeout=5000)
-    page.wait_for_selector("#w-item", timeout=2000)                      # End of day: served, waste and other use on one tab
-    assert page.locator("[role=tab]").count() == 2, "End of day and Daily balance"
+    assert page.locator("[role=tab]").count() == 2, "Daily record and Ingredient usage"
+    page.wait_for_selector(".rec-row .rec-b.is-neg", timeout=3000)       # 999 served: more used than prepared
+    page.locator("input[id^=s]").nth(1).fill("1")                       # typed, not saved: must survive the waste entry
+    page.locator(".rec-row").first.get_by_role("button", name="Waste / other").click()   # waste and other use under the row
+    page.wait_for_selector(".rec-detail #w-qty", timeout=3000)
     page.fill("#w-qty", "-4")
     page.get_by_role("button", name="Record waste").click()
     page.wait_for_selector("text=must be greater than 0", timeout=5000)
     page.fill("#w-qty", "3")
     page.get_by_role("button", name="Record waste").click()
     page.wait_for_selector("text=Waste recorded", timeout=5000)
-    page.wait_for_function("document.querySelectorAll('.eod-steps li.is-done').length >= 2", timeout=5000)   # served and waste ticked
+    page.fill("#u-qty", "2")
+    page.get_by_role("button", name="Record other use").click()
+    page.wait_for_selector(".rec-entries li", timeout=5000)
+    assert page.locator("input[id^=s]").nth(1).input_value() == "1", "unsaved served quantity kept after recording waste"
+    page.wait_for_function("document.querySelectorAll('.rec-status li.is-done').length >= 2", timeout=5000)   # waste and other use
     assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth + 1"), "horizontal scroll at 390px"
     visit(page, "/kitchen", "k_dashboard", wait=".kpis")
     assert page.locator(".kpis .stat-tile").count() == 4 and page.locator(".wf").count() == 0, "kitchen figures, no shared strip"

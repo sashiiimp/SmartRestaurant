@@ -722,11 +722,6 @@ a.step:hover { border-color: rgba(var(--accent-rgb), .45); background: var(--acc
   .nav-tabs { flex-wrap: nowrap !important; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; }
   .nav-tabs .nav-link { white-space: nowrap; padding: .55rem .8rem; }
 }
-/* served & waste: entry table */
-.served-table .col-served { width: 9.5rem; }
-.served-table .col-served .form-control { max-width: 8.5rem; }
-.served-table tfoot td { font-weight: 650; }
-@media (max-width: 575.98px) { .served-table .col-served { width: 6.5rem; } .served-table .col-served .form-control { max-width: 6rem; } }
 /* phone card lists (purchasing): one card per row, the key figure or status on the right, actions underneath */
 .m-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .55rem; }
 .m-list > li { padding: .7rem .8rem; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-sm); }
@@ -811,8 +806,75 @@ a.wf-step:focus-visible { outline: 3px solid rgba(var(--accent-rgb), .35); outli
 .req-steps li { padding: .15rem .6rem; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); }
 .req-steps li.is-now { background: var(--accent-soft); border-color: rgba(var(--accent-rgb), .45); color: var(--accent-strong); }
 .req-steps li.is-done { background: var(--success-bg); border-color: var(--success-line); color: var(--success); }
-.eod-steps a { color: inherit; text-decoration: none; }
-.eod-steps a:focus-visible { outline: 2px solid rgba(var(--accent-rgb), .45); outline-offset: 3px; border-radius: 999px; }
 .req-steps small { font-weight: 500; }
 /* on phones the requirements table scrolls sideways; keep the two choices in view at the visible width */
 @media (max-width: 767.98px) { .ask-panel { position: sticky; left: .75rem; width: calc(100vw - 4.5rem); } }
+
+/* ---- 18 served & waste daily record (Oct 2026) ------------------------------------------------------------------ */
+/* One row per item: prepared, served (typed in the row), wasted, other use and the balance. Waste and other use are
+   recorded in a panel under the row. On phones each row becomes a card with the figures in one line of four. */
+.rec-status { list-style: none; display: flex; flex-wrap: wrap; gap: .4rem; margin: 0 0 .75rem; padding: 0; font-size: .8rem; font-weight: 600; }
+.rec-status li { padding: .2rem .65rem; border-radius: 999px; border: 1px solid var(--border); color: var(--text-2); background: var(--surface); }
+.rec-status strong { font-weight: 750; font-variant-numeric: tabular-nums; margin-left: .15rem; }
+.rec-status li.is-now { background: var(--accent-soft); border-color: rgba(var(--accent-rgb), .45); color: var(--accent-strong); }
+.rec-status li.is-done { background: var(--success-bg); border-color: var(--success-line); color: var(--success); }
+.rec-status li.is-warn { background: var(--danger-bg); border-color: var(--danger-line); color: var(--danger); }
+.rec-table > :not(caption) > * > * { padding: .5rem .75rem; }
+.rec-table thead th { top: var(--topbar-h, 0); }
+.rec-name label { display: block; font-weight: 650; line-height: 1.25; }
+.rec-state { display: block; font-size: .74rem; font-weight: 500; color: var(--muted); }
+.rec-state.rec-saved { color: var(--success); }
+.rec-state.rec-dirty { color: var(--accent-strong); }
+.rec-state.rec-warn { color: var(--danger); font-weight: 600; }
+.rec-num { color: var(--text-2); font-variant-numeric: tabular-nums; }
+.rec-in { width: 8.5rem; }
+.rec-in .form-control { max-width: 7.5rem; text-align: right; font-weight: 650; font-variant-numeric: tabular-nums; }
+.rec-in .form-control.is-dirty { border-color: var(--accent); background: var(--accent-soft); }
+.rec-act { width: 1%; white-space: nowrap; text-align: right; }
+.rec-b { display: inline-block; min-width: 2.2rem; padding: .1rem .45rem; border-radius: 6px; font-weight: 750; text-align: center; font-variant-numeric: tabular-nums; }
+.rec-b.is-none { color: var(--muted); font-weight: 500; }
+.rec-b.is-ok { color: var(--success); background: var(--success-bg); }
+.rec-b.is-left { color: var(--warning); background: var(--warning-bg); }
+.rec-b.is-neg { color: var(--danger); background: var(--danger-bg); }
+.rec-b.is-draft { font-style: italic; outline: 1px dashed currentColor; outline-offset: -1px; }
+.rec-row.is-warn > td:first-child { box-shadow: inset 3px 0 0 var(--danger); }
+.rec-row.is-open > td { background: var(--surface-2); border-bottom-color: transparent; }
+.rec-table tfoot td { font-weight: 700; color: var(--text); background: var(--surface-2); border-top: 1px solid var(--border-strong); }
+.rec-detail > td { background: var(--surface-2) !important; padding-top: 0 !important; }
+.rec-panel { display: grid; gap: .75rem; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: .25rem 0 .5rem; width: 0; min-width: 100%; }
+.rec-form { min-width: 0; padding: .75rem .85rem; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.rec-form-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: .1rem .6rem; margin-bottom: .5rem; }
+.rec-form-head small { color: var(--muted); font-size: .76rem; }
+.rec-fields { display: grid; gap: .5rem; grid-template-columns: 5.5rem minmax(0, 1fr) auto; grid-template-areas: "qty sel sel" "note note btn"; align-items: end; }
+.rec-f-qty { grid-area: qty; } .rec-f-sel { grid-area: sel; } .rec-f-note { grid-area: note; } .rec-f-btn { grid-area: btn; }
+.rec-name { min-width: 10rem; }
+.rec-fields .form-label { font-size: .72rem; font-weight: 600; color: var(--text-2); margin-bottom: .15rem; }
+.rec-f-btn .btn { white-space: nowrap; }
+.rec-entries { list-style: none; margin: 0 0 .5rem; padding: 0; font-size: .85rem; }
+.rec-entries li { display: flex; justify-content: space-between; align-items: center; gap: .5rem; padding: .25rem 0; border-bottom: 1px dashed var(--border); }
+.rec-save { position: sticky; bottom: 0; z-index: 2; padding: .75rem .9rem; border-top: 1px solid var(--border); background: var(--surface); border-radius: 0 0 var(--bs-card-border-radius, 12px) var(--bs-card-border-radius, 12px); }
+@media (max-width: 991.98px) { .rec-panel { grid-template-columns: 1fr; } }
+@media (max-width: 1199.98px) {
+  /* phones, tablets and narrow laptops: each item is a compact card, the name with its button, then the five figures in one line */
+  .rec-table thead { display: none; }
+  .rec-table, .rec-table tbody, .rec-table tfoot { display: block; }
+  .rec-table tr.rec-row { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); grid-template-areas: "name name name act act" "prep in waste other bal";
+    gap: .45rem .35rem; padding: .6rem .75rem; border-bottom: 1px solid var(--border); align-items: start; scroll-margin-top: calc(var(--topbar-h) + .5rem); }
+  .rec-table tr.rec-row > td { display: block; padding: 0 !important; border: 0; width: auto; text-align: center !important; background: transparent; }
+  .rec-table tr.rec-row > td[data-label]::before { content: attr(data-label); display: block; font-size: .64rem; text-transform: uppercase; letter-spacing: .03em; font-weight: 650; color: var(--muted); margin-bottom: .15rem; line-height: 1.2; }
+  .rec-table tr.rec-row > td.rec-name { grid-area: name; text-align: left !important; align-self: center; min-width: 0; }
+  .rec-table tr.rec-row > td.rec-act { grid-area: act; align-self: center; text-align: right !important; }
+  .rec-table .rc-prep { grid-area: prep; } .rec-table .rec-in { grid-area: in; } .rec-table .rc-waste { grid-area: waste; } .rec-table .rc-other { grid-area: other; } .rec-table .rec-bal { grid-area: bal; }
+  .rec-in .form-control { max-width: 7rem; margin: 0 auto; text-align: center; padding: .3rem .25rem; min-height: 2.4rem; }
+  .rec-num { font-size: 1rem; font-weight: 650; color: var(--text); line-height: 2.4rem; }
+  .rec-bal .rec-b { line-height: 1.9rem; min-width: 2.6rem; }
+  .rec-table tfoot tr.rec-row { grid-template-areas: "name name name name name" "prep in waste other bal"; }
+  .rec-table tfoot .rec-act { display: none !important; }
+  .rec-row.is-warn > td:first-child { box-shadow: none; }
+  .rec-table tr.rec-row.is-warn { box-shadow: inset 3px 0 0 var(--danger); }
+  .rec-table tr.rec-detail, .rec-table tr.rec-detail > td { display: block; padding: 0 .6rem .7rem !important; }
+  .rec-panel { width: auto; }
+  .rec-fields { grid-template-columns: 5.5rem minmax(0, 1fr); grid-template-areas: "qty sel" "note note" "btn btn"; }
+  .rec-f-btn .btn { width: 100%; }
+  .rec-save { padding: .6rem .75rem; } .rec-save .btn { flex: 1 1 auto; }
+}
