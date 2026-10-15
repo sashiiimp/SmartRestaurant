@@ -11,51 +11,66 @@
     </div>
   </div>
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
-  <sr-loading v-if="loading" :tiles="4" :cards="2"></sr-loading>
+  <sr-loading v-if="loading" :tiles="2" :cards="2"></sr-loading>
   <template v-else-if="d">
-    <!-- the day in four figures, all from the plan rows below (dashboard_service._kitchen_day); display only -->
-    <div class="kpis">
-      <sr-stat-tile :label="isToday ? 'ML forecast · today\'s demand' : 'ML forecast · predicted demand'" :value="day.items_forecast ? ui.num(day.forecast_total, 0) + ' portions' : 'No forecast'"
-                    :hint="'predicted for ' + day.items_forecast + ' of ' + day.items_total + ' items'" :tone="day.items_forecast ? 'info' : 'warning'" icon="trending" href="/kitchen/prep?tab=forecast"></sr-stat-tile>
-      <sr-stat-tile label="Recommended preparation" :value="ui.num(d.tiles.planned_total, 0) + ' portions'" :hint="decisionHint" :tone="day.undecided ? 'warning' : 'success'" icon="clipboard" href="/kitchen/prep"></sr-stat-tile>
-      <sr-stat-tile label="Prepared" :value="ui.num(day.prepared_total, 0) + ' of ' + ui.num(d.tiles.planned_total, 0)" :hint="preparedHint" :progress="preparedPct" :tone="preparedPct >= 100 ? 'success' : 'accent'" icon="check" href="/kitchen/prep"></sr-stat-tile>
-      <sr-stat-tile label="End-of-day records" :value="day.served_total === null ? 'Not recorded' : ui.num(day.served_total, 0) + ' served'" :hint="recordHint" :tone="recordTone" icon="trash" href="/kitchen/record"></sr-stat-tile>
+    <!-- the day in two figures, both from the plan rows below (dashboard_service._kitchen_day); display only.
+         Recommended = what to prepare (approved quantities plus suggestions still waiting); Prepared = progress against it. -->
+    <div class="kpis kd-kpis">
+      <sr-stat-tile label="Recommended preparation" :value="ui.num(d.tiles.planned_total, 0) + ' portions'" :tone="day.undecided ? 'warning' : 'success'" icon="clipboard" href="/kitchen/prep">
+        <div v-if="d.plan.length && day.items_forecast" class="kd-split" aria-hidden="true"><span class="is-approved" :style="{ width: approvedPct + '%' }"></span><span class="is-suggested" :style="{ width: (100 - approvedPct) + '%' }"></span></div>
+        <ul v-if="day.items_forecast" class="kd-legend">
+          <li class="is-approved"><strong>[[ ui.num(approvedPortions, 0) ]]</strong> approved</li>
+          <li class="is-suggested"><strong>[[ ui.num(suggestedPortions, 0) ]]</strong> suggested</li>
+        </ul>
+        <p v-else class="stat-hint">No forecast yet - set quantities by hand in Plan &amp; prepare.</p>
+        <span v-if="day.undecided" class="kd-pill is-wait">[[ day.undecided ]] [[ day.undecided === 1 ? 'item awaits' : 'items await' ]] approval</span>
+        <span v-else-if="day.items_forecast" class="kd-pill is-ok">All [[ day.items_forecast ]] items approved</span>
+      </sr-stat-tile>
+      <sr-stat-tile label="Prepared" :value="ui.num(day.prepared_total, 0) + ' of ' + ui.num(d.tiles.planned_total, 0) + ' portions'" :hint="preparedHint" :progress="preparedPct" :tone="preparedPct >= 100 ? 'success' : 'accent'" icon="check" href="/kitchen/prep">
+        <span v-if="toGo > 0" class="kd-pill is-neutral">[[ ui.num(toGo, 0) ]] portions still to prepare</span>
+        <span v-else-if="Number(d.tiles.planned_total) > 0" class="kd-pill is-ok">Everything prepared</span>
+      </sr-stat-tile>
     </div>
 
-    <div class="row g-3 kd-grid">
-      <div class="col-12 col-xl-8 kd-main">
-        <section class="card" aria-labelledby="na-h"><div class="card-body">
-          <h2 id="na-h" class="h6">Needs attention</h2>
-          <sr-action-list :items="actions" empty="Everything for this day is on track."></sr-action-list>
-        </div></section>
+    <!-- only when something genuinely needs doing; the approval count lives in Recommended preparation above -->
+    <section v-if="actions.length" class="card kd-attention" aria-labelledby="na-h"><div class="card-body">
+      <h2 id="na-h" class="h6">Needs attention</h2>
+      <sr-action-list :items="actions"></sr-action-list>
+    </div></section>
 
+    <div class="row g-3 kd-grid">
+      <div class="col-12 col-xl-7 kd-main">
         <section class="card" aria-labelledby="plan-h"><div class="card-body">
           <div class="card-head"><h2 id="plan-h" class="h6">[[ isToday ? "Today's plan" : 'Plan for ' + ui.date(date) ]]</h2><a href="/kitchen/prep">Plan &amp; prepare</a></div>
           <p v-if="!d.plan.length" class="kd-none">No forecast for this date yet.</p>
-          <div v-else class="table-responsive"><table class="table table-sm align-middle mb-0 plan-table">
+          <div v-else class="table-responsive"><table class="table table-sm align-middle mb-0 plan-table kd-plan">
             <thead><tr><th>Item</th><th class="text-end d-none d-sm-table-cell">Forecast</th><th class="text-end">To prepare</th><th class="col-prepared">Prepared</th><th class="d-none d-sm-table-cell">Status</th></tr></thead>
-            <tbody><tr v-for="r in d.plan" :key="r.menu_item_id">
-              <td>[[ r.name ]] <span v-if="!r.is_available" class="sr-badge sr-badge-danger ms-1">Unavailable</span></td>
-              <td class="text-end text-muted d-none d-sm-table-cell">[[ ui.num(r.forecast_qty, 0) ]]</td>
-              <td class="text-end"><span class="plan-qty" :class="'is-' + decision(r)" :title="qtyTitle(r)">[[ toPrepare(r) === null || toPrepare(r) === undefined ? '-' : toPrepare(r) ]]</span>
+            <tbody><tr v-for="r in d.plan" :key="r.menu_item_id" :class="'row-' + state(r)">
+              <td class="kd-item">[[ r.name ]] <span v-if="!r.is_available" class="sr-badge sr-badge-danger ms-1">Unavailable</span></td>
+              <td class="text-end kd-num text-muted d-none d-sm-table-cell">[[ ui.num(r.forecast_qty, 0) ]]</td>
+              <td class="text-end kd-num"><span class="plan-qty" :class="'is-' + decision(r)" :title="qtyTitle(r)">[[ toPrepare(r) === null || toPrepare(r) === undefined ? '-' : toPrepare(r) ]]</span>
                 <small v-if="decision(r) === 'overridden' && r.recommended_qty !== null" class="plan-was">was [[ r.recommended_qty ]]</small>
-                <small class="plan-state d-sm-none">[[ stateLabel(r) ]]</small></td>
-              <td><div class="prep-cell"><div class="progress progress-thin" role="progressbar" :aria-label="'Prepared for ' + r.name" :aria-valuenow="r.prepared" aria-valuemin="0" :aria-valuemax="toPrepare(r)"><div class="progress-bar" :class="r.prep_status === 'done' ? 'bg-success' : ''" :style="{ width: pct(r) + '%' }"></div></div><span>[[ r.prepared ]]</span></div></td>
+                <small class="plan-state d-sm-none" :class="'is-' + state(r)">[[ stateLabel(r) ]]</small></td>
+              <td><div class="prep-cell"><div class="progress progress-thin" role="progressbar" :aria-label="'Prepared for ' + r.name" :aria-valuenow="r.prepared" aria-valuemin="0" :aria-valuemax="toPrepare(r) || 0"><div class="progress-bar" :class="barClass(r)" :style="{ width: pct(r) + '%' }"></div></div><span>[[ r.prepared ]]</span></div></td>
               <td class="d-none d-sm-table-cell"><span class="plan-badge" :class="'is-' + state(r)">[[ stateLabel(r) ]]</span></td></tr></tbody></table></div>
-          <p v-if="d.plan.length" class="table-note">Suggested = forecast + safety buffer (or confirmed pre-orders, if higher), rounded up to a whole batch. It counts as approved only after you accept or change it.</p>
+          <p v-if="d.plan.length" class="table-note">Suggested = forecast + safety buffer (or confirmed pre-orders, if higher), rounded up to a batch. Approved once you accept or change it.</p>
         </div></section>
       </div>
 
-      <div class="col-12 col-xl-4 kd-side">
+      <div class="col-12 col-xl-5 kd-side">
         <section class="card" aria-labelledby="sh-h"><div class="card-body">
           <div class="card-head"><h2 id="sh-h" class="h6">Ingredient shortages</h2><a href="/kitchen/requirements">Ingredients &amp; requests</a></div>
-          <p v-if="!d.shortages.length" class="kd-none kd-ok">No shortages for this plan.</p>
+          <p v-if="!d.shortages.length" class="kd-none kd-ok">Enough stock for this plan.</p>
           <template v-else>
-            <div><table class="table table-sm align-middle mb-0 short-table">
+            <p class="kd-sub"><span class="kd-when" :class="isFuture ? 'is-projected' : 'is-current'">[[ isFuture ? 'Projected' : 'Current' ]]</span>[[ shortSummary ]]</p>
+            <table class="table table-sm align-middle mb-0 short-table">
               <thead><tr><th>Ingredient</th><th class="text-end">Required</th><th class="text-end">Available</th><th class="text-end">Shortage</th></tr></thead>
-              <tbody><tr v-for="s in d.shortages" :key="s.ingredient_id">
-                <td>[[ s.name ]]</td><td class="text-end">[[ ui.qty(s.required, s.unit) ]]</td><td class="text-end">[[ ui.qty(s.usable_stock, s.unit) ]]</td>
-                <td class="text-end short-by">[[ ui.qty(s.short_by, s.unit) ]]</td></tr></tbody></table></div>
+              <tbody><tr v-for="s in shortRows" :key="s.ingredient_id" :class="isOut(s) ? 'is-out' : 'is-part'">
+                <td>[[ s.name ]]</td>
+                <td class="text-end"><span class="kd-q">[[ ui.qty(s.required) ]]</span><span class="kd-u">[[ s.unit ]]</span></td>
+                <td class="text-end kd-avail" :title="isOut(s) ? 'Out of stock' : null"><span class="kd-q">[[ ui.qty(s.usable_stock) ]]</span><span class="kd-u">[[ s.unit ]]</span></td>
+                <td class="text-end short-by"><span class="kd-q">[[ ui.qty(s.short_by) ]]</span><span class="kd-u">[[ s.unit ]]</span></td></tr></tbody></table>
+            <p class="table-note">Required = [[ isFuture ? 'projected need for ' + ui.date(date) : "today's need" ]] from the plan and recipes (BOM). Available = usable stock now.</p>
             <div class="kd-foot"><a class="btn btn-primary btn-sm" href="/kitchen/requirements?tab=requests">Request stock</a>
               <small v-if="openRequests">[[ openRequests ]] [[ openRequests === 1 ? 'request is' : 'requests are' ]] already open</small></div>
           </template>
@@ -72,9 +87,12 @@
           </ul>
           <p v-if="day.pre_orders.portions" class="table-note mb-0">[[ day.pre_orders.portions ]] confirmed portions are included in the plan.</p>
         </div></section>
+      </div>
 
-        <!-- Alerts: the open alerts, acknowledged here. The preview leaves out stock-out alerts for ingredients already in
-             the shortage table above (same information); "Show all" lists every open alert. Nothing is hidden for good. -->
+      <!-- Alerts: the open alerts, acknowledged here, full width so each reads on one or two lines. The preview leaves out
+           stock-out alerts for ingredients already in the shortage table (same information); "Show all" lists every open
+           alert. Nothing is hidden for good. -->
+      <div class="col-12">
         <section class="card" id="alerts" aria-labelledby="al-h"><div class="card-body">
           <div class="card-head"><h2 id="al-h" class="h6">Alerts</h2>
             <button v-if="alerts.length && (allAlerts || alerts.length > preview.length)" class="btn btn-sm btn-link p-0" type="button" :aria-expanded="allAlerts ? 'true' : 'false'" @click="allAlerts = !allAlerts">[[ allAlerts ? 'Show fewer' : 'Show all ' + alerts.length ]]</button></div>

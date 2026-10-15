@@ -140,10 +140,10 @@ def kitchen(browser):
     assert page.locator(".use-row").first.locator(".use-d.is-ok").count() == 1, "difference 0 after Matches"
     assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth + 1"), "horizontal scroll at 390px"
     visit(page, "/kitchen", "k_dashboard", wait=".kpis")
-    assert page.locator(".kpis .stat-tile").count() == 4 and page.locator(".wf").count() == 0, "kitchen figures, no shared strip"
-    page.wait_for_selector("h2:has-text('Needs attention')", timeout=8000)
-    page.wait_for_selector(".act-list, .act-clear", timeout=8000)
-    assert "Not recorded" not in page.locator(".kpis").inner_text(), "served was recorded above"
+    assert page.locator(".kpis .stat-tile").count() == 2 and page.locator(".wf").count() == 0, "two kitchen figures, no shared strip"
+    assert page.locator(".kd-kpis .kd-pill").count() >= 1, "approval count / still to prepare on the cards"
+    assert page.get_by_text("Decide quantities").count() == 0, "no separate decision notification"
+    assert page.locator(".kd-attention").count() == 0 or page.locator(".kd-attention .act-item").count() >= 1, "Needs attention only when something is listed"
     assert page.locator(".plan-table .plan-state, .plan-table .plan-badge").count() >= 1, "plan rows show their decision"
     assert page.locator(".short-table, .kd-ok").count() >= 1 and page.locator("#alerts").count() == 1, "shortage table and alerts"
     visit(page, "/kitchen/requirements", "k_requirements", wait="table")

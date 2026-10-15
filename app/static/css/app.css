@@ -982,3 +982,71 @@ a.wf-step:focus-visible { outline: 3px solid rgba(var(--accent-rgb), .35); outli
 .kd-foot small { color: var(--text-2); font-size: .78rem; }
 #alerts .card-head .btn-link { font-size: .82rem; font-weight: 600; text-decoration: none; }
 #alerts .kd-none + .kd-none, #alerts .alert-item + .kd-none, #alerts div + .kd-none { margin-top: .5rem; }
+
+/* ---- 22 kitchen dashboard polish (Oct 2026) ----------------------------------------------------------------------- */
+/* Two figure cards (recommended vs prepared); plan beside shortages and pre-orders on wide screens, alerts full width
+   below. Approved quantities are solid, suggested ones dashed and muted, so the two never read alike. */
+.kd-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 575.98px) { .kd-kpis { grid-template-columns: minmax(0, 1fr); } }
+.kd-split { display: flex; height: 6px; margin-top: .5rem; border-radius: 99px; overflow: hidden; background: var(--neutral-bg); }
+.kd-split .is-approved { background: var(--success); }
+.kd-split .is-suggested { background: repeating-linear-gradient(90deg, var(--border-strong) 0 6px, transparent 6px 9px); }
+.kd-legend { display: flex; flex-wrap: wrap; gap: .2rem 1rem; list-style: none; margin: .45rem 0 0; padding: 0; font-size: .8rem; color: var(--text-2); }
+.kd-legend li { display: inline-flex; align-items: center; gap: .3rem; }
+.kd-legend li::before { content: ""; width: .6rem; height: .6rem; border-radius: 2px; }
+.kd-legend .is-approved::before { background: var(--success); }
+.kd-legend .is-suggested::before { border: 1.5px dashed var(--muted); }
+.kd-legend strong { color: var(--text); font-variant-numeric: tabular-nums; }
+.kd-pill { position: relative; z-index: 2; display: inline-block; margin-top: .55rem; padding: .15rem .6rem; border-radius: 999px; font-size: .75rem; font-weight: 650; border: 1px solid transparent; }
+.kd-pill.is-wait { color: var(--warning); background: var(--warning-bg); border-color: var(--warning-line); }
+.kd-pill.is-neutral { color: var(--text-2); background: var(--neutral-bg); border-color: var(--neutral-line); }
+.kd-pill.is-ok { color: var(--success); background: var(--success-bg); border-color: var(--success-line); }
+.kd-kpis .stat-tile .value { font-size: 1.55rem; }
+.kd-attention { margin-bottom: 1rem; }
+.kd-attention .card-body { padding: 1rem 1.1rem; }
+
+/* today's plan: calmer rows, numbers right-aligned in tabular figures, status chips the same width */
+.kd-plan { font-size: .9rem; }
+.kd-plan > :not(caption) > * > * { padding-top: .5rem; padding-bottom: .5rem; }
+.kd-plan thead th { font-size: .68rem; }
+.kd-plan .kd-item { font-weight: 550; }
+.kd-plan .kd-num { font-variant-numeric: tabular-nums; width: 1%; }
+.kd-plan .col-prepared { min-width: 6rem; width: 18%; }
+.kd-plan td.kd-item { white-space: normal; }
+.kd-plan .prep-cell span { min-width: 1.75rem; font-size: .85rem; color: var(--text-2); }
+.kd-plan .progress-bar.is-suggested { background: var(--border-strong); }
+.kd-plan .plan-badge { padding: .12rem .5rem; font-size: .72rem; }
+.kd-plan .plan-badge::before { margin-right: .2rem; }
+.kd-plan .plan-badge.is-done::before { content: "\2713"; }
+.kd-plan .plan-badge.is-accepted::before { content: "\2713"; }
+.kd-plan .plan-badge.is-overridden::before { content: "\270E"; }
+.kd-plan .plan-badge.is-progress::before { content: "\25D0"; }
+.kd-plan tr.row-suggested .kd-item { color: var(--text-2); font-weight: 500; }
+.plan-state.is-done, .plan-state.is-accepted { color: var(--success); font-weight: 600; }
+.plan-state.is-overridden { color: var(--warning); font-weight: 600; }
+.plan-state.is-progress { color: var(--info); font-weight: 600; }
+
+/* ingredient shortages: quantity and unit in their own aligned columns; only out-of-stock rows are marked red */
+.kd-when { margin-right: .45rem; padding: .05rem .45rem; border-radius: 999px; font-size: .66rem; font-weight: 650; vertical-align: middle; letter-spacing: .02em; text-transform: uppercase; }
+.kd-when.is-current { color: var(--text-2); background: var(--neutral-bg); }
+.kd-when.is-projected { color: var(--info); background: var(--info-bg); }
+.kd-sub { margin: 0 0 .5rem; font-size: .8rem; color: var(--text-2); }
+.kd-side .short-table { font-size: .84rem; }
+.kd-side .short-table thead th { font-size: .66rem; white-space: nowrap; }
+.kd-side .short-table > :not(caption) > * > * { padding: .4rem .4rem; }
+.short-table .kd-q { font-variant-numeric: tabular-nums; }
+.short-table .kd-u { display: inline-block; min-width: 1.6rem; margin-left: .25rem; text-align: left; font-size: .75rem; color: var(--muted); }
+.short-table .short-by { color: var(--text); font-weight: 700; }
+.short-table .short-by .kd-u { color: inherit; opacity: .75; }
+.short-table tr > td:first-child { box-shadow: inset 3px 0 0 var(--warning-line); padding-left: .6rem; }
+.short-table tr.is-out > td:first-child { box-shadow: inset 3px 0 0 var(--danger); }
+.short-table tr.is-out .kd-avail { color: var(--danger); font-weight: 650; }
+.short-table thead th:first-child { padding-left: .6rem; }
+.kd-side .table-note { margin-top: .55rem; }
+@media (max-width: 575.98px) {
+  .kd-plan { font-size: .85rem; }
+  .kd-plan .col-prepared { min-width: 5rem; }
+  .kd-side .short-table { font-size: .8rem; }
+  .kd-side .short-table > :not(caption) > * > * { padding: .35rem .25rem; }
+  .short-table .kd-u { min-width: 0; margin-left: .15rem; }
+}

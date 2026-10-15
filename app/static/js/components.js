@@ -50,14 +50,14 @@ window.SR = (function () {
       template: '<span :class="\'sr-badge sr-badge-\' + cls">[[ text ]]</span>',
     },
     'sr-stat-tile': {
-      // progress (optional, 0-100): a thin bar under the value
+      // progress (optional, 0-100): a thin bar under the value; extra content (optional) goes in the default slot
       props: ['label', 'value', 'hint', 'tone', 'href', 'icon', 'progress'],
       computed: { toneClass() { return 'tone-' + ({ success: 'success', warning: 'warning', danger: 'danger', info: 'info', neutral: 'neutral' }[this.tone] ? this.tone : 'accent'); } },
       template: `<div class="card stat-tile h-100" :class="toneClass"><div class="card-body">
         <div class="stat-top"><div class="stat-label">[[ label ]]</div><span v-if="icon" class="stat-icon"><sr-icon :name="icon" :size="18"></sr-icon></span></div>
         <div class="value" :class="{ 'value-long': String(value).length > 11 }"><a v-if="href" :href="href" class="stretched-link">[[ value ]]</a><span v-else>[[ value ]]</span></div>
         <div v-if="progress !== undefined && progress !== null" class="progress progress-thin stat-progress" role="progressbar" :aria-label="label" :aria-valuenow="progress" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" :style="{ width: progress + '%' }"></div></div>
-        <div v-if="hint" class="stat-hint">[[ hint ]]</div></div></div>`,
+        <div v-if="hint" class="stat-hint">[[ hint ]]</div><slot></slot></div></div>`,
     },
     // The six-step decision chain (Historical sales -> ... -> Food waste monitoring). Each step: { title, value, caption,
     // href, owner, mine, tone, progress }. The viewer's own steps are highlighted and link to their page; the others
