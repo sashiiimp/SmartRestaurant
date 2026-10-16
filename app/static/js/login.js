@@ -55,16 +55,16 @@
     form.classList.add('is-loading');
     if (submit) {
       submit.setAttribute('aria-disabled', 'true');
-      submit.querySelector('.btn-label').textContent = 'Logging in…';
+      submit.querySelector('.btn-label').textContent = 'Signing in…';
     }
-    if (status) status.textContent = 'Logging in, please wait.';
+    if (status) status.textContent = 'Signing in, please wait.';
   });
 
   // Coming back with the browser's Back button can restore the page from the cache in its loading state.
   window.addEventListener('pageshow', function (e) {
     if (!e.persisted) return;
     form.classList.remove('is-loading');
-    if (submit) { submit.removeAttribute('aria-disabled'); submit.querySelector('.btn-label').textContent = 'Log in'; }
+    if (submit) { submit.removeAttribute('aria-disabled'); submit.querySelector('.btn-label').textContent = 'Sign in'; }
     if (status) status.textContent = '';
   });
 })();

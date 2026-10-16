@@ -50,29 +50,15 @@ window.SR = (function () {
       template: '<span :class="\'sr-badge sr-badge-\' + cls">[[ text ]]</span>',
     },
     'sr-stat-tile': {
-      // progress (optional, 0-100): a thin bar under the value; extra content (optional) goes in the default slot
-      props: ['label', 'value', 'hint', 'tone', 'href', 'icon', 'progress'],
+      // unit (optional): shown small after the value ("782" + "portions"); flag (optional): one short status line in the
+      // tile's tone; progress (optional, 0-100): a thin bar under the value; extra content goes in the default slot
+      props: ['label', 'value', 'unit', 'hint', 'flag', 'tone', 'href', 'icon', 'progress'],
       computed: { toneClass() { return 'tone-' + ({ success: 'success', warning: 'warning', danger: 'danger', info: 'info', neutral: 'neutral' }[this.tone] ? this.tone : 'accent'); } },
       template: `<div class="card stat-tile h-100" :class="toneClass"><div class="card-body">
-        <div class="stat-top"><div class="stat-label">[[ label ]]</div><span v-if="icon" class="stat-icon"><sr-icon :name="icon" :size="18"></sr-icon></span></div>
-        <div class="value" :class="{ 'value-long': String(value).length > 11 }"><a v-if="href" :href="href" class="stretched-link">[[ value ]]</a><span v-else>[[ value ]]</span></div>
+        <div class="stat-top"><div class="stat-label">[[ label ]]</div><span v-if="icon" class="stat-icon"><sr-icon :name="icon" :size="17"></sr-icon></span></div>
+        <div class="value" :class="{ 'value-long': String(value).length > 11 }"><a v-if="href" :href="href" class="stretched-link">[[ value ]]</a><span v-else>[[ value ]]</span><span v-if="unit" class="stat-unit">[[ unit ]]</span></div>
         <div v-if="progress !== undefined && progress !== null" class="progress progress-thin stat-progress" role="progressbar" :aria-label="label" :aria-valuenow="progress" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" :style="{ width: progress + '%' }"></div></div>
-        <div v-if="hint" class="stat-hint">[[ hint ]]</div><slot></slot></div></div>`,
-    },
-    // The six-step decision chain (Historical sales -> ... -> Food waste monitoring). Each step: { title, value, caption,
-    // href, owner, mine, tone, progress }. The viewer's own steps are highlighted and link to their page; the others
-    // stay visible and muted. The role that does a step is its tooltip, so the strip stays one compact row.
-    'sr-workflow': {
-      props: ['steps', 'label'],
-      template: `<ol class="wf" :aria-label="label || 'SmartRestaurant workflow'">
-        <li v-for="(s, i) in steps" :key="i" class="wf-item">
-          <component :is="s.href ? 'a' : 'div'" :href="s.href || null" class="wf-step" :class="[s.mine ? 'is-mine' : 'is-other', s.tone ? 'wf-' + s.tone : '']" :title="s.owner || null">
-            <span class="wf-top"><span class="wf-num" aria-hidden="true">[[ i + 1 ]]</span><span class="wf-title">[[ s.title ]]</span></span>
-            <strong class="wf-value">[[ s.value ]]</strong>
-            <small v-if="s.caption" class="wf-cap">[[ s.caption ]]</small>
-            <span v-if="s.progress !== undefined && s.progress !== null" class="progress progress-thin wf-bar" role="progressbar" :aria-valuenow="s.progress" aria-valuemin="0" aria-valuemax="100" :aria-label="s.title + ' progress'"><span class="progress-bar" :style="{ width: s.progress + '%' }"></span></span>
-          </component>
-        </li></ol>`,
+        <div v-if="hint" class="stat-hint">[[ hint ]]</div><div v-if="flag" class="stat-flag">[[ flag ]]</div><slot></slot></div></div>`,
     },
     // What needs attention, what the system recommends, and the action that handles it. Each item:
     // { key, tone: danger|warning|info, title, detail, action, href }. Empty list -> a calm "all clear" line.
@@ -170,13 +156,17 @@ window.SR = (function () {
         shown() { return this.limit && !this.all ? (this.alerts || []).slice(0, this.limit) : (this.alerts || []); },
         hidden() { return this.limit ? Math.max(0, (this.alerts || []).length - this.limit) : 0; },
       },
-      methods: { icon(sev) { return { critical: 'alert', warning: 'warning' }[sev] || 'info'; } },
+      methods: {
+        icon(sev) { return { critical: 'alert', warning: 'warning' }[sev] || 'info'; },
+        // display only: stored messages carry ISO dates ("2026-10-16"); show them as the rest of the app does ("Fri 16 Oct")
+        text(m) { return String(m || '').replace(/\b(\d{4}-\d{2}-\d{2})\b/g, (x) => window.ui.date(x)); },
+      },
       template: `<div><sr-empty v-if="!alerts || !alerts.length" message="No open alerts." icon="check"></sr-empty>
         <div v-else>
           <div v-for="a in shown" :key="a.id" class="alert-item" :class="['sev-' + a.severity, a.status === 'acknowledged' ? 'is-ack' : '']">
             <span class="sev-icon"><sr-icon :name="icon(a.severity)" :size="18"></sr-icon></span>
             <div class="flex-grow-1 min-w-0">
-              <div class="alert-msg">[[ a.message ]]</div>
+              <div class="alert-msg">[[ text(a.message) ]]</div>
               <div class="alert-meta"><span class="sev-tag">[[ a.severity ]]</span><span>[[ a.alert_type.replace(/_/g, ' ') ]]</span><span v-if="a.status === 'acknowledged'">&middot; acknowledged</span>
                 <button v-if="a.status === 'open'" class="btn btn-sm btn-outline-secondary ms-auto" type="button" @click="$emit('acknowledge', a)">Acknowledge</button></div>
             </div>

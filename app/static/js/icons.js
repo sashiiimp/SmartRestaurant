@@ -39,6 +39,11 @@ window.SRIcons = (function () {
     target: [circle(12, 12, 9), circle(12, 12, 5), circle(12, 12, 1)],
     user: ['M19 20v-1.5a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4V20', circle(12, 8, 3.5)],
     search: [circle(11, 11, 6.5), 'M16 16l4.5 4.5'],
+    calendar: ['M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z', 'M4 10h16M8 3v4M16 3v4'],
+    lock: ['M6.5 10.5h11a1.5 1.5 0 0 1 1.5 1.5v7a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 19v-7a1.5 1.5 0 0 1 1.5-1.5z', 'M8 10.5V7.5a4 4 0 0 1 8 0v3'],
+    arrow: ['M5 12h14M13 6l6 6-6 6'],
+    chevron: ['M9 6l6 6-6 6'],
+    cart: ['M3 4h2l2.4 11h10.2L20 8H6.2', circle(9, 19.5, 1.2), circle(17, 19.5, 1.2)],
   };
 
   function svg(name, size) {

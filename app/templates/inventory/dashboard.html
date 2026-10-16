@@ -6,23 +6,31 @@
     <div><h1 class="h4 m-0">Inventory</h1><p class="dash-sub">[[ ui.date(today) ]]</p></div>
     <div class="dash-actions">
       <a class="btn btn-primary btn-lg-touch" href="/inventory/stock?tab=record"><sr-icon name="swap" :size="16"></sr-icon> Record stock</a>
-      <a class="btn btn-outline-primary btn-lg-touch" href="/inventory/reorder"><sr-icon name="refresh" :size="16"></sr-icon> Reorder</a>
+      <a class="btn btn-outline-primary btn-lg-touch" href="/inventory/reorder"><sr-icon name="cart" :size="16"></sr-icon> Reorder</a>
     </div>
   </div>
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
   <sr-loading v-if="loading" :tiles="4" :cards="2"></sr-loading>
   <template v-else-if="d">
-    <!-- usable stock, requests, the 7-day demand and expiry: full counts from dashboard_service.inventory_dashboard -->
+    <!-- stock, requests, purchasing and expiry: full counts from dashboard_service.inventory_dashboard -->
     <div class="kpis">
-      <sr-stat-tile label="Usable stock" :value="d.counts.ok + ' of ' + stockTotal + ' OK'" :hint="d.counts.low + ' low · ' + d.counts.out + ' out of stock'" :tone="d.counts.out ? 'danger' : (d.counts.low ? 'warning' : 'success')" icon="package" href="/inventory/stock"></sr-stat-tile>
-      <sr-stat-tile label="Kitchen requests" :value="d.pending_requests + ' waiting'" :hint="t.approved_requests + ' approved, not issued'" :tone="d.pending_requests ? 'warning' : 'success'" icon="inbox" href="/inventory/requests"></sr-stat-tile>
-      <sr-stat-tile label="Short in 7 days" :value="t.at_risk + ' ingredient' + (t.at_risk === 1 ? '' : 's')" hint="forecast x recipes vs usable stock" :tone="t.at_risk ? 'danger' : 'success'" icon="bars" href="/inventory/reorder?tab=demand"></sr-stat-tile>
-      <sr-stat-tile label="Expiry" :value="t.expired_batches + ' expired'" :hint="t.expiring_batches + ' more expire within 3 days'" :tone="t.expired_batches ? 'danger' : (t.expiring_batches ? 'warning' : 'success')" icon="clock" href="/inventory/stock?tab=record"></sr-stat-tile>
+      <sr-stat-tile label="Ingredients in stock" :value="d.counts.ok" :unit="'of ' + stockTotal + ' OK'" icon="package" href="/inventory/stock"
+        :hint="d.counts.low + ' low · ' + d.counts.out + ' out of stock'" :tone="d.counts.out ? 'danger' : (d.counts.low ? 'warning' : 'success')"
+        :flag="d.counts.out ? d.counts.out + ' out of stock' : null"></sr-stat-tile>
+      <sr-stat-tile label="Kitchen requests" :value="d.pending_requests" unit="waiting" icon="inbox" href="/inventory/requests"
+        :hint="t.approved_requests + ' approved, not issued yet'" :tone="d.pending_requests ? 'warning' : 'success'"
+        :flag="d.pending_requests ? 'Approve or reject' : null"></sr-stat-tile>
+      <sr-stat-tile label="To reorder" :value="t.reorder" :unit="t.reorder === 1 ? 'ingredient' : 'ingredients'" icon="cart" href="/inventory/reorder"
+        :hint="t.at_risk + ' run short within 7 days'" :tone="t.reorder ? 'warning' : 'success'"
+        :flag="t.po_awaiting ? t.po_awaiting + ' order' + (t.po_awaiting === 1 ? '' : 's') + ' awaiting delivery' : null"></sr-stat-tile>
+      <sr-stat-tile label="Expiry" :value="t.expired_batches" :unit="t.expired_batches === 1 ? 'expired batch' : 'expired batches'" icon="clock" href="/inventory/stock?tab=record"
+        :hint="t.expiring_batches + ' more expire within 3 days'" :tone="t.expired_batches ? 'danger' : (t.expiring_batches ? 'warning' : 'success')"
+        :flag="t.expired_batches ? 'Record as stock wastage' : null"></sr-stat-tile>
     </div>
 
-    <div class="row g-3 mb-3">
+    <div class="row g-3 dash-row">
       <section class="col-12 col-xl-7" aria-labelledby="na-h"><div class="card h-100"><div class="card-body">
-        <h2 id="na-h" class="h6">Needs attention</h2>
+        <div class="card-head"><h2 id="na-h" class="h6">Needs attention</h2><span v-if="actions.length" class="sr-badge">[[ actions.length ]]</span></div>
         <sr-action-list :items="actions" empty="Stock, requests and orders are up to date."></sr-action-list>
       </div></div></section>
       <section class="col-12 col-xl-5" aria-labelledby="rq-h"><div class="card h-100"><div class="card-body">
@@ -38,40 +46,34 @@
     </div>
 
     <div class="row g-3">
-      <div class="col-12 col-xl-7">
-        <div class="card mb-3"><div class="card-body">
-          <div class="card-head"><h2 class="h6">Reorder now</h2><a href="/inventory/reorder">All [[ t.reorder ]] suggestions</a></div>
-          <sr-empty v-if="!d.reorder.length" message="Nothing to reorder." icon="check"></sr-empty>
-          <div v-else class="table-responsive"><table class="table table-sm align-middle mb-0"><thead><tr><th>Ingredient</th><th class="text-end">Order</th><th>Supplier</th></tr></thead>
-            <tbody><tr v-for="r in d.reorder" :key="r.ingredient_id"><td class="fw-semibold">[[ r.name ]]</td><td class="text-end">[[ ui.qty(r.suggested_qty, r.unit) ]]</td><td>[[ r.supplier ]] <span class="text-muted small">· [[ r.lead_time_days ]] d lead time</span></td></tr></tbody></table></div>
-        </div></div>
-        <div class="card"><div class="card-body">
-          <div class="card-head"><h2 class="h6">Stock-out risk, next 7 days</h2><a href="/inventory/reorder?tab=demand">Ingredient demand</a></div>
-          <sr-empty v-if="!risks.length" message="Stock covers the next 7 days." icon="check"></sr-empty>
-          <div v-else>
-            <div v-for="r in risks" :key="r.name" class="risk-row">
-              <div class="risk-top"><span class="fw-semibold">[[ r.name ]]</span><span class="text-muted">have [[ ui.qty(r.usable, r.unit) ]] of [[ ui.qty(r.need, r.unit) ]] needed</span></div>
-              <div class="progress progress-thin" role="progressbar" :aria-label="r.name + ': ' + cover(r) + '% of the 7-day need is in stock'" :aria-valuenow="cover(r)" aria-valuemin="0" aria-valuemax="100">
-                <div class="progress-bar" :class="cover(r) < 50 ? 'bg-danger' : 'bg-warning'" :style="{ width: cover(r) + '%' }"></div></div>
-              <small class="text-muted">[[ cover(r) ]]% covered · short by [[ ui.qty(Math.round((r.need - r.usable) * 1000) / 1000, r.unit) ]]</small>
-            </div>
-            <p v-if="t.at_risk > risks.length" class="small text-muted mb-0 mt-2">and [[ t.at_risk - risks.length ]] more on Ingredient demand</p>
-          </div>
-        </div></div>
-      </div>
-      <div class="col-12 col-xl-5">
-        <div class="card mb-3"><div class="card-body">
-          <div class="card-head"><h2 class="h6">Expiring soon</h2><a href="/inventory/stock?tab=record">Batches</a></div>
+      <!-- the 7-day need (forecast x recipes) against usable stock, with the reorder suggestion for the same ingredient -->
+      <section class="col-12 col-xl-8" aria-labelledby="ir-h"><div class="card h-100"><div class="card-body">
+        <div class="card-head"><div><h2 id="ir-h" class="h6">Ingredient requirements</h2><p class="card-sub">Next 7 days from the forecast and recipes, against usable stock</p></div><a href="/inventory/reorder">All [[ t.reorder ]] reorder suggestions</a></div>
+        <sr-empty v-if="!needRows.length" message="Stock covers the next 7 days and nothing needs reordering." icon="check"></sr-empty>
+        <div v-else class="table-responsive"><table class="table table-sm align-middle mb-0 req-table">
+          <thead><tr><th>Ingredient</th><th class="num">Need, 7 days</th><th class="num">In stock</th><th class="d-none d-md-table-cell">Covered</th><th class="num">Order</th><th class="d-none d-lg-table-cell">Supplier</th></tr></thead>
+          <tbody><tr v-for="r in needRows" :key="r.name">
+            <td class="fw-semibold">[[ r.name ]]<span class="cell-sub d-md-none">[[ r.need === null ? 'below minimum stock' : cover(r) + '% covered' ]]</span></td>
+            <td class="num">[[ r.need === null ? '–' : ui.qty(r.need) ]]<span class="u">[[ r.unit ]]</span></td>
+            <td class="num" :class="{ 'text-danger fw-semibold': Number(r.usable) <= 0 }">[[ ui.qty(r.usable) ]]<span class="u">[[ r.unit ]]</span></td>
+            <td class="d-none d-md-table-cell"><div v-if="r.need !== null" class="cover"><div class="progress" role="progressbar" :aria-label="r.name + ': ' + cover(r) + '% of the 7-day need is in stock'" :aria-valuenow="cover(r)" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" :class="cover(r) >= 100 ? 'bg-success' : (cover(r) < 50 ? 'bg-danger' : 'bg-warning')" :style="{ width: cover(r) + '%' }"></div></div><span>[[ cover(r) ]]%</span></div></td>
+            <td class="num fw-semibold">[[ r.order ? ui.qty(r.order.suggested_qty) : '–' ]]<span v-if="r.order" class="u">[[ r.unit ]]</span></td>
+            <td class="d-none d-lg-table-cell">[[ r.order ? r.order.supplier : '' ]]<span v-if="r.order" class="cell-sub">[[ r.order.lead_time_days ]] day lead time</span></td></tr></tbody></table></div>
+        <p v-if="t.at_risk > risks.length" class="table-note mb-0">The [[ risks.length ]] largest shortfalls are shown; all [[ t.at_risk ]] are on <a href="/inventory/reorder?tab=demand">Ingredient demand</a>.</p>
+      </div></div></section>
+      <div class="col-12 col-xl-4 d-flex flex-column gap-3">
+        <section class="card" aria-labelledby="ex-h"><div class="card-body">
+          <div class="card-head"><h2 id="ex-h" class="h6">Expiring soon</h2><a href="/inventory/stock?tab=record">Batches</a></div>
           <sr-empty v-if="!d.expiring.length" message="No batches expire in the next 3 days." icon="check"></sr-empty>
           <ul v-else class="exp-list"><li v-for="b in d.expiring.slice(0, 5)" :key="b.id" :class="{ expired: b.expired }">
-            <span><strong>[[ b.ingredient ]]</strong> <small class="text-muted">[[ ui.qty(b.qty_remaining, b.unit) ]] · [[ b.batch_no ]]</small></span>
+            <span class="mini-main"><strong>[[ b.ingredient ]]</strong><small>[[ ui.qty(b.qty_remaining, b.unit) ]] · batch [[ b.batch_no ]]</small></span>
             <span :class="b.expired ? 'sr-badge sr-badge-danger' : 'exp-date'">[[ b.expired ? 'Expired ' + ui.date(b.expiry_date) : ui.date(b.expiry_date) ]]</span></li></ul>
           <a v-if="expiryTotal > 5" class="small fw-semibold" href="/inventory/stock?tab=record">See all [[ expiryTotal ]] batches</a>
-        </div></div>
-        <div class="card" id="alerts"><div class="card-body">
-          <div class="card-head"><h2 class="h6">Alerts</h2>
-            <span class="count-chips"><span class="chip chip-critical">[[ d.alert_counts.critical ]] critical</span><span class="chip chip-warning">[[ d.alert_counts.warning ]] warning</span></span></div>
-          <sr-alert-list :alerts="alerts" :limit="4" @acknowledge="ack"></sr-alert-list></div></div>
+        </div></section>
+        <section class="card flex-grow-1" id="alerts" aria-labelledby="al-h"><div class="card-body">
+          <div class="card-head"><h2 id="al-h" class="h6">Alerts</h2>
+            <span class="count-chips"><span v-if="d.alert_counts.critical" class="chip chip-critical">[[ d.alert_counts.critical ]] critical</span><span v-if="d.alert_counts.warning" class="chip chip-warning">[[ d.alert_counts.warning ]] warning</span></span></div>
+          <sr-alert-list :alerts="alerts" :limit="3" @acknowledge="ack"></sr-alert-list></div></section>
       </div>
     </div>
   </template>

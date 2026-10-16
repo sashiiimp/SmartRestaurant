@@ -1,5 +1,5 @@
 SR.createApp({
-  data() { return { d: null, alerts: [], today: ui.todayIso(), loading: true, error: null, ui }; },
+  data() { return { d: null, alerts: [], reorderAll: null, today: ui.todayIso(), loading: true, error: null, ui }; },
   async mounted() { await this.load(); },
   computed: {
     t() { return this.d.totals; },
@@ -7,6 +7,16 @@ SR.createApp({
     expiryTotal() { return this.d ? this.d.totals.expired_batches + this.d.totals.expiring_batches : 0; },
     // the ingredients whose 7-day need is above usable stock, most short first (the full list is on Ingredient demand)
     risks() { return this.d ? this.d.need_vs_stock.filter(r => Number(r.need) > Number(r.usable)) : []; },
+    // one table: each ingredient short over 7 days with its reorder suggestion, then suggestions for ingredients that are
+    // below their minimum stock without a 7-day shortfall (display only; matched by name, both lists come from the server)
+    needRows() {
+      if (!this.d) return [];
+      const all = this.reorderAll || this.d.reorder, order = new Map(all.map(r => [r.name, r]));
+      const rows = this.risks.map(r => ({ ...r, order: order.get(r.name) || null }));
+      const shown = new Set(rows.map(r => r.name));
+      all.filter(r => !shown.has(r.name)).forEach(r => rows.push({ name: r.name, unit: r.unit, need: null, usable: r.usable_stock, order: r }));
+      return rows;
+    },
     // What needs attention, what the system recommends, and the page that handles it. Plain rules over the counts
     // above; nothing is calculated anew.
     actions() {
@@ -34,6 +44,8 @@ SR.createApp({
       try { this.d = (await api.get('/dashboards/inventory')).data; } catch (e) { this.d = null; this.error = ui.errorText(e); } finally { this.loading = false; }
       // After the dashboard (never in parallel) so the alert check runs once.
       if (this.d) { try { this.alerts = (await api.get('/alerts', { status: 'open' })).data; } catch (e) { this.alerts = this.d.alerts; } }
+      // every reorder suggestion (the dashboard carries the first five), so each ingredient row shows its own suggestion
+      if (this.d) { try { this.reorderAll = (await api.get('/recommendations/reorder')).data; } catch (e) { this.reorderAll = null; } }
     },
     cover(r) { return Number(r.need) ? Math.max(0, Math.min(100, Math.round(Number(r.usable) / Number(r.need) * 100))) : 100; },
     async ack(a) { try { await api.post('/alerts/' + a.id + '/acknowledge'); await this.load(); } catch (e) { ui.toast(ui.errorText(e), 'danger'); } },

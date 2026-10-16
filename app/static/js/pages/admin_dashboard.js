@@ -112,30 +112,27 @@ SR.createApp({
       }
       return out;
     },
-    // The six steps with today's figures (all values come from the endpoints above; nothing is calculated anew)
-    chain() {
-      const d = this.d, n = v => ui.num(v, 0), wait = 'loading';
+    // Each role's work today, read-only (all values come from the endpoints above; nothing is calculated anew)
+    today() {
+      const d = this.d, n = v => ui.num(v, 0), wait = '…';
       const items = this.prep ? this.prep.items.filter(i => i.status !== 'no_forecast') : [];
       const decided = items.filter(i => i.status === 'accepted' || i.status === 'overridden').length;
       const toMake = items.reduce((t, i) => t + Number(i.final_qty ?? i.recommended_qty ?? 0), 0);
       const short = this.req ? this.req.ingredients.filter(i => i.status === 'short').length : null;
-      const w = d.waste_rate.pct, cov = d.coverage;
+      const po = d.pre_orders;
       return [
-        { title: 'Historical sales', value: n(d.sales.quantity) + ' sold', mine: true, href: '/admin/monitor?tab=sales',
-          caption: ui.money(d.sales.revenue) + ' · ' + cov.days_with_sales + '/' + cov.days + ' days', owner: 'Admin imports · kitchen records' },
-        { title: 'ML demand forecast', value: this.forecastDays ? n(d.forecast_next7_total) + ' portions' : 'No forecast', mine: true, href: '/admin/models?tab=models',
-          tone: this.forecastDays < 7 ? 'warning' : 'info',
-          caption: 'next 7 days' + (d.active_model ? ' · ' + this.algoName(d.active_model.algorithm) : ''), owner: 'Admin trains · runs daily' },
-        { title: 'Preparation recommendations', value: this.prep ? n(toMake) + ' to prepare' : (this.prep === false ? '-' : wait), mine: false, href: null,
-          caption: this.prep ? 'today · ' + decided + '/' + items.length + ' decided' : 'today', owner: 'Kitchen accepts or overrides' },
-        { title: 'BOM & ingredient requirements', value: short === null ? (this.req === false ? '-' : wait) : (short ? short + ' short' : 'All covered'), mine: true, href: '/admin/catalog?tab=bom',
-          tone: short ? 'danger' : (short === 0 ? 'success' : null),
-          caption: d.items_without_recipe.length ? d.items_without_recipe.length + ' without a recipe' : "today's plan", owner: 'Admin keeps the recipes' },
-        { title: 'Inventory decisions', value: this.reorder ? (this.reorder.length ? this.reorder.length + ' to reorder' : 'Nothing to order') : (this.reorder === false ? '-' : wait), mine: true, href: '/admin/monitor?tab=stock',
-          tone: d.stock.out ? 'danger' : (d.stock.low ? 'warning' : 'success'),
-          caption: d.stock.out + ' out · ' + d.stock.low + ' low', owner: 'Inventory manager orders' },
-        { title: 'Food waste monitoring', value: w === null ? 'No data' : ui.num(w, 1) + '% wasted', mine: true, href: '/admin/monitor?tab=waste', tone: this.wasteTone,
-          caption: 'limit ' + ui.num(d.waste_threshold_pct, 0) + '%', owner: 'Kitchen records · admin reviews' },
+        { key: 'prep', icon: 'clipboard', title: 'Kitchen preparation', href: null,
+          caption: this.prep ? decided + ' of ' + items.length + ' items approved by the kitchen' : 'Recommended from the forecast',
+          value: this.prep ? n(toMake) + ' portions' : (this.prep === false ? '–' : wait) },
+        { key: 'bom', icon: 'book', title: 'Ingredients for today', href: '/admin/catalog?tab=bom',
+          caption: d.items_without_recipe.length ? d.items_without_recipe.length + ' menu items have no recipe' : 'Plan × recipes (BOM) against stock',
+          value: short === null ? (this.req === false ? '–' : wait) : (short ? short + ' short' : 'All covered'), tone: short ? 'danger' : (short === 0 ? 'success' : null) },
+        { key: 'buy', icon: 'cart', title: 'Purchasing', href: '/admin/monitor?tab=stock',
+          caption: d.stock.out + ' out of stock · ' + d.stock.low + ' low',
+          value: this.reorder ? (this.reorder.length ? this.reorder.length + ' to reorder' : 'Nothing to order') : (this.reorder === false ? '–' : wait), tone: this.reorder && this.reorder.length ? 'warning' : null },
+        { key: 'po', icon: 'bag', title: 'Pre-orders, next 7 days', href: null,
+          caption: po.count ? po.rows.slice(0, 2).map(p => p.quantity + ' × ' + p.item + ' ' + ui.date(p.target_date)).join(', ') + (po.count > 2 ? ', …' : '') : 'Confirmed pre-orders are already in the prep plan',
+          value: po.count ? po.count + ' · ' + po.portions + ' portions' : 'None' },
       ];
     },
     // The reporting period's recorded days, then the 7 forecast days, on one axis: history as lines, prediction as bars.
@@ -150,7 +147,7 @@ SR.createApp({
         { type: 'bar', label: 'ML forecast (prediction)', data: [...blank, ...this.d.forecast_next7.map(f => f.qty)], backgroundColor: c + '59', borderColor: c, borderWidth: 1.5, order: 1 },
       ];
     },
-    activityShown() { return this.activity.slice(0, this.allActivity ? 10 : 5); },
+    activityShown() { return this.activity.slice(0, this.allActivity ? 10 : 4); },
   },
   methods: {
     shortDate(iso) { return shortDate(iso, false); },
@@ -163,8 +160,8 @@ SR.createApp({
     },
     // Loaded after the dashboard (never in parallel) so the alert check runs once.
     async loadAlerts() { try { this.alerts = (await api.get('/alerts', { status: 'open' })).data; } catch (e) { this.alerts = this.d.alerts; } },
-    // Today's prep plan, ingredient requirements and reorder suggestions for the workflow strip (read-only; the
-    // administrator may read them). Loaded one after another, after the dashboard; a failure only blanks that step.
+    // Today's prep plan, ingredient requirements and reorder suggestions for Restaurant today (read-only; the
+    // administrator may read them). Loaded one after another, after the dashboard; a failure only blanks that row.
     async loadChain() {
       const day = ui.todayIso();
       try { this.prep = (await api.get('/recommendations/prep', { date: day })).data; } catch (e) { this.prep = false; }
@@ -199,6 +196,8 @@ SR.createApp({
       const why = { cleared: 'condition no longer true', restocked: 'restocked' }[a.closed_reason] || a.closed_reason || 'closed';
       return 'Opened ' + ui.dateTime(a.created_at) + ' · closed ' + ui.dateTime(a.closed_at) + ' (' + why + ')';
     },
+    // hold-out bars: the larger of model and baseline error fills the track
+    barPct(v) { const m = Math.max(Number(this.perf.model), Number(this.perf.baseline)); return m ? Math.round(Number(v) / m * 100) : 0; },
     algoName(a) { return { xgboost: 'XGBoost', random_forest: 'Random forest', naive_lag7: 'Same day last week', seasonal_mean4: '4-week average' }[a] || a; },
     async ack(a) { try { await api.post('/alerts/' + a.id + '/acknowledge'); await this.load(); } catch (e) { ui.toast(ui.errorText(e), 'danger'); } },
   },

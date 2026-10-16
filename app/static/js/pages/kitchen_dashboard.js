@@ -11,7 +11,6 @@ SR.createApp({
     // display only: the same figures as the plan table (planned = accepted or changed quantity, else the suggestion)
     approvedPortions() { return this.d.plan.filter(r => ['accepted', 'overridden'].includes(r.status)).reduce((t, r) => t + Number(this.toPrepare(r) || 0), 0); },
     suggestedPortions() { return this.d.plan.filter(r => r.status === 'suggested').reduce((t, r) => t + Number(r.recommended_qty || 0), 0); },
-    approvedPct() { const t = this.approvedPortions + this.suggestedPortions; return t ? Math.round(this.approvedPortions / t * 100) : 0; },
     preparedPct() { const t = this.d && this.d.tiles; return t && Number(t.planned_total) ? Math.min(100, Math.round(Number(t.prepared_total) / Number(t.planned_total) * 100)) : 0; },
     toGo() { return Math.max(0, Number(this.d.tiles.planned_total) - Number(this.day.prepared_total)); },
     preparedHint() {

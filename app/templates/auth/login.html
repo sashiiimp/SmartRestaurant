@@ -1,117 +1,46 @@
 {% extends "base.html" %}
-{% block title %}Log in - SmartRestaurant{% endblock %}
+{% block title %}Sign in - SmartRestaurant{% endblock %}
 {% block content %}
-{% set day_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}
-{% set wd = business_today.weekday() %}
-<div class="auth-shell">
-  {# Left: the product story. The chart is an illustration of a week of demand, not data from the database. #}
-  <section class="auth-hero" aria-labelledby="auth-hero-title">
-    <div class="auth-hero-bg" aria-hidden="true"></div>
-    <a class="brand auth-brand" href="/"><span class="brand-mark"><i class="sr-i" data-icon="utensils" data-size="20"></i></span>
-      <span class="brand-text">SmartRestaurant<small>Forecasting &amp; inventory decision support</small></span></a>
+{# One centred card on a quiet background. Field names, ids and the CSRF token are unchanged; the controller and the
+   auth service do every real check (generic error, lockout, session). #}
+<div class="login-shell">
+  <div class="login-card">
+    <a class="login-brand" href="/"><span class="brand-mark"><i class="sr-i" data-icon="utensils" data-size="20"></i></span><span>SmartRestaurant</span></a>
+    <h1 id="auth-title">Welcome back</h1>
+    <p class="login-sub">Sign in to continue to your dashboard.</p>
 
-    <div class="auth-story">
-      <p class="auth-eyebrow"><span class="pulse-dot" aria-hidden="true"></span>Demand forecasting &middot; Preparation &middot; Inventory</p>
-      <h2 id="auth-hero-title">Every service, <span class="hl">forecast</span> <span class="nowrap">before it begins.</span></h2>
-      <p class="lead-text">Forecasts become prep plans, ingredient checks and reorder suggestions.</p>
+    {% if error %}
+    <div class="auth-alert" id="form-error" role="alert">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0-18 0"/><path d="M12 8v5M12 16.5v.01"/></svg>
+      <span>{{ error }}</span>
     </div>
+    {% endif %}
 
-    <figure class="forecast-card" aria-label="Illustrative example, not live restaurant data: three days of sales and a four-day demand forecast">
-      <figcaption class="fc-head">
-        <span class="fc-title"><i class="sr-i" data-icon="trending" data-size="16"></i>Demand outlook<span class="fc-badge">Illustrative example</span></span>
-        <span class="fc-legend" aria-hidden="true"><span class="lg lg-actual">Actual</span><span class="lg lg-forecast">Forecast</span><span class="lg lg-band">Safety buffer</span></span>
-      </figcaption>
-      <svg class="fc-chart" viewBox="0 0 550 166" aria-hidden="true" focusable="false">
-        <defs>
-          <linearGradient id="fc-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4338ca" stop-opacity=".16"/><stop offset="1" stop-color="#4338ca" stop-opacity="0"/></linearGradient>
-          <linearGradient id="fc-band" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#6366f1" stop-opacity=".06"/><stop offset="1" stop-color="#6366f1" stop-opacity=".22"/></linearGradient>
-          <linearGradient id="fc-line" x1="240" y1="0" x2="520" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#4f46e5"/><stop offset="1" stop-color="#9333ea"/></linearGradient>
-        </defs>
-        <g class="fc-grid">
-          <line x1="16" x2="534" y1="28.4" y2="28.4"/><line x1="16" x2="534" y1="64.4" y2="64.4"/><line x1="16" x2="534" y1="100.4" y2="100.4"/><line x1="16" x2="534" y1="136.4" y2="136.4"/>
-        </g>
-        <rect class="fc-future" x="240" y="14" width="294" height="122.4" rx="9"/>
-        <line class="fc-reorder" x1="16" x2="534" y1="76.4" y2="76.4"/>
-        <text class="fc-reorder-label" x="22" y="70.5">Reorder point</text>
-        <path class="fc-area" d="M30 98.8 C41.7 95.8 76.7 79.8 100 81.2 C123.3 82.6 146.7 106 170 106.8 C193.3 107.6 228.3 89.4 240 86 L240 136.4 L30 136.4 Z" fill="url(#fc-area)"/>
-        <path class="fc-band" d="M240 86 C251.7 81 286.7 64.8 310 55.6 C333.3 46.4 356.7 33.4 380 30.8 C403.3 28.2 426.7 33.8 450 40.4 C473.3 47 508.3 65.8 520 70.8 L520 107.6 C508.3 101.4 473.3 79.6 450 70.8 C426.7 62 403.3 54.6 380 54.8 C356.7 55 333.3 66.4 310 71.6 C286.7 76.8 251.7 83.6 240 86 Z" fill="url(#fc-band)"/>
-        <path class="fc-actual" d="M30 98.8 C41.7 95.8 76.7 79.8 100 81.2 C123.3 82.6 146.7 106 170 106.8 C193.3 107.6 228.3 89.4 240 86" pathLength="1"/>
-        <path class="fc-forecast" d="M240 86 C251.7 82.2 286.7 70.8 310 63.6 C333.3 56.4 356.7 44.2 380 42.8 C403.3 41.4 426.7 47.8 450 55.6 C473.3 63.4 508.3 83.6 520 89.2" stroke="url(#fc-line)"/>
-        <line class="fc-now" x1="240" x2="240" y1="14" y2="136.4"/>
-        <circle class="fc-now-dot" cx="240" cy="86.0" r="5"/>
-        <g class="fc-peak"><circle cx="380" cy="42.8" r="10" class="fc-peak-halo"/><circle cx="380" cy="42.8" r="4.5" class="fc-peak-dot"/></g>
-        <g class="fc-note">
-          <path class="fc-note-line" d="M383 33.5 L390 26"/>
-          <rect x="378" y="4" width="142" height="22" rx="11"/>
-          <text x="449" y="19" text-anchor="middle">{{ day_names[(wd + 2) % 7] }} peak &middot; prep early</text>
-        </g>
-        <g class="fc-days">
-          {% for k in range(8) %}<text x="{{ 30 + k * 70 }}" y="158" text-anchor="middle"{% if k == 3 %} class="is-today"{% endif %}>{{ 'Today' if k == 3 else day_names[(wd + k - 3) % 7] }}</text>{% endfor %}
-        </g>
-      </svg>
-
-      <ol class="flow" aria-label="How one forecast reaches each role">
-        <li class="flow-step role-admin"><span class="flow-ic"><i class="sr-i" data-icon="layers" data-size="16"></i></span><span><strong>Forecast</strong><small>Administrator</small></span></li>
-        <li class="flow-step role-kitchen"><span class="flow-ic"><i class="sr-i" data-icon="clipboard" data-size="16"></i></span><span><strong>Prep plan</strong><small>Food Production</small></span></li>
-        <li class="flow-step role-inventory"><span class="flow-ic"><i class="sr-i" data-icon="package" data-size="16"></i></span><span><strong>Reorder</strong><small>Inventory &amp; Procurement</small></span></li>
-      </ol>
-    </figure>
-
-    <p class="auth-foot">CSE5015 project &middot; Team ForeSight &middot; demonstration system running on synthetic data</p>
-  </section>
-
-  {# Right: the form. Field names, ids and the CSRF token are unchanged; the controller and service do all checks. #}
-  <section class="auth-panel" aria-labelledby="auth-title">
-    <div class="auth-card">
-      <a class="auth-mobile-brand" href="/"><span class="brand-mark"><i class="sr-i" data-icon="utensils" data-size="18"></i></span>SmartRestaurant</a>
-      <div class="auth-docket">
-        <div class="docket-top">
-          <span class="docket-tag"><i class="sr-i" data-icon="shield" data-size="14"></i>Staff sign-in</span>
-          <time class="docket-date" datetime="{{ business_today.isoformat() }}">Service day &middot; {{ day_names[wd] }} {{ business_today.day }} {{ business_today.strftime('%b') }}</time>
-        </div>
-        <h1 id="auth-title">Welcome back</h1>
-        <p class="sub">Log in and your role dashboard opens automatically.</p>
-
-        {% if error %}
-        <div class="auth-alert" id="form-error" role="alert">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0-18 0"/><path d="M12 8v5M12 16.5v.01"/></svg>
-          <span>{{ error }}</span>
-        </div>
-        {% endif %}
-
-        <form method="post" id="login-form" novalidate>
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <div class="field">
-            <label class="field-label" for="username">Username</label>
-            <div class="field-control">
-              <span class="field-ic" aria-hidden="true"><i class="sr-i" data-icon="user" data-size="18"></i></span>
-              <input class="field-input" id="username" name="username" value="{{ username }}" autocomplete="username" autocapitalize="none" spellcheck="false" required autofocus
-                     aria-describedby="username-msg{{ ' form-error' if error else '' }}"{% if error %} aria-invalid="true"{% endif %}>
-            </div>
-            <p class="field-msg" id="username-msg" hidden></p>
-          </div>
-          <div class="field">
-            <label class="field-label" for="password">Password</label>
-            <div class="field-control">
-              <span class="field-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg></span>
-              <input class="field-input" id="password" name="password" type="password" autocomplete="current-password" required
-                     aria-describedby="password-msg caps-msg{{ ' form-error' if error else '' }}"{% if error %} aria-invalid="true"{% endif %}>
-              <button class="pw-toggle" id="pw-toggle" type="button" aria-label="Show password" aria-pressed="false" aria-controls="password"><i class="sr-i" data-icon="eye" data-size="18"></i></button>
-            </div>
-            <p class="field-msg" id="password-msg" hidden></p>
-            <p class="field-hint" id="caps-msg" hidden>Caps Lock is on</p>
-          </div>
-          <button class="auth-submit" id="login-submit" type="submit">
-            <span class="btn-spinner" aria-hidden="true"></span>
-            <span class="btn-label">Log in</span>
-            <svg class="btn-arrow" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-          </button>
-          <p class="visually-hidden" id="login-status" aria-live="polite"></p>
-        </form>
+    <form method="post" id="login-form" novalidate aria-labelledby="auth-title">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="field">
+        <label class="field-label" for="username">Username</label>
+        <input class="field-input" id="username" name="username" value="{{ username }}" autocomplete="username" autocapitalize="none" spellcheck="false" required autofocus
+               aria-describedby="username-msg{{ ' form-error' if error else '' }}"{% if error %} aria-invalid="true"{% endif %}>
+        <p class="field-msg" id="username-msg" hidden></p>
       </div>
-      <p class="auth-note"><i class="sr-i" data-icon="clock" data-size="14"></i>Sessions end after 30 minutes idle. Accounts are created by the administrator.</p>
-    </div>
-  </section>
+      <div class="field">
+        <label class="field-label" for="password">Password</label>
+        <div class="field-control">
+          <input class="field-input" id="password" name="password" type="password" autocomplete="current-password" required
+                 aria-describedby="password-msg caps-msg{{ ' form-error' if error else '' }}"{% if error %} aria-invalid="true"{% endif %}>
+          <button class="pw-toggle" id="pw-toggle" type="button" aria-label="Show password" aria-pressed="false" aria-controls="password"><i class="sr-i" data-icon="eye" data-size="18"></i></button>
+        </div>
+        <p class="field-msg" id="password-msg" hidden></p>
+        <p class="field-hint" id="caps-msg" hidden>Caps Lock is on</p>
+      </div>
+      <button class="login-submit" id="login-submit" type="submit">
+        <span class="btn-spinner" aria-hidden="true"></span><span class="btn-label">Sign in</span>
+      </button>
+      <p class="visually-hidden" id="login-status" aria-live="polite"></p>
+    </form>
+    <p class="login-foot">For administrator, kitchen and inventory staff. Accounts are created by the administrator.</p>
+  </div>
 </div>
 {% endblock %}
 {% block scripts %}<script src="{{ url_for('static', filename='js/login.js') }}"></script>{% endblock %}
