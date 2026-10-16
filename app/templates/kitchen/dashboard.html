@@ -53,7 +53,7 @@
                 <small class="plan-state d-sm-none" :class="'is-' + state(r)">[[ stateLabel(r) ]]</small></td>
               <td><div class="prep-cell"><div class="progress progress-thin" role="progressbar" :aria-label="'Prepared for ' + r.name" :aria-valuenow="r.prepared" aria-valuemin="0" :aria-valuemax="toPrepare(r) || 0"><div class="progress-bar" :class="barClass(r)" :style="{ width: pct(r) + '%' }"></div></div><span>[[ r.prepared ]]</span></div></td>
               <td class="d-none d-sm-table-cell"><span class="plan-badge" :class="'is-' + state(r)">[[ stateLabel(r) ]]</span></td></tr></tbody></table></div>
-          <p v-if="d.plan.length" class="table-note">Suggested = forecast + safety buffer (or confirmed pre-orders, if higher), rounded up to a batch. Approved once you accept or change it.</p>
+          <p v-if="d.plan.length" class="table-note">Suggested = forecast + safety buffer (or confirmed pre-orders, if higher), rounded up to a batch. Approved when the first portions are added, or when you change it.</p>
         </div></section>
       </div>
 

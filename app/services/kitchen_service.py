@@ -10,6 +10,7 @@ from app.models.kitchen import FOOD_USAGE_TYPES, WASTE_REASONS
 from app.models.sales import ORDER_STATUSES, PREORDER_STATUSES
 from app.services import audit
 from app.services import data_management_service as dm
+from app.services import inventory_service as inv
 from app.services.errors import ConflictError, NotFoundError, ValidationError
 from app.services.validation import Fields
 from app.utils.dates import today
@@ -47,8 +48,33 @@ def collected_pre_orders(outlet_id: int, day) -> dict:
     return {i: int(q) for i, q in rows}
 
 
-def record_prepared(outlet_id: int, data: dict, actor_id: int | None = None) -> dict:
-    """K5: several entries per item and day are summed."""
+def _retry_on_duplicate(fn):
+    """Two cooks can add the first portions of an undecided item at the same moment: both accept it automatically and
+    the second insert fails on the unique (item, date) plan key. Roll the whole entry back and run it again on a fresh
+    snapshot, where the other request's plan exists, so the portions are recorded exactly once and no plan is lost."""
+    import functools
+
+    from sqlalchemy.exc import IntegrityError
+
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        for attempt in range(3):
+            try:
+                return fn(*args, **kwargs)
+            except IntegrityError:
+                db.session.rollback()
+                if attempt == 2:
+                    raise
+    return wrapper
+
+
+@inv._retry_on_conflict
+@_retry_on_duplicate
+def record_prepared(outlet_id: int, data: dict, actor_id: int | None = None, decide_first=None) -> dict:
+    """K5: several entries per item and day are summed (each entry is added to the total, never replaces it).
+    decide_first(outlet_id, item, day, actor_id), when given, is called for an item without a plan and may add one in
+    this transaction (the API passes recommendation_service.accept_on_first_prepared; the kitchen service does not call
+    the recommendation service itself, see test_architecture)."""
     f = Fields(data)
     item_id = f.integer("menu_item_id", gt=0)
     day = f.date("date", not_future=True)
@@ -57,15 +83,21 @@ def record_prepared(outlet_id: int, data: dict, actor_id: int | None = None) -> 
     item = dm.get_menu_item(outlet_id, item_id)
     db.session.add(PreparationRecord(outlet_id=outlet_id, menu_item_id=item.id, prep_date=day, quantity=qty,
                                      prepared_at=utcnow(), created_by=actor_id))
-    # K4: the first prepared quantity starts a planned item; a finished item stays done (the extra entry is a correction)
+    # K4: the first prepared quantity starts a planned item; a finished item stays done (the extra entry is a correction).
+    # An undecided item (today, active, with a forecast) is accepted at the current recommendation by decide_first.
     plan = Recommendation.query.filter_by(outlet_id=outlet_id, menu_item_id=item.id, target_date=day).first()
-    if plan is not None and plan.prep_status == "planned":
+    auto = None
+    if plan is None:
+        if decide_first is not None:
+            auto = decide_first(outlet_id, item, day, actor_id)
+    elif plan.prep_status == "planned":
         plan.prep_status, plan.prep_started_at = "in_progress", utcnow()
     audit.record(outlet_id, actor_id, "prepared.record", "menu_item", item.id,
                  {"item": item.name, "date": day.isoformat(), "quantity": qty})
     db.session.commit()
     return {"menu_item_id": item.id, "date": day.isoformat(), "added": qty,
-            "total_prepared": _prepared_total(outlet_id, item.id, day)}
+            "total_prepared": _prepared_total(outlet_id, item.id, day),
+            "auto_accepted": {"final_qty": auto.final_qty} if auto is not None else None}
 
 
 def record_served(outlet_id: int, data: dict, actor_id: int | None = None) -> dict:

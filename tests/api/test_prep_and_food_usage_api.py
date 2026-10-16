@@ -58,3 +58,17 @@ def test_food_usage_over_http_and_roles(app, users):
     uid = got["entries"][0]["usage_id"]
     assert kitchen.delete(f"/api/v1/kitchen/food-usage/{uid}").status_code == 200
     assert kitchen.delete(f"/api/v1/kitchen/food-usage/{uid}").status_code == 404
+
+
+def test_first_prepared_entry_accepts_automatically_over_http(app, users):
+    """PREP-AUTO over HTTP: the response says the plan was accepted; the plan row says it was automatic; inventory
+    users still cannot record prepared portions."""
+    burger = make_item(name="Chicken Burger", batch_size=6)
+    add_forecast(burger, TODAY, "47.3")
+    kitchen, inventory = as_user(app, users, "kitchen"), as_user(app, users, "inventory")
+    body = {"menu_item_id": burger.id, "date": TODAY.isoformat(), "quantity": 12}
+    assert inventory.post("/api/v1/kitchen/prepared", json=body).status_code == 403
+    r = kitchen.post("/api/v1/kitchen/prepared", json=body)
+    assert r.status_code == 201 and r.get_json()["data"]["auto_accepted"] == {"final_qty": 54}
+    item = kitchen.get("/api/v1/recommendations/prep", query_string={"date": TODAY.isoformat()}).get_json()["data"]["items"][0]
+    assert (item["status"], item["final_qty"], item["prep_status"], item["decision_source"]) == ("accepted", 54, "in_progress", "auto")

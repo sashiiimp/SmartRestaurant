@@ -29,6 +29,11 @@ MOVED = {
     # BOM visibility (approved 16 Oct 2026): the ingredient form is one shared component (same fields, same API calls)
     ("/inventory/stock?tab=levels", "Save"): ("/inventory/stock?tab=levels", "(ingredient form with Save and Cancel)"),
     ("/inventory/stock?tab=levels", "Cancel"): ("/inventory/stock?tab=levels", "(ingredient form with Save and Cancel)"),
+    # prep simplification (approved 16 Oct 2026): plain words for the same operations and the same API calls
+    ("/kitchen/prep?tab=prep", "Override"): ("/kitchen/prep?tab=prep", "Change plan"),
+    ("/kitchen/prep?tab=prep", "Save override"): ("/kitchen/prep?tab=prep", "Save plan"),
+    ("/kitchen/prep?tab=prep", "+ Add"): ("/kitchen/prep?tab=prep", "Add prepared"),
+    ("/kitchen/prep?tab=prep", "Mark done"): ("/kitchen/prep?tab=prep", "Finish preparation"),
 }
 
 # Roles widened with approval: (method, path) -> roles now. Every role that had access still has it.

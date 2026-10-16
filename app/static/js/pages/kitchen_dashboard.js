@@ -64,9 +64,9 @@ SR.createApp({
     // the decision on an item (recommendations.status) and, once preparation has started, its progress (prep_status)
     decision(r) { return ['accepted', 'overridden'].includes(r.status) ? r.status : (r.status === 'no_forecast' ? 'none' : 'suggested'); },
     state(r) { return r.prep_status === 'done' ? 'done' : (r.prep_status === 'in_progress' ? 'progress' : this.decision(r)); },
-    stateLabel(r) { return { done: 'Completed', progress: 'In progress', accepted: 'Accepted', overridden: 'Overridden', suggested: 'Suggested', none: 'No forecast' }[this.state(r)]; },
+    stateLabel(r) { return { done: 'Completed', progress: 'In progress', accepted: 'Accepted', overridden: 'Changed', suggested: 'Suggested', none: 'No forecast' }[this.state(r)]; },
     qtyTitle(r) {
-      return { accepted: 'Accepted recommendation', overridden: 'Changed from the recommended ' + r.recommended_qty, suggested: 'Suggested, not approved yet', none: '' }[this.decision(r)];
+      return { accepted: 'Accepted recommendation', overridden: 'Plan changed from the recommended ' + r.recommended_qty, suggested: 'Suggested, not approved yet', none: '' }[this.decision(r)];
     },
     async ack(a) {
       try { await api.post('/alerts/' + a.id + '/acknowledge'); await this.load(); } catch (e) { ui.toast(ui.errorText(e), 'danger'); }

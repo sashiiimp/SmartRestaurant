@@ -7,133 +7,137 @@
     <sr-date-nav v-model="date" @change="load"></sr-date-nav>
   </div>
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
-  <p v-if="plan" class="page-note">Recommended = forecast + [[ plan.buffer_pct ]]% safety buffer, or the pre-ordered portions if that is higher, rounded up to whole batches. The forecast predicts total demand, which already includes pre-orders, so they are not added on top.<span v-if="anyWeatherEstimated"> Weather for this date is the seasonal average.</span><span v-if="plan.model" class="text-muted"> Model [[ plan.model ]].</span></p>
+  <p v-if="plan" class="page-note">Recommended = forecast + [[ plan.buffer_pct ]]% safety buffer (or confirmed pre-orders, if higher), rounded up to whole batches. Adding the first prepared portions accepts the recommendation.<span v-if="anyWeatherEstimated"> Weather is the seasonal average.</span><span v-if="plan.model" class="text-muted"> Model [[ plan.model ]].</span></p>
   <sr-loading v-if="loading"></sr-loading>
-  <div v-if="!loading && items.length" class="count-chips mb-3" aria-label="Plan summary">
-    <span class="chip chip-info">[[ items.length ]] items</span>
-    <span class="chip chip-info">[[ totalRecommended ]] portions recommended</span>
-    <span class="chip" :class="decided === withForecast ? 'chip-info' : 'chip-warning'">[[ decided ]] of [[ withForecast ]] decided</span>
-    <span class="chip chip-info">[[ totalPrepared ]] prepared</span>
+
+  <!-- the day in four figures (display only, from the rows below) -->
+  <div v-if="!loading && items.length" class="pp-sum" aria-label="Plan summary">
+    <div><span class="pp-l">Recommended</span><strong>[[ ui.num(totals.recommended, 0) ]]</strong></div>
+    <div><span class="pp-l">Planned</span><strong>[[ ui.num(totals.planned, 0) ]]</strong><small :class="decided < withForecast ? 'is-wait' : ''">[[ decided ]] of [[ withForecast ]] approved</small></div>
+    <div><span class="pp-l">Prepared</span><strong>[[ ui.num(totals.prepared, 0) ]]</strong><small>[[ finished ]] of [[ withForecast ]] finished</small></div>
+    <div><span class="pp-l">Remaining</span><strong>[[ ui.num(totals.remaining, 0) ]]</strong></div>
+    <div class="pp-sum-bar progress progress-thin" role="progressbar" aria-label="Prepared of planned, all items" :aria-valuenow="totals.pct" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" :style="{ width: totals.pct + '%' }"></div></div>
   </div>
-  <!-- Desktop: one row per item, so recommendations can be compared down the columns. Same actions as the cards below. -->
+
+  <!-- Desktop: one row per item. Same actions as the cards below. -->
   <div v-if="!loading && wide && items.length" class="table-responsive prep-table-wrap">
-    <table class="table align-middle prep-table">
-      <thead><tr><th>Item</th><th class="text-end">Forecast</th><th class="text-end">Recommended</th><th>Plan</th><th>Decide</th><th>Prepared</th></tr></thead>
+    <table class="table align-middle prep-table pp-table">
+      <thead><tr><th>Item</th><th class="text-end">Recommended</th><th>Planned</th><th>Prepared</th><th class="text-end">Remaining</th><th>Prepare</th></tr></thead>
       <tbody>
         <template v-for="it in items" :key="it.menu_item_id">
           <tr :class="'row-' + it.status">
             <td class="pt-name"><strong>[[ it.name ]]</strong><span v-if="!it.is_available" class="sr-badge sr-badge-danger ms-1">Unavailable</span>
-              <small v-if="it.preorder_qty" class="d-block text-muted">[[ it.preorder_qty ]] pre-ordered (already in the forecast)</small>
-              <small v-if="it.forecast_method === 'baseline'" class="d-block text-muted">Simple estimate (same day last week)</small>
-              <button class="btn btn-link btn-sm p-0 avail-btn" :class="it.is_available ? 'text-danger' : 'text-success'" type="button" :disabled="st(it.menu_item_id).busy" @click="toggleAvailable(it)">[[ it.is_available ? 'Mark unavailable' : 'Mark available' ]]</button></td>
-            <td class="text-end pt-num">[[ it.status === 'no_forecast' ? '-' : ui.num(it.forecast_qty, 1) ]]</td>
+              <small v-if="it.preorder_qty" class="pp-note">[[ it.preorder_qty ]] pre-ordered · the plan never goes below this</small>
+              <small v-if="it.forecast_method === 'baseline'" class="pp-note">Simple estimate (same day last week)</small>
+              <button class="btn btn-link btn-sm p-0 avail-btn" type="button" :disabled="st(it.menu_item_id).busy" @click="toggleAvailable(it)">[[ it.is_available ? 'Mark unavailable' : 'Mark available' ]]</button></td>
             <td class="text-end"><template v-if="it.status !== 'no_forecast'"><span class="pt-rec">[[ it.recommended_qty ]]</span>
-              <details class="calc calc-inline"><summary>How?</summary><span class="small">[[ ui.num(it.forecast_qty, 1) ]] + [[ it.buffer_pct ]]% = [[ ui.num(it.forecast_qty * (1 + it.buffer_pct / 100), 1) ]]<span v-if="it.preorder_qty"> (or [[ it.preorder_qty ]] pre-ordered, if higher)</span>, rounded up to a multiple of [[ it.batch_size ]] = [[ it.recommended_qty ]]</span></details></template>
+              <details class="calc calc-inline"><summary>How?</summary><span class="small">[[ ui.num(it.forecast_qty, 1) ]] forecast + [[ it.buffer_pct ]]% = [[ ui.num(it.forecast_qty * (1 + it.buffer_pct / 100), 1) ]]<span v-if="it.preorder_qty"> (or [[ it.preorder_qty ]] pre-ordered, if higher)</span>, rounded up to a multiple of [[ it.batch_size ]] = [[ it.recommended_qty ]]</span></details></template>
               <span v-else class="text-muted small">No forecast</span></td>
-            <td><sr-status-badge :status="it.status"></sr-status-badge>
-              <div v-if="it.status === 'accepted' || it.status === 'overridden'" class="small mt-1"><strong>[[ it.final_qty ]]</strong> to prepare<span v-if="it.status === 'accepted' && it.final_qty !== it.recommended_qty" class="text-warning"> (now [[ it.recommended_qty ]])</span></div>
-              <div v-if="it.override_reason" class="small text-muted">[[ it.override_reason ]]</div></td>
-            <td class="text-nowrap"><template v-if="it.status !== 'no_forecast' && !isPast && it.prep_status !== 'done'">
-              <button v-if="acceptLabel(it)" class="btn btn-sm btn-success me-1" type="button" :disabled="st(it.menu_item_id).busy" @click="decide(it, 'accept')">[[ acceptLabel(it) ]]</button>
-              <button class="btn btn-sm btn-outline-secondary" type="button" :aria-expanded="st(it.menu_item_id).overriding ? 'true' : 'false'" @click="st(it.menu_item_id).overriding = !st(it.menu_item_id).overriding">Override</button></template>
+            <td class="pp-plan">
+              <template v-if="it.status !== 'no_forecast'">
+                <div class="pp-plan-top"><span class="pp-num" :class="{ 'is-suggested': it.status === 'suggested' }">[[ planned(it) ]]</span><span class="pp-chip" :class="'is-' + decisionKey(it)">[[ decisionLabel(it) ]]</span></div>
+                <small v-if="moved(it)" class="pp-moved">Recommendation is now [[ it.recommended_qty ]]</small>
+                <small v-if="it.override_reason" class="pp-note">Why: [[ it.override_reason ]]</small>
+                <div v-if="canDecide(it)" class="pp-btns">
+                  <button v-if="acceptLabel(it)" class="btn btn-sm btn-outline-warning" type="button" :disabled="st(it.menu_item_id).busy" @click="decide(it, 'accept')">[[ acceptLabel(it) ]]</button>
+                  <button class="btn btn-sm btn-outline-secondary" type="button" :aria-expanded="st(it.menu_item_id).changing ? 'true' : 'false'" @click="openChange(it)">Change plan</button></div>
+              </template>
               <span v-else class="text-muted small">-</span></td>
-            <td class="pt-prep">
-              <div class="d-flex align-items-center gap-2"><div class="progress progress-thin flex-grow-1" role="progressbar" :aria-label="'Preparation progress for ' + it.name" :aria-valuenow="it.prepared_so_far" aria-valuemin="0" :aria-valuemax="it.final_qty || 0"><div class="progress-bar" :class="it.prep_status === 'done' ? 'bg-success' : ''" :style="{ width: progress(it) + '%' }"></div></div>
-                <span class="small text-nowrap"><strong>[[ it.prepared_so_far ]]</strong><span v-if="it.final_qty !== null"> / [[ it.final_qty ]]</span></span><sr-status-badge v-if="it.prep_status" :status="it.prep_status"></sr-status-badge></div>
-              <div class="d-flex gap-1 mt-1 align-items-center">
-                <input class="form-control form-control-sm pt-add" inputmode="numeric" placeholder="Qty" :aria-label="'Add prepared quantity for ' + it.name" v-model="st(it.menu_item_id).add" @keyup.enter="addPrepared(it)">
-                <button class="btn btn-sm btn-outline-primary" type="button" :disabled="st(it.menu_item_id).busy" @click="addPrepared(it)">+ Add</button>
-                <template v-if="it.prep_status && !isFuture">
-                  <button v-if="it.prep_status !== 'done'" class="btn btn-sm btn-outline-success" type="button" :disabled="st(it.menu_item_id).busy" @click="prepStatus(it, 'done')">Mark done</button>
-                  <button v-if="it.prep_status === 'done'" class="btn btn-sm btn-outline-secondary" type="button" :disabled="st(it.menu_item_id).busy" @click="prepStatus(it, 'reopen')">Reopen</button>
-                </template></div>
+            <td class="pp-prepared"><span class="pp-num">[[ it.prepared_so_far ]]</span>
+              <div v-if="planned(it) !== null" class="progress progress-thin" role="progressbar" :aria-label="'Prepared of planned for ' + it.name" :aria-valuenow="it.prepared_so_far" aria-valuemin="0" :aria-valuemax="planned(it) || 0"><div class="progress-bar" :class="barClass(it)" :style="{ width: progress(it) + '%' }"></div></div></td>
+            <td class="text-end pp-rem"><span :class="'pp-t-' + remaining(it).tone">[[ remaining(it).text ]]</span></td>
+            <td class="pp-act">
+              <template v-if="!isFuture">
+                <div class="input-group input-group-sm pp-add">
+                  <input class="form-control" inputmode="numeric" placeholder="+ portions" :aria-label="'Portions to add for ' + it.name" v-model="st(it.menu_item_id).add" @keyup.enter="addPrepared(it)">
+                  <button class="btn btn-outline-primary" type="button" :disabled="st(it.menu_item_id).busy" @click="addPrepared(it)">Add prepared</button></div>
+                <small class="pp-hint">[[ addHint(it) ]]</small>
+                <button v-if="it.prep_status && it.prep_status !== 'done' && it.prepared_so_far > 0" class="btn btn-sm btn-outline-success mt-1" type="button" :disabled="st(it.menu_item_id).busy" @click="askFinish(it)">Finish preparation</button>
+                <button v-if="it.prep_status === 'done'" class="btn btn-sm btn-outline-secondary mt-1" type="button" :disabled="st(it.menu_item_id).busy" @click="prepStatus(it, 'reopen')">Reopen</button>
+              </template>
+              <span v-else class="text-muted small">Prepared portions are recorded on the day.</span>
               <sr-field-error :errors="st(it.menu_item_id).errors" name="quantity"></sr-field-error>
               <sr-field-error :errors="st(it.menu_item_id).errors" name="date"></sr-field-error>
               <div v-if="st(it.menu_item_id).message && !Object.keys(st(it.menu_item_id).errors).length" class="text-danger small mt-1" role="alert">[[ st(it.menu_item_id).message ]]</div></td>
           </tr>
-          <tr v-if="st(it.menu_item_id).overriding" class="override-row"><td colspan="6">
+          <tr v-if="st(it.menu_item_id).changing" class="change-row"><td colspan="6">
             <div class="row g-2 align-items-end">
-              <div class="col-3"><label class="form-label mb-1" :for="'q' + it.menu_item_id">Quantity to prepare for [[ it.name ]]</label><input :id="'q' + it.menu_item_id" class="form-control" inputmode="numeric" v-model="st(it.menu_item_id).qty"><sr-field-error :errors="st(it.menu_item_id).errors" name="final_qty"></sr-field-error></div>
-              <div class="col-6"><label class="form-label mb-1" :for="'r' + it.menu_item_id">Reason (required)</label><input :id="'r' + it.menu_item_id" class="form-control" v-model="st(it.menu_item_id).reason" maxlength="255"><sr-field-error :errors="st(it.menu_item_id).errors" name="reason"></sr-field-error></div>
-              <div class="col-3 d-flex gap-2"><button class="btn btn-warning flex-fill" type="button" :disabled="st(it.menu_item_id).busy" @click="decide(it, 'override')">Save override</button><button class="btn btn-outline-secondary" type="button" @click="st(it.menu_item_id).overriding = false">Cancel</button></div>
+              <div class="col-3"><label class="form-label mb-1" :for="'q' + it.menu_item_id">New plan for [[ it.name ]] (higher or lower)</label><input :id="'q' + it.menu_item_id" class="form-control" inputmode="numeric" v-model="st(it.menu_item_id).qty"><sr-field-error :errors="st(it.menu_item_id).errors" name="final_qty"></sr-field-error></div>
+              <div class="col-6"><label class="form-label mb-1" :for="'r' + it.menu_item_id">Why? (required, e.g. school event)</label><input :id="'r' + it.menu_item_id" class="form-control" v-model="st(it.menu_item_id).reason" maxlength="255"><sr-field-error :errors="st(it.menu_item_id).errors" name="reason"></sr-field-error></div>
+              <div class="col-3 d-flex gap-2"><button class="btn btn-warning flex-fill" type="button" :disabled="st(it.menu_item_id).busy" @click="decide(it, 'override')">Save plan</button><button class="btn btn-outline-secondary" type="button" @click="st(it.menu_item_id).changing = false">Cancel</button></div>
+            </div></td></tr>
+          <tr v-if="st(it.menu_item_id).finishing" class="finish-row"><td colspan="6">
+            <div class="pp-confirm" role="alertdialog" :aria-label="'Finish preparation of ' + it.name">
+              <span><strong>Finish preparation of [[ it.name ]]?</strong> Prepared <strong>[[ it.prepared_so_far ]]</strong> of <strong>[[ planned(it) ]]</strong> planned · [[ finishGap(it) ]]</span>
+              <span class="d-flex gap-2"><button class="btn btn-sm btn-success" type="button" :disabled="st(it.menu_item_id).busy" @click="prepStatus(it, 'done')">Finish preparation</button><button class="btn btn-sm btn-outline-secondary" type="button" @click="st(it.menu_item_id).finishing = false">Cancel</button></span>
             </div></td></tr>
         </template>
       </tbody>
     </table>
   </div>
+
   <!-- Phone and tablet: one card per item -->
   <div v-else-if="!loading" class="row g-3">
     <div class="col-12 col-md-6 col-xl-4" v-for="it in items" :key="it.menu_item_id">
       <div class="card card-item h-100" :class="it.status">
         <div class="card-body">
-          <div class="d-flex justify-content-between align-items-start">
+          <div class="d-flex justify-content-between align-items-start gap-2">
             <h2 class="h6 mb-1">[[ it.name ]] <span v-if="!it.is_available" class="sr-badge sr-badge-danger ms-1">Unavailable</span></h2>
-            <sr-status-badge :status="it.status"></sr-status-badge>
+            <span v-if="it.status !== 'no_forecast'" class="pp-chip" :class="'is-' + decisionKey(it)">[[ decisionLabel(it) ]]</span>
           </div>
-          <template v-if="it.status === 'no_forecast'">
-            <p class="text-muted mb-2">No forecast yet for this date.</p>
-          </template>
-          <template v-else>
-            <div class="prep-figures">
-              <div><span class="pf-label">Forecast</span><span class="pf-forecast">[[ ui.num(it.forecast_qty, 1) ]]</span></div>
-              <div class="text-end"><span class="pf-label">Recommended</span><span class="pf-rec">[[ it.recommended_qty ]]</span></div>
-            </div>
-            <p v-if="it.preorder_qty" class="small mb-1">[[ it.preorder_qty ]] portions pre-ordered (confirmed or collected). The plan never goes below this.</p>
-            <p v-if="it.forecast_method === 'baseline'" class="small text-muted mb-1">Simple estimate (same day last week).</p>
+          <p v-if="it.status === 'no_forecast'" class="text-muted mb-2">No forecast yet for this date.</p>
+          <div class="pp-figs">
+            <div><span class="pp-l">Recommended</span><strong>[[ it.status === 'no_forecast' ? '-' : it.recommended_qty ]]</strong></div>
+            <div><span class="pp-l">Planned</span><strong :class="{ 'is-suggested': it.status === 'suggested' }">[[ planned(it) === null ? '-' : planned(it) ]]</strong></div>
+            <div><span class="pp-l">Prepared</span><strong>[[ it.prepared_so_far ]]</strong></div>
+            <div><span class="pp-l">Remaining</span><strong :class="'pp-t-' + remaining(it).tone">[[ remaining(it).text ]]</strong></div>
+          </div>
+          <div v-if="planned(it) !== null" class="progress progress-thin mb-2" role="progressbar" :aria-label="'Prepared of planned for ' + it.name" :aria-valuenow="it.prepared_so_far" aria-valuemin="0" :aria-valuemax="planned(it) || 0"><div class="progress-bar" :class="barClass(it)" :style="{ width: progress(it) + '%' }"></div></div>
+          <p v-if="it.preorder_qty" class="pp-note mb-1">[[ it.preorder_qty ]] pre-ordered (confirmed or collected) · the plan never goes below this</p>
+          <p v-if="it.forecast_method === 'baseline'" class="pp-note mb-1">Simple estimate (same day last week)</p>
+          <p v-if="moved(it)" class="pp-moved mb-1">Recommendation is now [[ it.recommended_qty ]]</p>
+          <p v-if="it.override_reason" class="pp-note mb-1">Why: [[ it.override_reason ]]</p>
+          <div v-if="it.status !== 'no_forecast'" class="pp-card-row">
             <details class="calc">
-              <summary>How was this worked out?</summary>
-              <dl class="row mb-0 small">
-                <dt class="col-7 fw-normal text-muted">Forecast</dt><dd class="col-5 text-end mb-0">[[ ui.num(it.forecast_qty, 1) ]]</dd>
-                <dt class="col-7 fw-normal text-muted">Safety buffer</dt><dd class="col-5 text-end mb-0">+[[ it.buffer_pct ]]%</dd>
-                <dt class="col-7 fw-normal text-muted">Pre-orders (confirmed or collected)</dt><dd class="col-5 text-end mb-0">[[ it.preorder_qty ]]</dd>
-                <dt class="col-7 fw-normal text-muted">Batch size</dt><dd class="col-5 text-end mb-0">[[ it.batch_size ]]</dd>
-              </dl>
-              <p class="small text-muted mb-0 mt-1">[[ ui.num(it.forecast_qty, 1) ]] + [[ it.buffer_pct ]]% = [[ ui.num(it.forecast_qty * (1 + it.buffer_pct / 100), 1) ]]<span v-if="it.preorder_qty"> (or [[ it.preorder_qty ]] pre-ordered, if higher)</span>, rounded up to a multiple of [[ it.batch_size ]] = [[ it.recommended_qty ]].</p>
+              <summary>How was [[ it.recommended_qty ]] worked out?</summary>
+              <p class="small text-muted mb-0 mt-1">[[ ui.num(it.forecast_qty, 1) ]] forecast + [[ it.buffer_pct ]]% = [[ ui.num(it.forecast_qty * (1 + it.buffer_pct / 100), 1) ]]<span v-if="it.preorder_qty"> (or [[ it.preorder_qty ]] pre-ordered, if higher)</span>, rounded up to a multiple of [[ it.batch_size ]] = [[ it.recommended_qty ]].</p>
             </details>
-            <div v-if="it.status !== 'suggested'" class="alert alert-light border py-2 small">
-              <strong>[[ it.status === 'accepted' ? 'Accepted' : 'Overridden' ]]: [[ it.final_qty ]]</strong>
-              <span v-if="it.status === 'accepted' && it.final_qty !== it.recommended_qty" class="text-warning"> (recommendation is now [[ it.recommended_qty ]])</span>
-              <div v-if="it.override_reason">Reason: [[ it.override_reason ]]</div>
-            </div>
-            <div v-if="!isPast && it.prep_status !== 'done'" class="d-flex gap-2 mb-2">
-              <button v-if="acceptLabel(it)" class="btn btn-success btn-lg-touch flex-fill" type="button" :disabled="st(it.menu_item_id).busy" @click="decide(it, 'accept')">[[ acceptLabel(it) ]]</button>
-              <button class="btn btn-outline-secondary btn-lg-touch flex-fill" type="button" @click="st(it.menu_item_id).overriding = !st(it.menu_item_id).overriding">Override</button>
-            </div>
-            <div v-if="st(it.menu_item_id).overriding" class="border rounded p-2 mb-2">
-              <label class="form-label small mb-1" :for="'q' + it.menu_item_id">Quantity to prepare</label>
-              <input :id="'q' + it.menu_item_id" class="form-control mb-1" inputmode="numeric" v-model="st(it.menu_item_id).qty">
-              <sr-field-error :errors="st(it.menu_item_id).errors" name="final_qty"></sr-field-error>
-              <label class="form-label small mb-1 mt-2" :for="'r' + it.menu_item_id">Reason (required)</label>
-              <input :id="'r' + it.menu_item_id" class="form-control mb-1" v-model="st(it.menu_item_id).reason" maxlength="255">
-              <sr-field-error :errors="st(it.menu_item_id).errors" name="reason"></sr-field-error>
-              <button class="btn btn-warning btn-lg-touch w-100 mt-2" type="button" :disabled="st(it.menu_item_id).busy" @click="decide(it, 'override')">Save override</button>
-            </div>
-          </template>
-          <div class="border-top pt-2 mt-2 d-flex justify-content-between align-items-center small">
-            <span class="text-muted">[[ it.is_available ? 'On the menu' : 'Not on the menu today' ]]</span>
-            <button class="btn btn-sm" :class="it.is_available ? 'btn-outline-danger' : 'btn-outline-success'" type="button" :disabled="st(it.menu_item_id).busy" @click="toggleAvailable(it)">[[ it.is_available ? 'Mark unavailable' : 'Mark available' ]]</button>
+            <button v-if="canDecide(it)" class="btn btn-sm btn-outline-secondary" type="button" :aria-expanded="st(it.menu_item_id).changing ? 'true' : 'false'" @click="openChange(it)">Change plan</button>
           </div>
-          <div class="border-top pt-2 mt-2">
-            <div class="d-flex justify-content-between align-items-center small">
-              <span>Prepared so far</span>
-              <span><strong>[[ it.prepared_so_far ]]</strong><span v-if="it.final_qty !== null"> of [[ it.final_qty ]]</span>
-                <sr-status-badge v-if="it.prep_status" class="ms-1" :status="it.prep_status"></sr-status-badge></span>
-            </div>
-            <div v-if="it.prep_status" class="progress mt-1" style="height: 6px" role="progressbar" :aria-label="'Preparation progress for ' + it.name"
-                 :aria-valuenow="it.prepared_so_far" aria-valuemin="0" :aria-valuemax="it.final_qty">
-              <div class="progress-bar" :class="it.prep_status === 'done' ? 'bg-success' : ''" :style="{ width: progress(it) + '%' }"></div></div>
-            <div v-if="it.prep_status && !isFuture" class="d-flex gap-2 mt-2">
-              <button v-if="it.prep_status !== 'done'" class="btn btn-sm btn-outline-success" type="button" :disabled="st(it.menu_item_id).busy" @click="prepStatus(it, 'done')">Mark done</button>
-              <button v-if="it.prep_status === 'done'" class="btn btn-sm btn-outline-secondary" type="button" :disabled="st(it.menu_item_id).busy" @click="prepStatus(it, 'reopen')">Reopen</button>
-            </div>
-            <div class="input-group mt-1">
-              <input class="form-control" inputmode="numeric" placeholder="Quantity" :aria-label="'Add prepared quantity for ' + it.name" v-model="st(it.menu_item_id).add" @keyup.enter="addPrepared(it)">
-              <button class="btn btn-outline-primary btn-lg-touch" type="button" :disabled="st(it.menu_item_id).busy" @click="addPrepared(it)">+ Add</button>
-            </div>
+          <button v-if="canDecide(it) && acceptLabel(it)" class="btn btn-outline-warning btn-lg-touch w-100 mb-2" type="button" :disabled="st(it.menu_item_id).busy" @click="decide(it, 'accept')">[[ acceptLabel(it) ]]</button>
+          <div v-if="st(it.menu_item_id).changing" class="border rounded p-2 mb-2">
+            <label class="form-label small mb-1" :for="'q' + it.menu_item_id">New plan (higher or lower)</label>
+            <input :id="'q' + it.menu_item_id" class="form-control mb-1" inputmode="numeric" v-model="st(it.menu_item_id).qty">
+            <sr-field-error :errors="st(it.menu_item_id).errors" name="final_qty"></sr-field-error>
+            <label class="form-label small mb-1 mt-2" :for="'r' + it.menu_item_id">Why? (required, e.g. school event)</label>
+            <input :id="'r' + it.menu_item_id" class="form-control mb-1" v-model="st(it.menu_item_id).reason" maxlength="255">
+            <sr-field-error :errors="st(it.menu_item_id).errors" name="reason"></sr-field-error>
+            <div class="d-flex gap-2 mt-2"><button class="btn btn-warning btn-lg-touch flex-fill" type="button" :disabled="st(it.menu_item_id).busy" @click="decide(it, 'override')">Save plan</button>
+              <button class="btn btn-outline-secondary btn-lg-touch" type="button" @click="st(it.menu_item_id).changing = false">Cancel</button></div>
+          </div>
+          <div class="border-top pt-2 mt-1">
+            <template v-if="!isFuture">
+              <div class="input-group">
+                <input class="form-control" inputmode="numeric" placeholder="+ portions" :aria-label="'Portions to add for ' + it.name" v-model="st(it.menu_item_id).add" @keyup.enter="addPrepared(it)">
+                <button class="btn btn-outline-primary btn-lg-touch" type="button" :disabled="st(it.menu_item_id).busy" @click="addPrepared(it)">Add prepared</button>
+              </div>
+              <small class="pp-hint">[[ addHint(it) ]]</small>
+              <div v-if="st(it.menu_item_id).finishing" class="pp-confirm mt-2" role="alertdialog" :aria-label="'Finish preparation of ' + it.name">
+                <span><strong>Finish preparation?</strong> Prepared <strong>[[ it.prepared_so_far ]]</strong> of <strong>[[ planned(it) ]]</strong> planned · [[ finishGap(it) ]]</span>
+                <span class="d-flex gap-2"><button class="btn btn-sm btn-success" type="button" :disabled="st(it.menu_item_id).busy" @click="prepStatus(it, 'done')">Finish preparation</button><button class="btn btn-sm btn-outline-secondary" type="button" @click="st(it.menu_item_id).finishing = false">Cancel</button></span>
+              </div>
+              <div v-else-if="it.prep_status" class="d-flex gap-2 mt-2">
+                <button v-if="it.prep_status !== 'done' && it.prepared_so_far > 0" class="btn btn-sm btn-outline-success" type="button" :disabled="st(it.menu_item_id).busy" @click="askFinish(it)">Finish preparation</button>
+                <button v-if="it.prep_status === 'done'" class="btn btn-sm btn-outline-secondary" type="button" :disabled="st(it.menu_item_id).busy" @click="prepStatus(it, 'reopen')">Reopen</button>
+              </div>
+            </template>
+            <small v-else class="text-muted">Prepared portions are recorded on the day.</small>
             <sr-field-error :errors="st(it.menu_item_id).errors" name="quantity"></sr-field-error>
             <sr-field-error :errors="st(it.menu_item_id).errors" name="date"></sr-field-error>
             <div v-if="st(it.menu_item_id).message && !Object.keys(st(it.menu_item_id).errors).length" class="text-danger small mt-1" role="alert">[[ st(it.menu_item_id).message ]]</div>
           </div>
+          <div class="pp-avail"><span>[[ it.is_available ? 'On the menu' : 'Not on the menu today' ]]</span>
+            <button class="btn btn-link btn-sm p-0" type="button" :disabled="st(it.menu_item_id).busy" @click="toggleAvailable(it)">[[ it.is_available ? 'Mark unavailable' : 'Mark available' ]]</button></div>
         </div>
       </div>
     </div>

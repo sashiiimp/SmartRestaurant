@@ -4,7 +4,7 @@ from datetime import date, timedelta
 from decimal import ROUND_CEILING, Decimal
 
 from app.extensions import db
-from app.models import PreOrder, PreparationRecord, RecipeLine, Recommendation, SalesRecord
+from app.models import AuditLog, PreOrder, PreparationRecord, RecipeLine, Recommendation, SalesRecord
 from app.models.base import utcnow
 from app.services import audit, settings
 from app.services import data_management_service as dm
@@ -58,6 +58,7 @@ def get_prep_plan(outlet_id: int, day: date) -> dict:
     served = {i: int(q) for i, q in (db.session.query(SalesRecord.menu_item_id, SalesRecord.quantity_sold)
                                      .filter(SalesRecord.outlet_id == outlet_id, SalesRecord.sale_date == day))}
     active = fs.get_active_model(outlet_id)
+    sources = _decision_sources(outlet_id, day, decisions)
     rows = []
     for item in dm.list_menu_items(outlet_id, active_only=True):
         f = fmap.get((item.id, day))
@@ -72,11 +73,69 @@ def get_prep_plan(outlet_id: int, day: date) -> dict:
             "preorder_qty": pre_q, "buffer_pct": float(buffer_pct), "recommended_qty": rec_qty,
             "status": status, "final_qty": d.final_qty if d else None,
             "override_reason": d.override_reason if d else None,
+            "decision_source": sources.get(item.id, "manual") if d else None,
             "prepared_so_far": prepared.get(item.id, 0), "served_so_far": served.get(item.id),
             "prep_status": d.prep_status if d else None,
         })
     return {"date": day.isoformat(), "buffer_pct": float(buffer_pct),
             "model": f"{active.version_label} ({active.algorithm})" if active else None, "items": rows}
+
+
+def _decision_sources(outlet_id: int, day: date, decisions: dict) -> dict:
+    """{menu_item_id: "auto" | "manual"} for the decided items of one day, from the latest accept/override entry in the
+    audit log (an automatic acceptance carries detail.auto). Only entries written since the earliest decision are read."""
+    if not decisions:
+        return {}
+    since = min(d.decided_at for d in decisions.values()) - timedelta(seconds=5)
+    rows = (AuditLog.query.filter(AuditLog.outlet_id == outlet_id, AuditLog.created_at >= since,
+                                  AuditLog.action.in_(("recommendation.accept", "recommendation.override")),
+                                  AuditLog.entity_id.in_([str(i) for i in decisions]))
+            .order_by(AuditLog.id))
+    out = {}
+    for a in rows:
+        detail = a.detail or {}
+        if detail.get("date") == day.isoformat():
+            out[int(a.entity_id)] = "auto" if detail.get("auto") else "manual"
+    return out
+
+
+def _snapshot(outlet_id: int, item, day: date):
+    """The recommendation for one item and day as it stands now: (forecast row, buffer %, committed pre-orders,
+    recommended quantity), or None when there is no forecast. This is what a decision stores."""
+    fc = fs.forecast_map(outlet_id, day, day).get((item.id, day))
+    if not fc:
+        return None
+    buffer_pct = settings.get_decimal(outlet_id, "safety_buffer_pct")
+    pre_q = _preorder_totals(outlet_id, day).get(item.id, 0)
+    return fc, buffer_pct, pre_q, compute_recommended(fc["qty"], buffer_pct, pre_q, item.batch_size)
+
+
+def accept_on_first_prepared(outlet_id: int, item, day: date, actor_id: int | None = None) -> Recommendation | None:
+    """K3/K4: the first prepared portions of an undecided item accept today's recommendation, exactly as Accept would
+    (same snapshot), and start its preparation. Only for an active item with a forecast for today and no decision yet;
+    an existing decision is never replaced. The audit entry is marked auto, so manual and automatic acceptance stay
+    apart. Adds to the caller's transaction: two first entries at once meet the unique (item, date) key on flush, and
+    kitchen_service.record_prepared (which the kitchen API calls with decide_first=this function) runs again on a fresh
+    snapshot, where the other request's plan already exists."""
+    if day != today() or not item.is_active:
+        return None
+    if Recommendation.query.filter_by(outlet_id=outlet_id, menu_item_id=item.id, target_date=day).first() is not None:
+        return None
+    snap = _snapshot(outlet_id, item, day)
+    if snap is None:
+        return None
+    fc, buffer_pct, pre_q, recommended = snap
+    now = utcnow()
+    rec = Recommendation(outlet_id=outlet_id, menu_item_id=item.id, target_date=day, forecast_id=fc["id"],
+                         forecast_qty=fc["qty"], buffer_pct=buffer_pct, preorder_qty=pre_q, batch_size=item.batch_size,
+                         recommended_qty=recommended, final_qty=recommended, status="accepted", decided_by=actor_id,
+                         decided_at=now, prep_status="in_progress", prep_started_at=now)
+    db.session.add(rec)
+    db.session.flush()
+    audit.record(outlet_id, actor_id, "recommendation.accept", "menu_item", item.id,
+                 {"date": day.isoformat(), "recommended": recommended, "final": recommended, "auto": True,
+                  "trigger": "first_prepared"})
+    return rec
 
 
 def decide(outlet_id: int, data: dict, actor_id: int | None = None) -> dict:
@@ -91,13 +150,11 @@ def decide(outlet_id: int, data: dict, actor_id: int | None = None) -> dict:
     item = dm.get_menu_item(outlet_id, item_id)
     if not item.is_active:
         raise ValidationError("That menu item is not active.", {"menu_item_id": "is not active"})
-    buffer_pct = settings.get_decimal(outlet_id, "safety_buffer_pct")
-    fc = fs.forecast_map(outlet_id, day, day).get((item.id, day))
-    if not fc:
+    snap = _snapshot(outlet_id, item, day)
+    if snap is None:
         raise ValidationError("There is no forecast for this item and date yet.", {"date": "No forecast yet"},
                               code="no_forecast")
-    pre_q = _preorder_totals(outlet_id, day).get(item.id, 0)
-    recommended = compute_recommended(fc["qty"], buffer_pct, pre_q, item.batch_size)
+    fc, buffer_pct, pre_q, recommended = snap
     warnings = []
     if action == "accept":
         final, reason = recommended, None
