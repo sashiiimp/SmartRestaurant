@@ -126,6 +126,30 @@ def forecast_cmd(as_of, from_, to_):
     click.echo(r)
 
 
+@group.command("db-info")
+def db_info_cmd():
+    """Read-only: which database this configuration uses (deploy preflight). Exit 1 if it is not usable."""
+    from flask import current_app
+    from sqlalchemy import text
+
+    from app.extensions import db
+    from app.utils.db_check import mysql_required, server_problem
+
+    url = db.engine.url
+    try:
+        version = db.session.execute(text("SELECT VERSION()" if url.get_backend_name() == "mysql" else "SELECT sqlite_version()")).scalar()
+        alembic = db.session.execute(text("SELECT version_num FROM alembic_version")).scalar()
+    except Exception as exc:  # noqa: BLE001 - report any connection or schema problem and fail
+        click.echo(f"database not usable: {exc}")
+        raise SystemExit(1)
+    info = {"backend": url.get_backend_name(), "server": version, "database": url.database,
+            "host": url.host or url.query.get("unix_socket"), "port": url.port, "migration": alembic,
+            "mysql_required": mysql_required(current_app.config)}
+    click.echo(info)
+    if info["mysql_required"] and (url.get_backend_name() != "mysql" or server_problem(str(version))):
+        raise SystemExit(1)
+
+
 @group.command("forecast-daily")
 def forecast_daily_cmd():
     """The scheduled 7-day forecast: runs once per Asia/Colombo day, skips when today's forecast already exists."""
