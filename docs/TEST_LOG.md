@@ -498,3 +498,16 @@ Earlier entries are kept as written: the runs they record used MariaDB 11.8 for 
 | Functional checks on MySQL | 16/16: model and forecasts, prep formula and pre-order floor, BOM requirements, pre-order workflow, served and waste, ingredient usage, stock, dashboards, permissions; forecast run on MySQL wrote 70 rows |
 | Live staging service on MySQL | kitchen 10/10, inventory 6/6, admin 7/7 pages and APIs; forecast timer runs on schedule, no errors |
 
+
+## Redesign (16 Oct 2026, branch `ux-redesign`, staging only)
+
+Front end only (design system, login, three dashboards); no service, API, permission, ML or database change.
+
+| Check | Result |
+|---|---|
+| Fast suite (SQLite in memory) | **525 passed**, 2 skipped |
+| Full suite on MySQL 8.4 (`TEST_ALL_ON_DATABASE=1`) | **542 passed, 0 failed** |
+| Preservation (PRES-1 .. PRES-5) | pass: every route, role, menu page, tab, page button and API call kept |
+| Browsers on a fresh MySQL copy (`tests/ui/smoke.py all`) | Chromium, Firefox, WebKit: kitchen, inventory, admin, responsive **pass** |
+| 25 menu pages x 3 roles, 1440 px and 390 px | 50 page views: no JS errors, no sideways scroll |
+| Login | no scroll at 1440x900, 1366x680, 390x844; empty-field messages, show / hide password, generic error, focus to password after an error |

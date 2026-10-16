@@ -1156,3 +1156,15 @@ input[type="file"]::file-selector-button { background: var(--surface-3); color: 
 .exp-list .mini-main { display: flex; flex-direction: column; min-width: 0; }
 .exp-list .mini-main small { color: var(--muted); font-size: .78rem; }
 @media (max-width: 575.98px) { .kd-grid .card-body, .kd-attention .card-body { padding: 1rem; } }
+@media (max-width: 575.98px) {
+  .act-item { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; row-gap: .5rem; }
+  .act-dot { margin-top: .4rem; }
+  .act-btn { grid-column: 2; justify-self: start; margin-left: 0; }
+  .req-table > :not(caption) > * > * { padding-left: .55rem; padding-right: .55rem; }
+}
+/* a segmented control inside a card fills the card width, so its choices never wrap onto a second row */
+.card .nav-pills, .card-body > .sr-tabs:not(.sr-tabs-sm) { display: flex; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+.card .nav-pills .nav-link, .card-body > .sr-tabs:not(.sr-tabs-sm) .sr-tab { flex: 1 1 auto; text-align: center; padding-inline: .6rem; }
+.card .nav-pills .nav-item { flex: 1 1 auto; }
+.card .nav-pills .nav-item .nav-link { width: 100%; white-space: nowrap; }
+@media (max-width: 575.98px) { .card .nav-pills { display: grid; grid-template-columns: 1fr 1fr; } }

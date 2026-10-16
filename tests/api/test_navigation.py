@@ -141,8 +141,10 @@ def test_reports_title_and_dashboard_labels(as_role):
     assert "Reports &amp; Analytics" in client.get("/admin/monitor").get_data(as_text=True)
     dash = client.get("/admin").get_data(as_text=True)
     assert "Forecast models" not in dash
-    # role dashboards (Oct 2026): the admin view leads with the workflow, what needs attention and model performance
-    for section in ("Workflow today", "Needs attention", "Forecasting performance", "Sales, food waste and 7-day forecast"):
+    # redesign (Oct 2026): four headline figures, the sales/waste/forecast chart, model performance, what needs attention,
+    # each role's work today and quick access to the management pages
+    for section in ("Forecast, next 7 days", "Food waste", "Sales, waste and forecast", "Forecasting performance", "Needs attention",
+                    "Restaurant today", "Quick access"):
         assert section in dash, section
     js = client.get("/static/js/pages/admin_monitor.js").get_data(as_text=True)
     for group in ("'Sales'", "'Forecasting'", "'Inventory'", "'Waste & Analytics'"):
@@ -156,11 +158,18 @@ def test_role_access_has_a_phone_list_with_the_same_pages(as_role):
     assert phone.count("<li>") == 14
 
 
-# ---- NAV-8: the "Step n of 6" marker was removed from the top bar (R1, Oct 2026); the workflow stays on the admin dashboard
+# ---- NAV-8: the "Step n of 6" marker was removed from the top bar (R1, Oct 2026)
 @pytest.mark.parametrize("role,url", [("admin", "/admin/models"), ("kitchen", "/kitchen/prep"), ("inventory", "/inventory/reorder")])
 def test_no_step_marker_in_the_top_bar(as_role, role, url):
     assert "step-chip" not in as_role(role).get(url).get_data(as_text=True)
 
 
-def test_admin_dashboard_keeps_the_workflow(as_role):
-    assert "<sr-workflow" in as_role("admin").get("/admin").get_data(as_text=True)
+def test_admin_dashboard_still_shows_every_stage_of_the_chain(as_role):
+    """Redesign (Oct 2026): the six-step strip became four figures (sales, forecast, ingredients, food waste) and
+    "Restaurant today", which still reads the kitchen's prep plan, today's ingredient requirements and the reorder list."""
+    client = as_role("admin")
+    html = client.get("/admin").get_data(as_text=True)
+    assert "Restaurant today" in html and 'class="kpis"' in html
+    js = client.get("/static/js/pages/admin_dashboard.js").get_data(as_text=True)
+    for call in ("/recommendations/prep", "/recommendations/requirements", "/recommendations/reorder", "/reports/sales", "/reports/waste"):
+        assert call in js, call

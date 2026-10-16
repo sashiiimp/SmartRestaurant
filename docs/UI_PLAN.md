@@ -327,3 +327,31 @@ kitchen requests shown one step at a time (Approve, then Issue to kitchen; still
 first prepared quantity starts an item); Served & waste as End of day + Daily balance; Reports with Stock & expiry and
 Stock history (8 reports); Role access under Users; one word per operation (Food waste, Stock wastage, Issue to
 kitchen); no step marker in the top bar; unused CSS and dashboard fields removed. CSS section 17.
+
+## 18. Redesign (16 Oct 2026, branch `ux-redesign`)
+
+One design system for every page (CSS section 25), the login page and the three dashboards. Front end only: no service,
+API, permission, ML or database change. Every page keeps its buttons and API calls (`tests/api/test_preservation.py`).
+
+- **Look:** Inter (vendored in `static/vendor/fonts`, SIL OFL 1.1, served from the app, so the CSP is unchanged) on a soft
+  neutral canvas; white cards with a hairline border; green only for the main action on a page, the active menu entry and
+  "good" states. Secondary buttons, page tabs and section tabs are neutral (white or a grey segmented control), so a
+  colour always means something. Tables use sentence-case headers; toasts are one dark line with a coloured dot.
+- **Shell:** the top bar shows where you are, the business date, the synthetic-data label and the alerts bell; the role is
+  under the user's name at the bottom of the menu.
+- **Figures:** `sr-stat-tile` gains `unit` (small text after the number) and `flag` (one status line in the tile's
+  tone); the number itself is always dark, the tone shows in the icon and the flag.
+- **Login:** one centred card, no imagery: brand, "Welcome back", username, password with show / hide, one Sign in button,
+  the server's generic error and the Caps Lock hint. Field names, ids, CSRF token and checks are unchanged.
+- **Administrator dashboard:** four figures (Sales, Forecast next 7 days, Ingredients low or out, Food waste); the sales,
+  waste and forecast chart beside Forecasting performance (model and baseline hold-out error as two bars); Needs
+  attention beside Restaurant today (kitchen preparation, ingredients for today, purchasing, pre-orders: what the
+  six-step strip showed, read from the same endpoints); alerts beside Quick access and recent activity. The six-step
+  strip (`sr-workflow`, CSS section 15) is removed.
+- **Kitchen dashboard:** four figures (To prepare, Prepared with progress, Pre-orders, Served & waste); Needs attention
+  only when something needs doing; the preparation plan beside ingredient shortages with Request stock; the day's
+  pre-order list only when there are pre-orders; alerts.
+- **Inventory dashboard:** four figures (Ingredients in stock, Kitchen requests, To reorder, Expiry); Needs attention
+  beside open kitchen requests; one Ingredient requirements table (7-day need, usable stock, cover, the reorder
+  suggestion and supplier) replaces the separate Reorder now and Stock-out risk lists; expiring batches; alerts.
+- Alert messages show their stored ISO dates as "Fri 16 Oct" (display only).

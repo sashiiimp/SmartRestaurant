@@ -39,6 +39,21 @@ Dashboard එක කියන්නේ Administrator log වුණාම මු�
 
 ## 2. What each part is for, where the value comes from, and how it is calculated
 
+> **Redesign (16 Oct 2026, current; branch `ux-redesign`).** Same data and formulas, new layout and look.
+>
+> - **Administrator:** four figures (**Sales**, **Forecast, next 7 days**, **Ingredients low or out**, **Food waste**);
+>   the sales, waste and forecast chart beside **Forecasting performance** (the ML model's hold-out error and the simple
+>   baseline's error as two bars: the shorter bar is better); **Needs attention** beside **Restaurant today**, which shows
+>   what the six-step strip showed: the kitchen's preparation total, today's ingredient shortages (plan × BOM against
+>   stock), the reorder count and the pre-orders; then alerts, **Quick access** (Manage BOM, Menu items, Run forecast,
+>   Import sales data, Reports, Users & settings) and recent activity.
+> - **Kitchen:** To prepare, Prepared (with progress), Pre-orders, Served & waste; the preparation plan beside the
+>   ingredient shortages with Request stock; alerts.
+> - **Inventory:** Ingredients in stock, Kitchen requests, To reorder, Expiry; Needs attention; one **Ingredient
+>   requirements** table (7-day need from forecast × recipes, usable stock, % covered, suggested order and supplier).
+>
+> The sections below describe earlier layouts; every figure they explain is still on the dashboards or one click away.
+
 > **Role dashboards (October 2026, current).** Each role now has its own dashboard, built the same way: figures at the
 > top, then **Needs attention** (each line says what is wrong, what the system recommends, and has one button to the
 > page that handles it), then the detail.

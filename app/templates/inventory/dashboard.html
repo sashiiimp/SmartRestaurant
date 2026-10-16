@@ -51,10 +51,10 @@
         <div class="card-head"><div><h2 id="ir-h" class="h6">Ingredient requirements</h2><p class="card-sub">Next 7 days from the forecast and recipes, against usable stock</p></div><a href="/inventory/reorder">All [[ t.reorder ]] reorder suggestions</a></div>
         <sr-empty v-if="!needRows.length" message="Stock covers the next 7 days and nothing needs reordering." icon="check"></sr-empty>
         <div v-else class="table-responsive"><table class="table table-sm align-middle mb-0 req-table">
-          <thead><tr><th>Ingredient</th><th class="num">Need, 7 days</th><th class="num">In stock</th><th class="d-none d-md-table-cell">Covered</th><th class="num">Order</th><th class="d-none d-lg-table-cell">Supplier</th></tr></thead>
+          <thead><tr><th>Ingredient</th><th class="num d-none d-sm-table-cell">Need, 7 days</th><th class="num">In stock</th><th class="d-none d-md-table-cell">Covered</th><th class="num">Order</th><th class="d-none d-lg-table-cell">Supplier</th></tr></thead>
           <tbody><tr v-for="r in needRows" :key="r.name">
-            <td class="fw-semibold">[[ r.name ]]<span class="cell-sub d-md-none">[[ r.need === null ? 'below minimum stock' : cover(r) + '% covered' ]]</span></td>
-            <td class="num">[[ r.need === null ? '–' : ui.qty(r.need) ]]<span class="u">[[ r.unit ]]</span></td>
+            <td class="fw-semibold">[[ r.name ]]<span class="cell-sub d-md-none">[[ r.need === null ? 'below minimum stock' : ui.qty(r.need, r.unit) + ' needed · ' + cover(r) + '% covered' ]]</span></td>
+            <td class="num d-none d-sm-table-cell">[[ r.need === null ? '–' : ui.qty(r.need) ]]<span class="u">[[ r.unit ]]</span></td>
             <td class="num" :class="{ 'text-danger fw-semibold': Number(r.usable) <= 0 }">[[ ui.qty(r.usable) ]]<span class="u">[[ r.unit ]]</span></td>
             <td class="d-none d-md-table-cell"><div v-if="r.need !== null" class="cover"><div class="progress" role="progressbar" :aria-label="r.name + ': ' + cover(r) + '% of the 7-day need is in stock'" :aria-valuenow="cover(r)" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" :class="cover(r) >= 100 ? 'bg-success' : (cover(r) < 50 ? 'bg-danger' : 'bg-warning')" :style="{ width: cover(r) + '%' }"></div></div><span>[[ cover(r) ]]%</span></div></td>
             <td class="num fw-semibold">[[ r.order ? ui.qty(r.order.suggested_qty) : '–' ]]<span v-if="r.order" class="u">[[ r.unit ]]</span></td>
