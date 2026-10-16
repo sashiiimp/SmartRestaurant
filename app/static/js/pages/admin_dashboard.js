@@ -128,7 +128,7 @@ SR.createApp({
           caption: 'next 7 days' + (d.active_model ? ' · ' + this.algoName(d.active_model.algorithm) : ''), owner: 'Admin trains · runs daily' },
         { title: 'Preparation recommendations', value: this.prep ? n(toMake) + ' to prepare' : (this.prep === false ? '-' : wait), mine: false, href: null,
           caption: this.prep ? 'today · ' + decided + '/' + items.length + ' decided' : 'today', owner: 'Kitchen accepts or overrides' },
-        { title: 'BOM & ingredient requirements', value: short === null ? (this.req === false ? '-' : wait) : (short ? short + ' short' : 'All covered'), mine: true, href: '/admin/catalog',
+        { title: 'BOM & ingredient requirements', value: short === null ? (this.req === false ? '-' : wait) : (short ? short + ' short' : 'All covered'), mine: true, href: '/admin/catalog?tab=bom',
           tone: short ? 'danger' : (short === 0 ? 'success' : null),
           caption: d.items_without_recipe.length ? d.items_without_recipe.length + ' without a recipe' : "today's plan", owner: 'Admin keeps the recipes' },
         { title: 'Inventory decisions', value: this.reorder ? (this.reorder.length ? this.reorder.length + ' to reorder' : 'Nothing to order') : (this.reorder === false ? '-' : wait), mine: true, href: '/admin/monitor?tab=stock',

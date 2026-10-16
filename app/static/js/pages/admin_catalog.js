@@ -9,7 +9,10 @@ SR.createApp({
   async mounted() {
     try { this.items = (await api.get('/menu-items')).data; this.ingredients = (await api.get('/ingredients')).data; }
     catch (e) { this.error = ui.errorText(e); } finally { this.loading = false; }
-    if (this.items.length) await this.select(this.items[0]);
+    // ?item=<id> (from the BOM overview) opens that item's recipe in the editor; otherwise the first recipe is shown
+    const wanted = this.items.find(i => String(i.id) === new URLSearchParams(location.search).get('item'));
+    if (wanted) { await this.select(wanted); await this.openRecipe(wanted); this.$nextTick(() => { const el = document.querySelector('.recipe-panel'); if (el) el.scrollIntoView({ block: 'center' }); }); }
+    else if (this.items.length) await this.select(this.items[0]);
   },
   methods: {
     async reload() {

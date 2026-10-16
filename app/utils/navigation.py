@@ -10,7 +10,7 @@ from flask import current_app, redirect, render_template, request
 NAV_GROUPS = {
     "admin": [
         ("Overview", [("Dashboard", "/admin"), ("Reports & Analytics", "/admin/monitor"), ("Forecasting", "/admin/models")]),
-        ("Setup", [("Menu & recipes", "/admin/catalog"), ("Administration", "/admin/users")]),
+        ("Setup", [("Menu & Recipes (BOM)", "/admin/catalog"), ("Administration", "/admin/users")]),
     ],
     "kitchen": [
         ("Today", [("Dashboard", "/kitchen"), ("Plan & prepare", "/kitchen/prep"), ("Served & waste", "/kitchen/record")]),
@@ -27,6 +27,8 @@ HUBS = {
     "/admin/models": [("data", "Historical data", "admin/data.html"), ("models", "ML models", "admin/models.html"),
                       ("runs", "Forecast generation", "admin/models.html")],
     "/admin/users": [("users", "Users", "admin/users.html"), ("settings", "Settings & alerts", "admin/settings.html")],
+    "/admin/catalog": [("items", "Menu items", "admin/catalog.html"), ("bom", "BOM overview", "admin/bom.html"),
+                       ("ingredients", "Ingredients", "admin/ingredients.html")],
     "/kitchen/prep": [("prep", "Prep plan", "kitchen/prep.html"), ("forecast", "7-day forecast", "kitchen/forecast.html")],
     "/kitchen/requirements": [("needs", "Needs & shortages", "kitchen/requirements.html"),
                               ("requests", "Stock requests", "kitchen/stock_requests.html")],

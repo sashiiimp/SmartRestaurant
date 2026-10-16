@@ -1,0 +1,36 @@
+{% extends "hub.html" %}
+{% block title %}BOM overview - SmartRestaurant{% endblock %}
+{% block panel %}
+<div id="app" v-cloak>
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-1">
+    <h2 class="h5 m-0">BOM overview</h2>
+    <input class="form-control bom-search" placeholder="Search item or ingredient" aria-label="Search item or ingredient" v-model="filter">
+  </div>
+  <p class="page-intro">Every menu item's recipe (bill of materials) in one place: ingredients per portion and per batch. Planned portions x these quantities = the ingredient needs used for shortages, ingredient demand and reorder.</p>
+  <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
+  <sr-loading v-if="loading"></sr-loading>
+  <template v-else>
+    <div class="count-chips mb-3">
+      <span class="chip chip-info">[[ items.length ]] menu items</span>
+      <span class="chip" :class="missing ? 'chip-critical' : 'chip-info'">[[ missing ]] without a recipe</span>
+      <span class="chip chip-info">[[ usedIngredients ]] ingredients used</span>
+    </div>
+    <sr-empty v-if="!shown.length" message="Nothing matches this search." icon="book"></sr-empty>
+    <div v-else class="table-responsive"><table class="table table-sm align-middle bom-table">
+      <thead><tr><th>Ingredient</th><th class="text-end">Per portion</th><th class="text-end">Per batch</th></tr></thead>
+      <tbody v-for="i in shown" :key="i.id">
+        <tr class="bom-item" :class="{ 'row-muted': !i.is_active }"><th colspan="3" scope="rowgroup">
+          <div class="bom-head"><span><strong>[[ i.name ]]</strong>
+            <small>batch of [[ i.batch_size ]]<template v-if="!i.is_active"> · inactive</template></small></span>
+            <span class="bom-head-r"><span v-if="i.lines.length" class="sr-badge sr-badge-success">[[ i.lines.length ]] [[ i.lines.length === 1 ? 'ingredient' : 'ingredients' ]]</span>
+              <span v-else class="sr-badge sr-badge-danger">Missing</span>
+              <a class="btn btn-sm btn-outline-primary" :href="'/admin/catalog?tab=items&item=' + i.id">[[ i.lines.length ? 'Edit recipe' : 'Add recipe' ]]</a></span></div></th></tr>
+        <tr v-if="!i.lines.length"><td colspan="3" class="text-muted small">No recipe: this item's ingredient needs count as zero.</td></tr>
+        <tr v-for="l in i.lines" :key="l.ingredient_id" :class="{ 'bom-hit': hit(l.ingredient) }">
+          <td>[[ l.ingredient ]]</td><td class="text-end">[[ ui.qty(l.quantity_per_portion, l.unit) ]]</td>
+          <td class="text-end text-muted">[[ ui.qty(l.quantity_per_portion * i.batch_size, l.unit) ]]</td></tr>
+      </tbody></table></div>
+  </template>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/pages/admin_bom.js') }}"></script>{% endblock %}

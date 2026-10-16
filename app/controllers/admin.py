@@ -22,7 +22,8 @@ def users():
 
 @bp.route("/catalog")
 def catalog():
-    return render_template("admin/catalog.html")
+    """Menu & Recipes (BOM): Menu items (with each item's recipe), BOM overview, Ingredients."""
+    return render_hub("/admin/catalog")
 
 
 @bp.route("/models")

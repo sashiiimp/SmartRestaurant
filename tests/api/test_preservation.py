@@ -26,6 +26,16 @@ MOVED = {
     ("/inventory/stock?tab=record", "Wastage"): ("/inventory/stock?tab=record", "Stock wastage"),
     # final checks: Accept is shown only when it changes the plan ("Accept 84", or "Accept new 90" after a change)
     ("/kitchen/prep?tab=prep", "Accept [[ it.recommended_qty ]]"): ("/kitchen/prep?tab=prep", "[[ acceptLabel(it) ]]"),
+    # BOM visibility (approved 16 Oct 2026): the ingredient form is one shared component (same fields, same API calls)
+    ("/inventory/stock?tab=levels", "Save"): ("/inventory/stock?tab=levels", "(ingredient form with Save and Cancel)"),
+    ("/inventory/stock?tab=levels", "Cancel"): ("/inventory/stock?tab=levels", "(ingredient form with Save and Cancel)"),
+}
+
+# Roles widened with approval: (method, path) -> roles now. Every role that had access still has it.
+APPROVED_ROLE_CHANGES = {
+    # BOM visibility (16 Oct 2026): the admin keeps the recipes, so it may also add and edit ingredients
+    ("POST", "/api/v1/ingredients"): ["admin", "inventory"],
+    ("PATCH", "/api/v1/ingredients/<int:ingredient_id>"): ["admin", "inventory"],
 }
 
 # Removed with approval, each with the reason the capability is still there (checked by the named test).
@@ -36,7 +46,9 @@ APPROVED_REMOVALS = {
 }
 
 # M7: the Role access tab is a section under Users; ?tab=roles still opens it
-MERGED_VIEWS = {"/admin/users?tab=roles": "/admin/users?tab=users"}
+MERGED_VIEWS = {"/admin/users?tab=roles": "/admin/users?tab=users",
+                # BOM visibility: Menu & recipes became the first tab of Menu & Recipes (BOM)
+                "/admin/catalog": "/admin/catalog?tab=items"}
 # M5, M6: reports merged; the earlier ?tab= keys open the report that holds them
 MERGED_REPORTS = {"stock": "stock", "batches": "stock", "inventory": "history", "movements": "history"}
 
@@ -49,7 +61,8 @@ def _routes(data):
 def test_every_route_and_method_still_exists_with_the_same_roles():
     now = _routes(NOW)
     missing = [k for k in _routes(BASELINE) if k not in now]
-    changed = [(k, roles, now[k]) for k, roles in _routes(BASELINE).items() if k in now and now[k] != roles]
+    changed = [(k, roles, now[k]) for k, roles in _routes(BASELINE).items()
+               if k in now and now[k] != roles and not (APPROVED_ROLE_CHANGES.get(k) == now[k] and set(roles) <= set(now[k]))]
     assert not missing, missing
     assert not changed, changed
 
@@ -62,6 +75,11 @@ def test_menu_pages_and_tabs_are_unchanged_apart_from_the_approved_merges():
             p["tabs"] = [t for t in p["tabs"] if t["key"] != "roles"]
         if p["path"] == "/kitchen/requirements":                          # M8
             p["label"] = "Ingredients & requests"
+        if p["path"] == "/admin/catalog":                                 # BOM visibility (16 Oct 2026)
+            p["label"] = "Menu & Recipes (BOM)"
+            p["tabs"] = [{"key": "items", "label": "Menu items", "template": "admin/catalog.html"},
+                         {"key": "bom", "label": "BOM overview", "template": "admin/bom.html"},
+                         {"key": "ingredients", "label": "Ingredients", "template": "admin/ingredients.html"}]
     assert NOW["pages"] == expected
 
 

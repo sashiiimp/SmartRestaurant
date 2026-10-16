@@ -86,6 +86,53 @@ window.SR = (function () {
             <a v-if="a.href" :href="a.href" class="btn btn-sm act-btn" :class="a.tone === 'danger' ? 'btn-primary' : 'btn-outline-primary'">[[ a.action ]]</a>
           </li></ul></div>`,
     },
+    // Add or edit one ingredient (name, unit, supplier, stock levels, pack size). One form for every page that manages
+    // ingredients (Inventory > Stock levels, Admin > Menu & Recipes (BOM) > Ingredients); same API calls.
+    // ingredient: the row to edit, or {} for a new one. Emits saved(ingredient) and cancel.
+    'sr-ingredient-form': {
+      props: { ingredient: { type: Object, required: true }, suppliers: { type: Array, default: () => [] } },
+      emits: ['saved', 'cancel'],
+      data() {
+        const i = this.ingredient;
+        return { saving: false, errors: {}, form: {
+          id: i.id || null, name: i.name || '', unit: i.unit || 'kg', category: i.category || '',
+          shelf_life_days: i.shelf_life_days || '', default_supplier_id: i.default_supplier_id || '',
+          min_stock: i.min_stock ?? 0, reorder_level: i.reorder_level ?? 0, pack_size: i.pack_size ?? 1, reorder_qty: i.reorder_qty ?? 0 } };
+      },
+      computed: {
+        // inactive suppliers cannot be newly chosen, but the one already on the ingredient stays visible
+        supplierOptions() { return this.suppliers.filter(s => s.is_active || s.id === this.form.default_supplier_id); },
+      },
+      methods: {
+        async save() {
+          this.saving = true; this.errors = {};
+          const f = this.form;
+          const body = { name: f.name, unit: f.unit, category: f.category, shelf_life_days: f.shelf_life_days, default_supplier_id: f.default_supplier_id,
+            min_stock: f.min_stock, reorder_level: f.reorder_level, pack_size: f.pack_size, reorder_qty: f.reorder_qty };
+          try {
+            const { data } = f.id ? await window.api.patch('/ingredients/' + f.id, body) : await window.api.post('/ingredients', body);
+            window.ui.toast('Ingredient saved.'); this.$emit('saved', data);
+          } catch (e) { this.errors = e.fields || {}; if (!Object.keys(this.errors).length) window.ui.toast(window.ui.errorText(e), 'danger'); }
+          finally { this.saving = false; }
+        },
+      },
+      template: `<div class="card mb-3"><div class="card-body">
+        <h2 class="h6">[[ form.id ? 'Edit ingredient: ' + ingredient.name : 'New ingredient' ]]</h2>
+        <div class="row g-2">
+          <div class="col-12 col-md-4"><label class="form-label" for="f-name">Name</label><input id="f-name" class="form-control" v-model="form.name"><sr-field-error :errors="errors" name="name"></sr-field-error></div>
+          <div class="col-6 col-md-2"><label class="form-label" for="f-unit">Unit</label><input id="f-unit" class="form-control" v-model="form.unit"><sr-field-error :errors="errors" name="unit"></sr-field-error></div>
+          <div class="col-6 col-md-3"><label class="form-label" for="f-cat">Category</label><input id="f-cat" class="form-control" v-model="form.category"></div>
+          <div class="col-6 col-md-3"><label class="form-label" for="f-sup">Default supplier</label>
+            <select id="f-sup" class="form-select" v-model="form.default_supplier_id"><option value="">None</option><option v-for="s in supplierOptions" :key="s.id" :value="s.id">[[ s.name ]][[ s.is_active ? '' : ' (inactive)' ]]</option></select></div>
+          <div class="col-6 col-md-2"><label class="form-label" for="f-min">Minimum stock</label><input id="f-min" class="form-control" inputmode="decimal" v-model="form.min_stock"><sr-field-error :errors="errors" name="min_stock"></sr-field-error></div>
+          <div class="col-6 col-md-2"><label class="form-label" for="f-ro">Reorder level</label><input id="f-ro" class="form-control" inputmode="decimal" v-model="form.reorder_level"><sr-field-error :errors="errors" name="reorder_level"></sr-field-error></div>
+          <div class="col-6 col-md-2"><label class="form-label" for="f-pack">Pack size</label><input id="f-pack" class="form-control" inputmode="decimal" v-model="form.pack_size"><sr-field-error :errors="errors" name="pack_size"></sr-field-error></div>
+          <div class="col-6 col-md-2"><label class="form-label" for="f-moq">Min order qty</label><input id="f-moq" class="form-control" inputmode="decimal" v-model="form.reorder_qty"><sr-field-error :errors="errors" name="reorder_qty"></sr-field-error></div>
+          <div class="col-6 col-md-2"><label class="form-label" for="f-shelf">Shelf life (days)</label><input id="f-shelf" class="form-control" inputmode="numeric" v-model="form.shelf_life_days"></div>
+        </div>
+        <div class="mt-3 d-flex gap-2"><button class="btn btn-primary" type="button" :disabled="saving" @click="save">Save</button><button class="btn btn-outline-secondary" type="button" @click="$emit('cancel')">Cancel</button></div>
+      </div></div>`,
+    },
     'sr-field-error': {
       props: ['errors', 'name'],
       template: '<div v-if="errors && errors[name]" class="text-danger small mt-1" role="alert">[[ errors[name] ]]</div>',

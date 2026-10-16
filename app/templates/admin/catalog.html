@@ -1,9 +1,9 @@
-{% extends "base.html" %}
-{% block title %}Menu & recipes - SmartRestaurant{% endblock %}
-{% block content %}
+{% extends "hub.html" %}
+{% block title %}Menu & Recipes (BOM) - SmartRestaurant{% endblock %}
+{% block panel %}
 <div id="app" v-cloak>
-  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-1"><h1 class="h4 m-0">Menu &amp; recipes</h1><button class="btn btn-primary" type="button" @click="add">Add menu item</button></div>
-  <p class="page-intro">Each recipe (BOM) lists the ingredients in one portion; planned portions x recipe = ingredient need.</p>
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-1"><h2 class="h5 m-0">Menu items</h2><button class="btn btn-primary" type="button" @click="add">Add menu item</button></div>
+  <p class="page-intro">Each recipe (BOM) lists the ingredients in one portion; planned portions x recipe = ingredient need. <a href="/admin/catalog?tab=bom">See all recipes</a></p>
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
   <div v-if="!loading" class="count-chips mb-3">
     <span class="chip chip-info">[[ items.length ]] menu items</span>
@@ -31,7 +31,7 @@
           <td class="text-nowrap"><button type="button" class="link-btn" @click="toggle(i)" :aria-expanded="view && view.item.id === i.id ? 'true' : 'false'" :aria-label="'Show the recipe of ' + i.name">[[ i.name ]]</button></td>
           <td class="text-muted">[[ i.category || '-' ]]</td>
           <td class="text-end text-nowrap">[[ ui.money(i.price) ]]</td><td class="text-end">[[ i.batch_size ]]</td>
-          <td><span v-if="i.has_recipe" class="sr-badge sr-badge-success">Defined</span><span v-else class="sr-badge sr-badge-danger">Missing</span></td>
+          <td><span v-if="i.has_recipe" class="sr-badge sr-badge-success">[[ i.recipe_lines ]] [[ i.recipe_lines === 1 ? 'ingredient' : 'ingredients' ]]</span><span v-else class="sr-badge sr-badge-danger">Missing</span></td>
           <td><span class="sr-badge" :class="i.is_active ? 'sr-badge-success' : ''">[[ i.is_active ? 'Active' : 'Inactive' ]]</span>
             <small v-if="i.is_active && !i.is_available" class="d-block text-warning">unavailable today</small></td>
           <td class="text-nowrap text-end"><button class="btn btn-sm btn-outline-primary me-1" type="button" @click="toggle(i)">[[ view && view.item.id === i.id ? 'Hide recipe' : 'Recipe' ]]</button><button class="btn btn-sm btn-outline-secondary me-1" type="button" @click="edit(i)">Edit</button>

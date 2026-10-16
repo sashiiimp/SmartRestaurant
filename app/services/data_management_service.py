@@ -471,7 +471,7 @@ def load_promotions_frame(outlet_id: int) -> pd.DataFrame:
 def menu_item_dict(m: MenuItem) -> dict:
     return {"id": m.id, "name": m.name, "category": m.category, "price": float(m.price), "portion_unit": m.portion_unit,
             "shelf_life_hours": m.shelf_life_hours, "batch_size": m.batch_size, "is_active": m.is_active,
-            "is_available": m.is_available, "has_recipe": bool(m.recipe_lines)}
+            "is_available": m.is_available, "has_recipe": bool(m.recipe_lines), "recipe_lines": len(m.recipe_lines)}
 
 
 def recipe_dict(lines) -> list[dict]:
