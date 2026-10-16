@@ -84,37 +84,38 @@ def kitchen(browser):
     visit(page, "/kitchen/prep?tab=forecast", "k_forecast")
     assert page.locator("table tbody tr").count() >= 10, "forecast table empty"
     page.locator(".hub-tab", has_text="Prep plan").click()   # tabs of a merged page are plain links
-    page.wait_for_selector(".card-item", timeout=8000)
+    page.wait_for_selector(".pp-item", timeout=8000)
     assert "tab=prep" in page.url, page.url
-    visit(page, "/kitchen/prep", "k_prep", wait=".card-item")
-    n = page.locator(".card-item").count()
-    print("prep cards:", n)
-    first = page.locator(".card-item").first
+    visit(page, "/kitchen/prep", "k_prep", wait=".pp-item")
+    n = page.locator(".pp-item").count()
+    print("prep items:", n)
+    first = page.locator(".pp-item").first
     assert page.get_by_role("button", name="Accept").count() == 0, "no separate Accept button"
-    first.locator("input[inputmode=numeric]").last.fill("24")          # the first portions accept the recommendation
+    assert page.get_by_text("How?").count() == 0, "no unclear How? label"
+    first.locator(".pp-add input").fill("24")                           # the first portions approve the suggestion
     first.get_by_role("button", name="Add prepared").click()
-    page.wait_for_function("document.querySelector('.card-item.accepted') !== null", timeout=8000)
-    assert "Auto-accepted" in page.locator(".card-item.accepted").first.inner_text(), "accepted automatically"
-    page.wait_for_selector(".card-item.accepted", timeout=5000)
-    second = page.locator(".card-item").nth(1)
+    page.wait_for_function("document.querySelector('.pp-item .pp-chip.is-approved') !== null", timeout=8000)
+    second = page.locator(".pp-item").nth(1)
+    second.locator(".pp-more > button").click()                         # less common actions are in the row's menu
     second.get_by_role("button", name="Change plan").click()
-    second.locator("input").nth(0).fill("50")             # prefilled with the plan; a new figure replaces it
+    second.locator(".pp-change input").nth(0).fill("50")                # prefilled with the plan; a new figure replaces it
     second.get_by_role("button", name="Save plan").click()
     # reason missing -> the server answers 422 and the field error appears; the form stays open
     second.locator("text=is required").first.wait_for(timeout=8000)
-    assert "Why? (required" in second.inner_text(), "Change plan form must stay open after the error"
-    second.locator("input").nth(1).fill("Rain expected")
+    assert second.locator(".pp-change").count() == 1, "Change plan form must stay open after the error"
+    second.locator(".pp-change input").nth(1).fill("Rain expected")
     second.get_by_role("button", name="Save plan").click()
-    page.wait_for_selector(".card-item.overridden", timeout=5000)
-    first.locator("input[inputmode=numeric]").last.fill("6")
+    page.wait_for_selector(".pp-item .pp-chip.is-changed", timeout=5000)
+    first.locator(".pp-add input").fill("6")
     first.get_by_role("button", name="Add prepared").click()             # added to the total, never replaces it
-    page.wait_for_selector("text=Adds to the 30 already prepared", timeout=5000)
-    first.get_by_role("button", name="Finish preparation").click()      # asks first, showing actual against planned
-    assert "Prepared 30 of" in first.locator(".pp-confirm").inner_text(), "finish confirmation shows actual vs planned"
+    page.wait_for_function("document.querySelector('.pp-item .pp-cell:nth-child(4) .pp-n').textContent.trim() === '30'", timeout=5000)
+    first.locator(".pp-more > button").click()
+    first.get_by_role("button", name="Finish preparation").click()      # below the plan it asks first, actual against planned
+    assert "with 30 of" in first.locator(".pp-confirm").inner_text(), "finish confirmation shows actual vs planned"
     first.locator(".pp-confirm").get_by_role("button", name="Cancel").click()
-    visit(page, "/kitchen/prep", "k_prep_after", wait=".card-item")
-    acc, ovr = page.locator(".card-item.accepted").count(), page.locator(".card-item.overridden").count()
-    assert (acc, ovr) == (1, 1), f"after reload: {acc} accepted and {ovr} overridden cards, expected 1 and 1"
+    visit(page, "/kitchen/prep", "k_prep_after", wait=".pp-item")
+    acc, ovr = page.locator(".pp-chip.is-approved").count(), page.locator(".pp-chip.is-changed").count()
+    assert (acc, ovr) == (1, 1), f"after reload: {acc} approved and {ovr} changed, expected 1 and 1"
     visit(page, "/kitchen/record", "k_record", wait="input[id^=s]")
     assert "including collected pre-orders" in page.locator(".rec-hint").inner_text(), "served includes pre-orders"
     page.locator("input[id^=s]").first.fill("999")
@@ -171,16 +172,16 @@ def kitchen(browser):
     ctx = browser.new_context(viewport={"width": 1366, "height": 900})
     page = ctx.new_page()
     login(page, "kitchen1")
-    visit(page, "/kitchen/prep", "k_prep_desktop", wait=".prep-table")
-    rows, cards = page.locator(".prep-table tbody tr").count(), page.locator(".card-item").count()
-    assert rows >= 10 and cards == 0, f"desktop prep plan: {rows} table rows, {cards} cards"
-    row = page.locator(".prep-table tbody tr", has=page.get_by_role("button", name="Change plan")).first
+    visit(page, "/kitchen/prep", "k_prep_desktop", wait=".pp-list")
+    assert page.locator(".pp-head").is_visible() and page.locator(".pp-item").count() >= 10, "desktop prep plan: one row per item"
+    row = page.locator(".pp-item").nth(2)
+    row.locator(".pp-more > button").click()
     row.get_by_role("button", name="Change plan").click()
-    page.wait_for_selector(".change-row", timeout=3000)
-    page.locator(".change-row").get_by_role("button", name="Cancel").click()
-    assert page.locator(".change-row").count() == 0, "Cancel must close the Change plan row"
-    assert page.locator(".pp-sum").count() == 1 and page.locator(".pp-table thead").inner_text().upper().split() == \
-        ["ITEM", "RECOMMENDED", "PLANNED", "PREPARED", "REMAINING", "PREPARE"], "four figures per item"
+    page.wait_for_selector(".pp-change", timeout=3000)
+    page.locator(".pp-change").get_by_role("button", name="Cancel").click()
+    assert page.locator(".pp-change").count() == 0, "Cancel must close the Change plan form"
+    assert page.locator(".pp-sum").count() == 1 and page.locator(".pp-head").inner_text().split("\n")[:5] == \
+        ["Item", "Recommended", "Planned", "Prepared", "Remaining"], "four figures per item"
     ctx.close()
 
 

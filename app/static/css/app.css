@@ -295,13 +295,6 @@ input[type="file"]::file-selector-button { border: 0; background: var(--accent-s
 .chart-legend-note { font-size: .78rem; color: var(--muted); }
 
 /* ---- 9 page-specific --------------------------------------------------------------------------------------- */
-.card-item { border-left: 4px solid var(--accent); transition: box-shadow .15s; }
-.card-item:hover { box-shadow: var(--shadow); }
-.card-item.accepted { border-left-color: var(--success); }
-.card-item.overridden { border-left-color: #d9931a; }
-.card-item.no_forecast { border-left-color: #b9c3d1; }
-.card-item dl dd { font-variant-numeric: tabular-nums; font-weight: 600; }
-.card-item .fs-4 { color: var(--accent-strong); font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
 .list-group-flush > .list-group-item { padding: .7rem 0; border-color: var(--border); background: transparent; }
 .chip { display: inline-block; padding: .1rem .5rem; border-radius: 6px; background: var(--neutral-bg); color: var(--neutral); font-size: .74rem; font-weight: 600; }
 .activity { list-style: none; padding: 0; margin: 0; position: relative; }
@@ -487,22 +480,6 @@ a.step:hover { border-color: rgba(var(--accent-rgb), .45); background: var(--acc
 .kv { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: .35rem 1rem; font-size: .9rem; }
 .kv dt { color: var(--muted); font-weight: 500; }
 .kv dd { margin: 0; font-weight: 600; }
-/* plan & prepare: comparison table on wide screens */
-.prep-table { min-width: 960px; }
-.prep-table .avail-btn { display: block; font-size: .76rem; font-weight: 600; text-decoration: none; margin-top: .15rem; }
-.prep-table > :not(caption) > * > * { padding: .7rem .75rem; vertical-align: middle; }
-.prep-table .pt-name strong { font-weight: 650; }
-.prep-table .pt-num { color: var(--text-2); font-variant-numeric: tabular-nums; }
-.prep-table .pt-rec { font-size: 1.25rem; font-weight: 750; color: var(--accent); font-variant-numeric: tabular-nums; }
-.prep-table .pt-prep { min-width: 13.5rem; }
-.prep-table .pt-add { width: 4.5rem; }
-.prep-table tr.row-accepted > td:first-child { box-shadow: inset 3px 0 0 var(--success); }
-.prep-table tr.row-overridden > td:first-child { box-shadow: inset 3px 0 0 #d9931a; }
-.prep-table tr.override-row > td { background: var(--surface-2); }
-.calc-inline { margin: .1rem 0 0; }
-.calc-inline summary { font-size: .74rem; margin-left: auto; }
-.calc-inline[open] { position: absolute; z-index: 3; width: 17rem; right: 0; text-align: left; box-shadow: var(--shadow); background: var(--surface); }
-.prep-table td { position: relative; }
 @media (max-width: 575.98px) {
   /* sub-section tabs scroll inside their own bar on phones instead of wrapping into several rows */
   .nav-tabs { flex-wrap: nowrap !important; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; }
@@ -799,73 +776,108 @@ a.step:hover { border-color: rgba(var(--accent-rgb), .45); background: var(--acc
   .short-table .kd-u { min-width: 0; margin-left: .15rem; }
 }
 
-/* ---- 23 plan & prepare simplified (Oct 2026) ---------------------------------------------------------------------- */
-/* Four figures per item (recommended, planned, prepared, remaining) and for the day; suggested plans look unapproved
-   (muted, dashed); the decision chip says Suggested, Accepted, Auto-accepted or Changed. */
-.pp-sum { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .25rem 1rem; padding: .8rem 1rem; margin-bottom: 1rem;
-  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+/* ---- 23 plan & prepare (redesign 2, Oct 2026) ---------------------------------------------------------------------- */
+/* One list for every screen: a six-column row on wide screens, a card below 992 px. Suggested plans are muted with a
+   dashed chip; approved ones are solid; actions follow the item's state (add while cooking, finish at the plan). */
+.pp-top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: .75rem 1.5rem; margin-bottom: 1rem; }
+.pp-lead { margin: .3rem 0 0; max-width: 46rem; font-size: .875rem; color: var(--muted); }
+.pp-sum { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .25rem 1.25rem; padding: 1rem 1.25rem .9rem; margin-bottom: 1rem;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-sm); }
 .pp-sum > div:not(.pp-sum-bar) { display: flex; flex-direction: column; min-width: 0; }
-.pp-sum strong { font-size: 1.35rem; font-weight: 750; line-height: 1.15; font-variant-numeric: tabular-nums; }
-.pp-sum small { font-size: .74rem; color: var(--muted); }
-.pp-sum small.is-wait { color: var(--warning); font-weight: 650; }
-.pp-sum .pp-sum-bar { grid-column: 1 / -1; margin-top: .4rem; }
-.pp-l { display: block; font-size: .68rem; font-weight: 650; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
-.pp-num { font-size: 1.1rem; font-weight: 750; font-variant-numeric: tabular-nums; color: var(--text); }
-.pp-num.is-suggested, .pp-figs strong.is-suggested { color: var(--text-2); font-weight: 550; border-bottom: 1px dashed var(--border-strong); }
-.pp-chip { display: inline-block; padding: .1rem .5rem; border-radius: 999px; font-size: .7rem; font-weight: 650; white-space: nowrap; border: 1px solid transparent; }
-.pp-chip.is-suggested { color: var(--text-2); border: 1px dashed var(--border-strong); }
-.pp-chip.is-accepted { color: var(--success); background: var(--success-bg); border-color: var(--success-line); }
-.pp-chip.is-auto { color: var(--info); background: var(--info-bg); border-color: var(--info-line); }
+.pp-sum strong { font-size: 1.6rem; font-weight: 650; letter-spacing: -.02em; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.pp-sum small { font-size: .78rem; color: var(--muted); }
+.pp-sum small.is-wait { color: var(--warning); font-weight: 600; }
+.pp-sum .pp-sum-bar { grid-column: 1 / -1; margin-top: .6rem; }
+.pp-l { display: block; font-size: .8rem; font-weight: 550; color: var(--text-2); }
+.pp-info { display: flex; align-items: center; gap: .5rem; margin: 0 0 1rem; padding: .6rem .85rem; font-size: .85rem; color: var(--text-2);
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; }
+.pp-info.is-ok { color: var(--success); background: var(--success-bg); border-color: var(--success-line); }
+.pp-info a { font-weight: 600; }
+
+.pp-list { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-sm); }
+.pp-head, .pp-row { display: grid; grid-template-columns: minmax(8rem, 1.4fr) 6.5rem minmax(7.5rem, 1fr) minmax(6rem, .8fr) 5.5rem minmax(17.5rem, 1.4fr); gap: .9rem; align-items: center; padding: 0 1.25rem; }
+.pp-head { min-height: 2.6rem; font-size: .75rem; font-weight: 600; color: var(--muted); background: var(--surface-2); border-bottom: 1px solid var(--border); border-radius: var(--radius) var(--radius) 0 0; }
+.pp-head .num, .pp-cell.num { text-align: right; }
+.pp-item + .pp-item { border-top: 1px solid var(--border); }
+.pp-item.is-open { background: var(--surface-2); }
+.pp-row { padding-block: .85rem; }
+.pp-name { min-width: 0; display: flex; flex-direction: column; gap: .2rem; }
+.pp-name strong { font-weight: 600; font-size: .9375rem; }
+.pp-tags { display: flex; flex-wrap: wrap; gap: .3rem; }
+.pp-tags:empty { display: none; }
+.pp-tag { font-size: .72rem; color: var(--text-2); background: var(--surface-3); border-radius: 6px; padding: .05rem .4rem; }
+.pp-cell { min-width: 0; display: flex; flex-direction: column; }
+.pp-cell.num { align-items: flex-end; }
+.pp-k { display: none; }
+.pp-n { font-size: 1.125rem; font-weight: 650; font-variant-numeric: tabular-nums; line-height: 1.25; color: var(--text); }
+.pp-n.is-suggested { color: var(--muted); font-weight: 550; }
+.pp-n.is-zero { color: var(--success); }
+.pp-none { color: var(--faint); font-size: .85rem; }
+.pp-sub { font-size: .75rem; color: var(--muted); line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.pp-sub.is-warn { color: var(--warning); font-weight: 600; }
+.pp-plan { display: inline-flex; align-items: center; gap: .5rem; }
+.pp-chip { display: inline-flex; align-items: center; gap: .3rem; padding: .1rem .5rem; border-radius: 999px; font-size: .72rem; font-weight: 600; white-space: nowrap; border: 1px solid transparent; }
+.pp-chip.is-suggested { color: var(--muted); border: 1px dashed var(--border-strong); }
+.pp-chip.is-approved { color: var(--success); background: var(--success-bg); border-color: var(--success-line); }
 .pp-chip.is-changed { color: var(--warning); background: var(--warning-bg); border-color: var(--warning-line); }
-.pp-note { display: block; font-size: .74rem; color: var(--text-2); line-height: 1.3; margin-top: .1rem; }
-.pp-moved { display: block; font-size: .74rem; font-weight: 650; color: var(--warning); margin-top: .15rem; }
-.pp-hint { display: block; font-size: .7rem; color: var(--muted); margin-top: .2rem; }
-.pp-confirm { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem 1rem; padding: .55rem .75rem;
-  background: var(--surface-2); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); font-size: .85rem; }
+.pp-chip.is-done { color: var(--success); background: var(--success-bg); border-color: var(--success-line); }
+.pp-bar { margin-top: .35rem; max-width: 9rem; }
 .progress-bar.is-suggested { background: var(--border-strong); }
-.pp-t-left { color: var(--text); font-weight: 700; }
-.pp-t-ok, .pp-t-done { color: var(--success); font-weight: 700; }
-.pp-t-over { color: var(--warning); font-weight: 700; }
-.pp-t-none { color: var(--muted); }
+.pp-act { display: flex; align-items: center; justify-content: flex-end; gap: .5rem; min-width: 0; }
+.pp-add { display: flex; gap: .4rem; flex: 1 1 auto; max-width: 15rem; }
+.pp-add .form-control { min-width: 0; width: 5.5rem; flex: 0 0 5.5rem; text-align: right; font-variant-numeric: tabular-nums; }
+.pp-add .btn { flex: 1 1 auto; white-space: nowrap; }
+.pp-finish, .pp-more-btn { white-space: nowrap; }
+.pp-done-note { display: inline-flex; align-items: center; gap: .35rem; font-size: .85rem; font-weight: 600; color: var(--success); }
+.btn-icon-sm { width: 34px; height: 34px; padding: 0; border-radius: 8px; color: var(--text-2); font-size: 1.1rem; line-height: 1; border: 1px solid transparent; }
+.btn-icon-sm:hover, .btn-icon-sm[aria-expanded="true"] { background: var(--surface-3); color: var(--text); }
+.pp-more .dropdown-menu { font-size: .875rem; border-color: var(--border); border-radius: 10px; box-shadow: var(--shadow-lg); padding: .3rem; }
+.pp-more .dropdown-item { border-radius: 6px; padding: .45rem .7rem; }
+.pp-msg { display: flex; align-items: center; gap: .4rem; margin: -.35rem 1.25rem .75rem; font-size: .8125rem; color: var(--danger); justify-content: flex-end; }
+.pp-panel { margin: 0 1.25rem .9rem; padding: .8rem .9rem; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 10px; }
+.pp-confirm { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .6rem 1rem; font-size: .875rem; }
+.pp-change { display: grid; grid-template-columns: 8rem minmax(0, 1fr) auto; gap: .5rem .75rem; align-items: end; }
+.pp-change .form-label { margin-bottom: .25rem; }
+.pp-f-btns { display: flex; gap: .5rem; }
+.pp-calc { grid-column: 1 / -1; margin: .1rem 0 0; font-size: .78rem; color: var(--muted); }
+.pp-foot { margin: .75rem 0 0; font-size: .78rem; color: var(--muted); }
+/* state: suggested rows are quiet until approved; finished rows step back */
+.pp-item.is-done .pp-name strong, .pp-item.is-done .pp-n { color: var(--text-2); }
+.pp-item.is-none .pp-name strong { color: var(--text-2); }
 
-/* desktop table */
-.pp-table { min-width: 0; }
-.pp-table > :not(caption) > * > * { padding: .6rem .6rem; }
-.pp-table thead th { font-size: .68rem; white-space: nowrap; }
-.pp-table .pt-name { min-width: 10rem; width: 18%; }
-.pp-table .pp-plan { min-width: 15.5rem; }
-.pp-table .avail-btn { color: var(--muted); font-weight: 500; font-size: .72rem; }
-.pp-table .avail-btn:hover { color: var(--danger); }
-.pp-plan-top { display: flex; align-items: center; gap: .45rem; }
-.pp-btns { display: flex; flex-wrap: nowrap; gap: .3rem; margin-top: .35rem; }
-.pp-btns .btn { white-space: nowrap; }
-.pp-prepared { min-width: 6.5rem; }
-.pp-prepared .progress { margin-top: .3rem; }
-.pp-rem { font-size: 1rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.pp-act { min-width: 14rem; }
-.pp-add { max-width: 15rem; }
-.pp-add .form-control { max-width: 6.5rem; }
-.pp-table tr.change-row > td, .pp-table tr.finish-row > td { background: var(--surface-2); }
-.pp-table tr.row-overridden > td:first-child { box-shadow: inset 3px 0 0 var(--warning-line); }
-
-/* cards */
-.pp-figs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .4rem; margin: .4rem 0 .5rem; text-align: center; }
-.pp-figs > div { padding: .35rem .2rem; background: var(--surface-2); border-radius: var(--radius-sm); }
-.pp-figs .pp-l { font-size: .64rem; letter-spacing: 0; text-transform: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.pp-figs strong.pp-t-done { font-size: .85rem; }
-.pp-figs strong { display: inline-block; font-size: 1.15rem; font-weight: 750; font-variant-numeric: tabular-nums; }
-.pp-card-row { display: flex; justify-content: space-between; align-items: flex-start; gap: .5rem; margin-bottom: .5rem; }
-.pp-card-row details { flex: 1 1 auto; min-width: 0; }
-.pp-card-row .btn { flex: none; }
-.pp-avail { display: flex; justify-content: space-between; align-items: center; margin-top: .6rem; padding-top: .45rem; border-top: 1px solid var(--border); font-size: .76rem; color: var(--muted); }
-.pp-avail .btn-link { font-size: .76rem; text-decoration: none; }
+/* below 1200 px (the six columns no longer fit beside the menu) each item is a card: name and menu on top, four figures
+   in a row, the entry form full width */
+@media (max-width: 1199.98px) {
+  .pp-list { background: transparent; border: 0; box-shadow: none; display: grid; gap: .75rem; }
+  .pp-head { display: none; }
+  .pp-item { background: var(--surface); border: 1px solid var(--border) !important; border-radius: var(--radius); box-shadow: var(--shadow-sm); }
+  .pp-row { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-areas: "name name name name" "rec plan prep rem" "act act act act"; gap: .75rem .5rem; padding: 1rem; }
+  .pp-name { grid-area: name; padding-right: 2.5rem; }
+  .pp-row > .pp-cell:nth-child(2) { grid-area: rec; } .pp-row > .pp-cell:nth-child(3) { grid-area: plan; }
+  .pp-row > .pp-cell:nth-child(4) { grid-area: prep; } .pp-row > .pp-cell:nth-child(5) { grid-area: rem; }
+  .pp-act { grid-area: act; justify-content: stretch; }
+  .pp-row { position: relative; }
+  .pp-more { position: absolute; top: .7rem; right: .7rem; }
+  .pp-cell, .pp-cell.num { align-items: flex-start; text-align: left; padding: .45rem .55rem; background: var(--surface-2); border-radius: 8px; }
+  .pp-k { display: block; font-size: .72rem; font-weight: 550; color: var(--muted); margin-bottom: .1rem; }
+  .pp-plan { flex-wrap: wrap; gap: .3rem; }
+  .pp-bar { max-width: none; width: 100%; }
+  .pp-add { max-width: none; min-width: 0; flex: 1 1 0; }
+  .pp-add .form-control { flex: 1 1 0; width: 0; }
+  .pp-add .btn { flex: 0 0 auto; }
+  .pp-act .btn, .pp-add .form-control { min-height: 44px; }
+  .pp-act > .btn { flex: 1 1 auto; }
+  .pp-msg, .pp-panel { margin: 0 1rem 1rem; }
+  .pp-msg { justify-content: flex-start; }
+  .pp-change { grid-template-columns: 1fr; }
+}
 @media (max-width: 575.98px) {
-  .pp-sum { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem .75rem; }
-  .pp-sum strong { font-size: 1.15rem; }
-  .pp-figs strong { font-size: 1rem; }
-  .pp-figs .pp-l { font-size: .56rem; }
-  .pp-figs { gap: .3rem; grid-template-columns: 1.35fr 1fr 1fr 1fr; }
-  .pp-figs > div { padding: .35rem .1rem; }
+  .pp-sum { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem 1rem; padding: .9rem 1rem; }
+  .pp-sum strong { font-size: 1.3rem; }
+  .pp-row { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-areas: "name name" "rec plan" "prep rem" "act act"; }
+  .pp-act { flex-wrap: wrap; }
+  .pp-finish { flex: 1 1 auto; }
+  .pp-n { font-size: 1.05rem; }
 }
 
 /* ---- 24 menu & recipes (BOM) (Oct 2026) --------------------------------------------------------------------------- */

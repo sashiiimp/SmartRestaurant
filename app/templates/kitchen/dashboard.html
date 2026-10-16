@@ -14,9 +14,9 @@
   <sr-loading v-if="loading" :tiles="2" :cards="2"></sr-loading>
   <template v-else-if="d">
     <!-- the day in four figures, all from the plan rows below (dashboard_service._kitchen_day); display only.
-         To prepare = approved quantities plus suggestions still waiting; Prepared = progress against it. -->
+         Planned = approved quantities plus suggestions still waiting; Prepared = progress against it. -->
     <div class="kpis">
-      <sr-stat-tile label="To prepare" :value="ui.num(d.tiles.planned_total, 0)" unit="portions" icon="clipboard" href="/kitchen/prep" :tone="day.undecided ? 'warning' : 'success'"
+      <sr-stat-tile label="Planned" :value="ui.num(d.tiles.planned_total, 0)" unit="portions" icon="clipboard" href="/kitchen/prep" :tone="day.undecided ? 'warning' : 'success'"
         :hint="day.items_forecast ? ui.num(approvedPortions, 0) + ' approved · ' + ui.num(suggestedPortions, 0) + ' suggested' : 'No forecast yet: set quantities by hand'"
         :flag="day.undecided ? day.undecided + (day.undecided === 1 ? ' item awaits' : ' items await') + ' approval' : (day.items_forecast ? 'All ' + day.items_forecast + ' items approved' : null)"></sr-stat-tile>
       <sr-stat-tile label="Prepared" :value="ui.num(day.prepared_total, 0)" :unit="'of ' + ui.num(d.tiles.planned_total, 0)" icon="check" href="/kitchen/prep" :progress="preparedPct"
@@ -41,7 +41,7 @@
           <div class="card-head"><div><h2 id="plan-h" class="h6">[[ isToday ? "Today's preparation plan" : 'Plan for ' + ui.date(date) ]]</h2><p class="card-sub">What to cook, how much, and how far each item is</p></div><a href="/kitchen/prep">Open plan</a></div>
           <p v-if="!d.plan.length" class="kd-none">No forecast for this date yet.</p>
           <div v-else class="table-responsive"><table class="table table-sm align-middle mb-0 plan-table kd-plan">
-            <thead><tr><th>Item</th><th class="text-end d-none d-sm-table-cell">Forecast</th><th class="text-end">To prepare</th><th class="col-prepared">Prepared</th><th class="d-none d-sm-table-cell">Status</th></tr></thead>
+            <thead><tr><th>Item</th><th class="text-end d-none d-sm-table-cell">Forecast</th><th class="text-end">Planned</th><th class="col-prepared">Prepared</th><th class="d-none d-sm-table-cell">Status</th></tr></thead>
             <tbody><tr v-for="r in d.plan" :key="r.menu_item_id" :class="'row-' + state(r)">
               <td class="kd-item">[[ r.name ]] <span v-if="!r.is_available" class="sr-badge sr-badge-danger ms-1">Unavailable</span></td>
               <td class="text-end kd-num text-muted d-none d-sm-table-cell">[[ ui.num(r.forecast_qty, 0) ]]</td>

@@ -12,7 +12,8 @@ SR.createApp({
     approvedPortions() { return this.d.plan.filter(r => ['accepted', 'overridden'].includes(r.status)).reduce((t, r) => t + Number(this.toPrepare(r) || 0), 0); },
     suggestedPortions() { return this.d.plan.filter(r => r.status === 'suggested').reduce((t, r) => t + Number(r.recommended_qty || 0), 0); },
     preparedPct() { const t = this.d && this.d.tiles; return t && Number(t.planned_total) ? Math.min(100, Math.round(Number(t.prepared_total) / Number(t.planned_total) * 100)) : 0; },
-    toGo() { return Math.max(0, Number(this.d.tiles.planned_total) - Number(this.day.prepared_total)); },
+    // the same rule as Plan & prepare: what is still to cook on unfinished items (portions above a plan are not negative)
+    toGo() { return this.d.plan.filter(r => r.prep_status !== 'done').reduce((t, r) => t + Math.max(0, Number(this.toPrepare(r) || 0) - Number(r.prepared || 0)), 0); },
     preparedHint() {
       const plan = this.day.items_forecast && !this.day.undecided ? 'approved' : 'recommended';
       return this.preparedPct + '% of the ' + plan + ' plan · ' + this.d.tiles.items_done + ' of ' + this.d.plan.length + ' items done';
@@ -63,9 +64,9 @@ SR.createApp({
     // the decision on an item (recommendations.status) and, once preparation has started, its progress (prep_status)
     decision(r) { return ['accepted', 'overridden'].includes(r.status) ? r.status : (r.status === 'no_forecast' ? 'none' : 'suggested'); },
     state(r) { return r.prep_status === 'done' ? 'done' : (r.prep_status === 'in_progress' ? 'progress' : this.decision(r)); },
-    stateLabel(r) { return { done: 'Completed', progress: 'In progress', accepted: 'Accepted', overridden: 'Changed', suggested: 'Suggested', none: 'No forecast' }[this.state(r)]; },
+    stateLabel(r) { return { done: 'Done', progress: 'In progress', accepted: 'Approved', overridden: 'Changed', suggested: 'Suggested', none: 'No forecast' }[this.state(r)]; },
     qtyTitle(r) {
-      return { accepted: 'Accepted recommendation', overridden: 'Plan changed from the recommended ' + r.recommended_qty, suggested: 'Suggested, not approved yet', none: '' }[this.decision(r)];
+      return { accepted: 'Approved', overridden: 'Plan changed from the recommended ' + r.recommended_qty, suggested: 'Suggested, not approved yet', none: '' }[this.decision(r)];
     },
     async ack(a) {
       try { await api.post('/alerts/' + a.id + '/acknowledge'); await this.load(); } catch (e) { ui.toast(ui.errorText(e), 'danger'); }

@@ -355,3 +355,23 @@ API, permission, ML or database change. Every page keeps its buttons and API cal
   beside open kitchen requests; one Ingredient requirements table (7-day need, usable stock, cover, the reorder
   suggestion and supplier) replaces the separate Reorder now and Stock-out risk lists; expiring batches; alerts.
 - Alert messages show their stored ISO dates as "Fri 16 Oct" (display only).
+
+## 19. Plan & prepare, second pass (16 Oct 2026, branch `prep-polish`)
+
+Front end only; the prep formula, the API calls and the auto-approval on the first entry are unchanged.
+
+- **One list for every screen** (a six-column row from 1200 px, a card below) instead of a table and a separate card
+  template. Columns: Item, Recommended (with "forecast N"; the full calculation is the tooltip and is shown in the
+  Change plan form), Planned (with Suggested / Approved / Changed), Prepared (with a bar), Remaining, Add prepared.
+- **Consistent figures:** Remaining = planned − prepared for an unfinished item, never below 0; portions above the plan
+  are shown as "+N extra"; a finished item shows Done (and "N short of plan" if it stopped below). The four summary
+  figures are the sums of what the rows show. The kitchen dashboard's "still to prepare" uses the same rule.
+- **Actions by state:** while cooking, an entry box (placeholder = what is left) and Add prepared; once the plan is
+  reached, Finish preparation becomes the main button and "Add more" opens the box; a finished item has only its ⋯ menu.
+  Change plan, Use new N, finishing below the plan, Reopen and Mark unavailable are in the row's ⋯ menu.
+- **Over-preparation:** an entry that would take an item above its plan asks once in the row ("Adding 80 makes 80
+  prepared, 10 more than the plan of 70"), because an entry cannot be taken back; finishing below the plan also asks once.
+  Finishing at or above the plan needs no confirmation.
+- Labels: "How?" removed; "Auto-accepted" and "Accepted" are both "Approved" (the tooltip says how); Done replaces
+  Completed on the dashboard; the dashboard tile and table say Planned, like this page. When every item is done the page
+  points to Served & waste. A future date shows one note instead of a message on every row.
