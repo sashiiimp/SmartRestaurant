@@ -7,9 +7,12 @@
       <h1 class="h4 m-0">Dashboard</h1>
       <p class="dash-sub" v-if="d">[[ ui.date(d.from) ]] – [[ ui.date(d.to) ]] · [[ d.range_days ]] days to yesterday</p>
     </div>
-    <div class="btn-group" role="group" aria-label="Reporting period">
-      <button class="btn btn-outline-secondary" :class="{ active: range === 7 }" :aria-pressed="range === 7" :disabled="loading" @click="setRange(7)">Last 7 days</button>
-      <button class="btn btn-outline-secondary" :class="{ active: range === 30 }" :aria-pressed="range === 30" :disabled="loading" @click="setRange(30)">Last 30 days</button>
+    <div class="dash-actions">
+      <a class="btn btn-outline-primary" href="/admin/catalog?tab=bom"><sr-icon name="book" :size="16"></sr-icon> Manage BOM</a>
+      <div class="btn-group" role="group" aria-label="Reporting period">
+        <button class="btn btn-outline-secondary" :class="{ active: range === 7 }" :aria-pressed="range === 7" :disabled="loading" @click="setRange(7)">Last 7 days</button>
+        <button class="btn btn-outline-secondary" :class="{ active: range === 30 }" :aria-pressed="range === 30" :disabled="loading" @click="setRange(30)">Last 30 days</button>
+      </div>
     </div>
   </div>
   <div v-if="error" class="alert alert-danger d-flex align-items-center gap-3" role="alert">

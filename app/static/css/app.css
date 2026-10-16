@@ -1050,3 +1050,17 @@ a.wf-step:focus-visible { outline: 3px solid rgba(var(--accent-rgb), .35); outli
   .kd-side .short-table > :not(caption) > * > * { padding: .35rem .25rem; }
   .short-table .kd-u { min-width: 0; margin-left: .15rem; }
 }
+
+/* ---- 24 menu & recipes (BOM) (Oct 2026) --------------------------------------------------------------------------- */
+/* BOM overview: one group of rows per menu item (name, batch, ingredient count, Edit recipe), then its ingredients. */
+.bom-search { max-width: 18rem; }
+.bom-table > :not(caption) > * > * { padding: .4rem .6rem; }
+.bom-table thead th { font-size: .68rem; }
+.bom-table tr.bom-item > th { background: var(--surface-2); border-top: 1px solid var(--border-strong); font-weight: 500; }
+.bom-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .35rem .75rem; }
+.bom-head small { margin-left: .5rem; font-size: .76rem; color: var(--muted); }
+.bom-head-r { display: inline-flex; align-items: center; gap: .5rem; }
+.bom-table tr.bom-hit > td { background: var(--accent-soft); font-weight: 600; }
+.bom-table td:first-child { padding-left: 1.2rem; }
+.ing-table td, .ing-table th { white-space: nowrap; }
+@media (max-width: 575.98px) { .bom-search { max-width: none; width: 100%; } .bom-head small { display: block; margin-left: 0; } }

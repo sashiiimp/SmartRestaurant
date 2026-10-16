@@ -298,6 +298,21 @@ def admin(browser):
     page.get_by_role("button", name="Edit recipe").click()
     page.wait_for_selector("text=Save recipe", timeout=4000)
     page.get_by_role("button", name="Cancel").click()
+    assert "ingredients" in page.locator(".catalog-table").inner_text(), "recipe column counts ingredients"
+    page.locator(".hub-tab", has_text="BOM overview").click()                # all recipes in one read-only view
+    page.wait_for_selector(".bom-table tr.bom-item", timeout=8000)
+    page.fill(".bom-search", "Chicken")
+    assert page.locator(".bom-table tr.bom-hit").count() >= 1, "search by ingredient highlights it"
+    page.locator(".bom-table tr.bom-item a", has_text="Edit recipe").first.click()   # opens the one recipe editor
+    page.wait_for_selector("text=Save recipe", timeout=8000)
+    assert "tab=items" in page.url, page.url
+    visit(page, "/admin/catalog?tab=ingredients", "a_ingredients", wait=".ing-table tbody tr")
+    page.get_by_role("button", name="Add ingredient").click()                # the same form as Inventory > Stock levels
+    page.get_by_role("button", name="Save", exact=True).click()
+    page.wait_for_selector("text=is required", timeout=4000)
+    page.get_by_role("button", name="Cancel").click()
+    visit(page, "/admin", "a_dashboard_bom", wait=".dash-head")
+    assert page.get_by_role("link", name="Manage BOM").get_attribute("href") == "/admin/catalog?tab=bom"
     visit(page, "/admin/users", "a_users", wait="table tbody tr")
     page.get_by_role("button", name="Add user").click()
     page.get_by_role("button", name="Create").click()
@@ -325,6 +340,7 @@ PAGES = {
                    "/inventory/reorder?tab=demand", "/inventory/reorder?tab=orders", "/inventory/reorder?tab=suppliers"],
     "admin": ["/admin", "/admin/monitor", "/admin/monitor?tab=forecast", "/admin/monitor?tab=stock", "/admin/monitor?tab=ingredients",
               "/admin/monitor?tab=waste", "/admin/models", "/admin/models?tab=data", "/admin/models?tab=runs", "/admin/catalog",
+              "/admin/catalog?tab=bom", "/admin/catalog?tab=ingredients",
               "/admin/users", "/admin/users?tab=settings", "/admin/users?tab=roles"],
 }
 

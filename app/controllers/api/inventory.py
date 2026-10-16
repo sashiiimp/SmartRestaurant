@@ -18,13 +18,13 @@ def list_ingredients():
 
 
 @bp.route("/ingredients", methods=["POST"])
-@roles_required("inventory")
+@roles_required("admin", "inventory")   # admin keeps the recipes (BOM), so it can add the ingredients they use
 def create_ingredient():
     return ok(inv.ingredient_dict(inv.create_ingredient(current_outlet_id(), json_body(), current_user.id)), status=201)
 
 
 @bp.route("/ingredients/<int:ingredient_id>", methods=["PATCH"])
-@roles_required("inventory")
+@roles_required("admin", "inventory")
 def update_ingredient(ingredient_id):
     return ok(inv.ingredient_dict(inv.update_ingredient(current_outlet_id(), ingredient_id, json_body(), current_user.id)))
 

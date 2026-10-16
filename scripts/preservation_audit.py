@@ -45,7 +45,13 @@ def page_actions(template: str) -> list[str]:
         out.add(f"(CSV import {m.group(1)})")
     for m in re.finditer(r"<sr-alert-list\b", src):
         out.add("(alert list with Acknowledge)")
+    for m in re.finditer(r"<sr-ingredient-form\b", src):
+        out.add("(ingredient form with Save and Cancel)")
     return sorted(out)
+
+
+# shared components that call the API themselves: the calls count for every page that uses the component
+COMPONENT_API = {"sr-ingredient-form": ["PATCH /ingredients/<id>", "POST /ingredients"]}
 
 
 def api_calls(script: str, template: str | None = None) -> list[str]:
@@ -65,6 +71,9 @@ def api_calls(script: str, template: str | None = None) -> list[str]:
         out.add(f"CSV {m.group(1)}")
     for m in re.finditer(r"csvUrl\(\s*'([^']+)'", src):
         out.add(f"CSV {m.group(1)}")
+    for tag, calls in COMPONENT_API.items():
+        if f"<{tag}" in src:
+            out.update(calls)
     return sorted(out)
 
 
