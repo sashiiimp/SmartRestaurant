@@ -6,7 +6,7 @@ sequenceDiagram
   participant C as API controller /api/v1/recommendations
   participant RS as RecommendationService
   participant FS as ForecastingService
-  participant D as MySQL / MariaDB
+  participant D as MySQL 8.4
 
   K->>B: open Prep plan for a date
   B->>C: GET /recommendations/prep?date=D

@@ -1,7 +1,7 @@
 # SmartRestaurant
 
 An ML-based demand forecasting and inventory decision support system for Sri Lankan fast-food restaurants
-(CSE5015 project, Team ForeSight). Python 3.14, Flask, MariaDB/MySQL, Pandas, scikit-learn, XGBoost; Vue 3 and
+(CSE5015 project, Team ForeSight). Python 3.14, Flask, MySQL 8.4, Pandas, scikit-learn, XGBoost; Vue 3 and
 Bootstrap 5 (vendored, no CDN, no build step) inside Jinja2 pages.
 
 **All data in the demo is synthetic** and labelled as such in the UI. No real restaurant data was available; see
@@ -30,7 +30,8 @@ reports with CSV export.
 uv venv --python 3.14 .venv            # or: python3 -m venv .venv
 uv pip install --python .venv/bin/python -r requirements-dev.txt   # or: pip install -r requirements-dev.txt
 cp .env.example .env                   # then edit: SECRET_KEY, DATABASE_URL, TEST_DATABASE_URL, SEED_PASSWORD
-# database: MySQL 8.4 (production target, see docs/RUNBOOK_MYSQL.md) or the older private MariaDB (scripts/db.sh)
+# database: MySQL 8.4 (see docs/RUNBOOK_MYSQL.md); DATABASE_URL is required, REQUIRE_MYSQL=1 refuses anything else
+flask --app wsgi smartrest db-info    # read-only: which database this configuration uses
 export FLASK_APP=wsgi.py
 flask db upgrade                       # create the tables
 flask smartrest demo-reset             # seed + synthetic history + train + activate + backfill + forecast + alerts
@@ -60,8 +61,9 @@ flask smartrest create-user | set-setting <key> <value> | demo-reset
 ## Tests
 
 ```bash
-pytest -q -m "not mysql"                # fast: unit + service + API tests on SQLite
-pytest -q                               # everything, incl. MariaDB constraint and concurrency tests
+pytest -q -m "not mysql"                # fast: unit + service + API tests on SQLite in memory
+pytest -q                               # everything, incl. MySQL 8.4 constraint and concurrency tests
+TEST_ALL_ON_DATABASE=1 pytest -q        # the whole suite against MySQL 8.4 (TEST_DATABASE_URL)
 pytest -q -m perf -s tests/perf         # timing against the seeded database
 pytest --cov=app/services --cov=app/ml  # coverage
 scripts/devserver.sh start && python tests/ui/smoke.py all --shots docs/screenshots   # browser test (Playwright)

@@ -1,0 +1,21 @@
+[Unit]
+Description=SmartRestaurant STAGING MySQL 8.4 (127.0.0.1:3311, socket /srv/smartrest-staging-mysql/run/mysql.sock)
+After=network.target
+
+[Service]
+Type=simple
+User=stagemysql
+Group=stagemysql
+ExecStart=/opt/mysql-8.4.11/bin/mysqld --defaults-file=/srv/smartrest-staging-mysql/my.cnf
+TimeoutStopSec=120
+Restart=on-failure
+LimitNOFILE=16384
+MemoryMax=700M
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+ReadWritePaths=/srv/smartrest-staging-mysql/data /srv/smartrest-staging-mysql/run /srv/smartrest-staging-mysql/log /srv/smartrest-staging-mysql/tmp
+
+[Install]
+WantedBy=multi-user.target

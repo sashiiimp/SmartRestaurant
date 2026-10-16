@@ -43,8 +43,8 @@ This project built SmartRestaurant, a web-based decision support system that for
 item seven days ahead and converts the forecast into decisions: how many portions to prepare, which ingredients will
 run short, which alerts to raise and how much to reorder. The system has three roles (System Administrator, Food
 Production Manager, Inventory and Procurement Manager), 23 pages, 89 JSON API endpoints and 30 database tables, and
-implements all 47 functions listed in the approved proposal, two of them partly. It is built with Python, Flask, MariaDB (MySQL
-compatible), pandas, scikit-learn and XGBoost, with a Vue and Bootstrap front end.
+implements all 47 functions listed in the approved proposal, two of them partly. It is built with Python, Flask, MySQL 8.4,
+pandas, scikit-learn and XGBoost, with a Vue and Bootstrap front end.
 
 No real restaurant data was available, so the system was trained and demonstrated on two years of synthetic sales
 generated for ten menu items with Sri Lankan calendar effects (Poya days and other public holidays, school holidays,
@@ -316,11 +316,11 @@ Git and GitHub were used for version control, with one commit per finished work 
 | Layer | Technology | Why |
 |---|---|---|
 | Back end | Python 3.14, Flask 3.1, Flask-SQLAlchemy, Flask-Migrate, Flask-Login, Flask-WTF | Proposal stack; small, well-documented, suits a layered design |
-| Database | MariaDB 11.8 (MySQL compatible) | The proposal specifies MySQL; MariaDB is a drop-in replacement and was available on the server |
+| Database | MySQL 8.4 LTS (Community Server 8.4.11) | The proposal specifies MySQL. Development started on MariaDB 11.8, which was available on the server; production moved to MySQL 8.4 on 9 October 2026 and staging and the test suite on 16 October 2026, with every row compared after the move. The app refuses to start on any other server in production. |
 | Data and ML | pandas, NumPy, scikit-learn 1.9 (Random Forest), XGBoost 3.4, joblib | Proposal stack; tree models suit tabular data with interacting features |
 | Front end | Jinja2 pages with Vue 3, Bootstrap 5 and Chart.js, stored locally (no build step, no CDN) | Responsive interface without a separate single-page application; works offline at the demo |
 | Testing | pytest, pytest-cov, Playwright (headless Chromium, Firefox and WebKit) | Unit, integration, API, timing and browser tests |
-| Deployment | gunicorn behind nginx (HTTPS, Let's Encrypt certificate) on an Ubuntu server, as an unprivileged systemd service; MariaDB instance for the project | Simple demo deployment; a local copy is the fallback |
+| Deployment | gunicorn behind nginx (HTTPS, Let's Encrypt certificate) on an Ubuntu server, as an unprivileged systemd service; a private MySQL 8.4 instance for the project (a separate one for staging) | Simple demo deployment; a local copy is the fallback |
 
 ## 6.3 Data strategy
 
@@ -380,7 +380,7 @@ only the forecasting service may call it. A command-line interface (`flask smart
 operators access to seeding, training, forecasting, evaluation and checks through the same services.
 
 ```
-Browser (Vue page) --fetch JSON--> API controller --> role check, CSRF --> service --> SQLAlchemy --> MariaDB
+Browser (Vue page) --fetch JSON--> API controller --> role check, CSRF --> service --> SQLAlchemy --> MySQL 8.4
                                                                               \--> ml package --> model files
 ```
 

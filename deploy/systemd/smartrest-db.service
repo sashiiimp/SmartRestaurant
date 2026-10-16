@@ -1,3 +1,5 @@
+# LEGACY (16 Oct 2026): production runs on smartrest-mysql (MySQL 8.4) since 9 Oct 2026 and staging on
+# smartrest-staging-mysql since 16 Oct 2026. Kept until the MariaDB instance is retired (separate approval).
 [Unit]
 Description=SmartRestaurant private MariaDB (127.0.0.1:3307)
 After=network.target
