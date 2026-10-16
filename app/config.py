@@ -8,7 +8,10 @@ load_dotenv()
 
 class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY", "dev-only-change-me")
-    SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL", "sqlite:///smartrest_dev.db")
+    # no default: a missing DATABASE_URL stops the app (app/utils/db_check.py) instead of creating a local SQLite file
+    SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
+    # MySQL 8.4 only (checked at start-up): always in production; staging sets REQUIRE_MYSQL=1 in .env
+    REQUIRE_MYSQL = os.environ.get("REQUIRE_MYSQL") == "1"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {"pool_pre_ping": True}
     SESSION_COOKIE_HTTPONLY = True
@@ -30,6 +33,7 @@ class DevConfig(Config):
 
 class TestConfig(Config):
     TESTING = True
+    REQUIRE_MYSQL = False
     SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
     SQLALCHEMY_ENGINE_OPTIONS = {}
     WTF_CSRF_ENABLED = False
@@ -39,6 +43,7 @@ class TestConfig(Config):
 
 class ProdConfig(Config):
     SESSION_COOKIE_SECURE = True
+    REQUIRE_MYSQL = True
 
 
 CONFIGS = {"dev": DevConfig, "test": TestConfig, "prod": ProdConfig}

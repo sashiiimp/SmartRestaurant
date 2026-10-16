@@ -58,7 +58,9 @@ permissions. Static files are served with `Cache-Control: no-cache` and an ETag,
    row lock against overlap, and systemd never starts the oneshot service twice at once).
    Leave `smartrest-web.service` and its `mysql.conf` drop-in as they are: they already require MySQL. The unit in
    `deploy/systemd/` is the same thing written as one file and can be installed later.
-4. Reload the web app without downtime: `systemctl kill -s HUP --kill-whom=main smartrest-web`.
+4. Preflight (from the MySQL fail-fast release on): `cd /srv/smartrest && runuser -u smartrest -- env APP_ENV=prod
+   .venv/bin/flask --app wsgi smartrest db-info` must print `backend: mysql`, server `8.4.x` and exit 0; only then
+   reload the web app without downtime: `systemctl kill -s HUP --kill-whom=main smartrest-web`.
 
 ## 4. Checks after the deployment
 

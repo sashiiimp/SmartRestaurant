@@ -21,6 +21,8 @@ def create_app(config_name: str | None = None, overrides: dict | None = None) ->
     os.makedirs(app.instance_path, exist_ok=True)
     if app.config.get("SECRET_KEY") == "dev-only-change-me" and os.environ.get("APP_ENV") == "prod":
         raise RuntimeError("Set SECRET_KEY in the environment before running with APP_ENV=prod.")
+    from app.utils.db_check import check_server, check_url
+    check_url(app.config)   # DATABASE_URL set, and MySQL where it is required
 
     if app.config.get("TRUST_PROXY"):
         from werkzeug.middleware.proxy_fix import ProxyFix
@@ -28,6 +30,7 @@ def create_app(config_name: str | None = None, overrides: dict | None = None) ->
         app.wsgi_app = ProxyFix(app.wsgi_app, x_for=n, x_proto=n, x_host=n)
 
     db.init_app(app)
+    app.config["DATABASE_SERVER"] = check_server(app, db)   # MySQL 8.4 or later where required (not MariaDB)
     migrate.init_app(app, db)
     csrf.init_app(app)
     login_manager.init_app(app)

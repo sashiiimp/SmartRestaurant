@@ -1,7 +1,15 @@
 # Runbook: SmartRestaurant on MySQL 8.4
 
-*Written 9 October 2026 on branch `feature/mysql`. The private MySQL instance exists and was tested in isolation;
-**production still runs on MariaDB** until the cutover in section 5 is separately approved and carried out.*
+> **Status 16 October 2026.** Production has run on **MySQL 8.4.11** (`smartrest-mysql`, 127.0.0.1:3308 / socket)
+> since the cutover of 9 October 2026. Staging runs on its own MySQL 8.4.11 instance, `smartrest-staging-mysql`
+> (127.0.0.1:3311, databases `smartrest_staging`, `smartrest_dash`, `smartrest_test`), since 16 October 2026; the full
+> test suite runs against `smartrest_test` there. The app refuses to start on SQLite, MariaDB or MySQL below 8.4 when
+> `APP_ENV=prod` or `REQUIRE_MYSQL=1` (`app/utils/db_check.py`); `flask smartrest db-info` is the read-only preflight.
+> The MariaDB instance `smartrest-db` (127.0.0.1:3307) is no longer used by production or staging and is kept until its
+> retirement is approved. Sections 1 to 5 below are the original plan of 9 October, kept as written.
+
+*Written 9 October 2026 on branch `feature/mysql`. The private MySQL instance existed and was tested in isolation;
+production then still ran on MariaDB until the cutover in section 5.*
 
 ## 1. What runs where
 
@@ -105,3 +113,15 @@ The tarball is not updated by apt. Check the MySQL 8.4 release notes monthly; to
 tarball, stop `smartrest-mysql`, take a dump, point `ExecStart` and `basedir` at the new folder, start (8.4.x patch
 releases upgrade the data dictionary in place), run `check-stock` and the read-only checks, and keep the old folder
 until the new one is proven.
+
+## 7. Staging on MySQL 8.4 (16 October 2026)
+
+| | |
+|---|---|
+| Service | `smartrest-staging-mysql` (user `stagemysql`, enabled), config `/srv/smartrest-staging-mysql/my.cnf` = production settings with port 3311 and its own paths; unit file in `deploy/systemd/` |
+| Databases | `smartrest_staging` (staging service), `smartrest_dash` (staging worktree), `smartrest_test` (test suite); users `stage_app`, `stage_test` |
+| Migration | schema by `flask db upgrade`, rows copied from the staging SQLite files and compared value by value (24,941 and 24,819 rows, no differences, no orphan foreign keys; DATETIME keeps whole seconds, as in production) |
+| Backups | `/root/smartrest/backups/mysql_staging_migration_20261016_122245` (production dump restore-tested: 32/32 table checksums equal; SQLite files; MariaDB dumps) |
+| Rollback | restore the commented SQLite `DATABASE_URL` line in the staging `.env`, remove `REQUIRE_MYSQL=1`, restart the staging service (the SQLite files are kept unchanged) |
+| Preflight | `flask --app wsgi smartrest db-info` prints backend, server version, database, migration and exits 1 when MySQL is required but not used |
+

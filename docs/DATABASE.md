@@ -169,7 +169,7 @@ Who sees which type is a service constant listed in `API.md` section 6.
 | One open alert per condition | yes | UNIQUE on `open_key` |
 | Movement sign per type; movements immutable | yes (no update/delete code path) | CHECK |
 
-SQLite does not enforce `SELECT ... FOR UPDATE`; concurrency behaviour is therefore tested on MariaDB only (`TESTING.md`).
+SQLite does not enforce `SELECT ... FOR UPDATE`; concurrency behaviour is therefore tested on the server database only: MySQL 8.4 since 16 Oct 2026 (MariaDB before) (`TESTING.md`).
 
 ## 4. Stock operations (exact behaviour)
 

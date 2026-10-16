@@ -47,7 +47,7 @@ Controllers  app/controllers/        parse request, check role, call ONE service
 Services     app/services/           all business logic, validation, transactions
    │   forecasting_service ──► app/ml (pure pandas / scikit-learn / XGBoost, no database)
    ▼
-Models       app/models/  (SQLAlchemy) ──► MySQL 8.4 (production), SQLite (tests)
+Models       app/models/  (SQLAlchemy) ──► MySQL 8.4 (production and staging; required at start-up), SQLite in memory (fast tests only)
 ```
 
 - **MVC with a service layer.** The controllers never calculate anything, and `tests/test_architecture.py` enforces which service may call which.
@@ -363,7 +363,8 @@ unless the demo is reset.
     - HTTPS, and an unprivileged service user.
 
 25. **How did you test it?**
-    - **Automated:** 395 fast tests (SQLite) and 14 MySQL tests, with hand-calculated expected values for the formulas.
+    - **Automated:** about 500 tests with hand-calculated expected values for the formulas; the fast run uses SQLite in
+      memory and the whole suite also runs against MySQL 8.4 (514 passed, 16 Oct 2026), including the concurrency tests.
     - **Migration:** rehearsed up, down and up on a copy of the production database.
     - **Browser:** a smoke test in Chromium, Firefox and WebKit, and checks at 360–1440 px.
 

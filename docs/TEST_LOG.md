@@ -481,3 +481,20 @@ one exists and otherwise opens the same pre-filled Stock requests address direct
 | Fast suite (SQLite) | **483 passed**, 16 skipped |
 | MySQL 8.4 (isolated) | stock requests, prep workflow, recommendations, role dashboards, E2E-1, preservation, RBAC: **104 passed** |
 | Browsers | Chromium, Firefox, WebKit **pass**; the walkthrough now checks that an accepted card has no second Accept, that End of day ticks served and waste once recorded, and that Issue is disabled when nothing is usable |
+
+## 27. MySQL 8.4 for staging and tests, fail-fast (16 Oct 2026, branch `mysql-failfast` on production `159d7aa`, staging only, not deployed)
+
+Earlier entries are kept as written: the runs they record used MariaDB 11.8 for the server tests.
+
+| Check | Result |
+|---|---|
+| Staging data moved to MySQL 8.4 (instance `smartrest-staging-mysql`, 127.0.0.1:3311) | staging 24,941 rows and worktree 24,819 rows compared value by value: no differences, no orphan foreign keys; `flask db check` clean on both |
+| Production backup restore test | dump restored on the staging instance: 32/32 table checksums equal to production |
+| Fail-fast (`app/utils/db_check.py`) | no SQLite fallback outside tests; MySQL required with `APP_ENV=prod` or `REQUIRE_MYSQL=1`; MariaDB and MySQL < 8.4 refused; access denied or unknown database refused; only an unreachable server (2002/2003/2006/2013) warns and starts. Checked by hand: SQLite, MariaDB 3307 and a missing URL are refused, staging passes (`flask smartrest db-info`) |
+| New tests DB-1 .. DB-7 | 14 passed (incl. the server version, a wrong password and an unknown database on MySQL 8.4) |
+| Fast suite (SQLite in memory) | **498 passed**, 2 skipped |
+| Full suite on MySQL 8.4 (`TEST_ALL_ON_DATABASE=1`, `smartrest_test`) | **514 passed, 0 failed** (the MariaDB-only failure `test_two_runs_at_once...` passes on MySQL) |
+| Browsers on a MySQL copy | Chromium, Firefox, WebKit: kitchen, inventory, admin, responsive **pass** |
+| Functional checks on MySQL | 16/16: model and forecasts, prep formula and pre-order floor, BOM requirements, pre-order workflow, served and waste, ingredient usage, stock, dashboards, permissions; forecast run on MySQL wrote 70 rows |
+| Live staging service on MySQL | kitchen 10/10, inventory 6/6, admin 7/7 pages and APIs; forecast timer runs on schedule, no errors |
+

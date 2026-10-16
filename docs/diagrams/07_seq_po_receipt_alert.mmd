@@ -7,7 +7,7 @@ sequenceDiagram
   participant IS as InventoryService
   participant AS as AlertService
   participant RS as RecommendationService
-  participant D as MySQL / MariaDB
+  participant D as MySQL 8.4
 
   I->>B: Receive stock on order PO-n (quantity, expiry)
   B->>C: POST /purchase-orders/{id}/receive + CSRF token
