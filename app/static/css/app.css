@@ -858,6 +858,8 @@ a.step:hover { border-color: rgba(var(--accent-rgb), .45); background: var(--acc
   .pp-list { background: transparent; border: 0; box-shadow: none; display: grid; gap: .75rem; }
   .pp-head { display: none; }
   .pp-item { background: var(--surface); border: 1px solid var(--border) !important; border-radius: var(--radius); box-shadow: var(--shadow-sm); }
+  /* an open card stays white (its grey figure boxes would vanish on the row's grey); a darker edge marks it instead */
+  .pp-item.is-open { background: var(--surface); border-color: var(--border-strong) !important; }
   .pp-row { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-areas: "name name name name" "rec plan prep rem" "act act act act"; gap: .75rem .5rem; padding: 1rem; }
   .pp-name { grid-area: name; padding-right: 2.5rem; }
   .pp-row > .pp-cell:nth-child(2) { grid-area: rec; } .pp-row > .pp-cell:nth-child(3) { grid-area: plan; }
