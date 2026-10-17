@@ -1,7 +1,6 @@
 {% extends "hub.html" %}
 {% block title %}Forecasting - SmartRestaurant{% endblock %}
 {% block panel %}
-{% include "admin/_forecast_steps.html" %}
 <div id="app" v-cloak>
 {% if hub.tab == 'runs' %}
   <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2"><h2 class="h5 m-0">Forecast generation</h2>
@@ -43,7 +42,7 @@
         <div class="small" :class="active.beats_baseline ? 'text-success' : 'text-warning'"><template v-if="active.selection_reason">Chosen in its training run: [[ active.selection_reason.charAt(0).toLowerCase() + active.selection_reason.slice(1) ]]</template></div>
         <div class="small text-muted">Hold-out [[ ui.date(active.holdout.start) ]] – [[ ui.date(active.holdout.end) ]], never seen in training; weather is the seasonal estimate.</div>
         <div class="table-responsive mt-3"><table class="table table-sm mb-0"><thead><tr><th>Model</th><th class="text-end">MAE</th><th class="text-end">RMSE</th><th class="text-end">MAPE %</th><th class="text-end">WAPE %</th><th class="text-end">R2</th><th class="text-end">Bias</th></tr></thead>
-          <tbody><tr v-for="c in active.metrics.comparison" :key="c.model" :class="c.model === active.algorithm ? 'table-success' : ''"><td>[[ algoName(c.model) ]] <span class="text-muted small">([[ c.model ]])</span></td><td class="text-end">[[ ui.num(c.mae, 2) ]]</td><td class="text-end">[[ ui.num(c.rmse, 2) ]]</td><td class="text-end">[[ ui.num(c.mape, 1) ]]</td><td class="text-end">[[ ui.num(c.wape, 1) ]]</td><td class="text-end">[[ ui.num(c.r2, 3) ]]</td><td class="text-end">[[ ui.num(c.bias, 2) ]]</td></tr></tbody></table></div>
+          <tbody><tr v-for="c in byMae(active.metrics.comparison)" :key="c.model" :class="c.model === active.algorithm ? 'table-success' : ''"><td>[[ algoName(c.model) ]] <span class="text-muted small">([[ c.model ]])</span></td><td class="text-end">[[ ui.num(c.mae, 2) ]]</td><td class="text-end">[[ ui.num(c.rmse, 2) ]]</td><td class="text-end">[[ ui.num(c.mape, 1) ]]</td><td class="text-end">[[ ui.num(c.wape, 1) ]]</td><td class="text-end">[[ ui.num(c.r2, 3) ]]</td><td class="text-end">[[ ui.num(c.bias, 2) ]]</td></tr></tbody></table></div>
         <p class="table-note">MAE: average error (portions). RMSE: weights large errors. MAPE / WAPE: % error. R2: variation explained. Bias: over (+) / under (-).</p>
         <div v-if="active.metrics.oracle_mae" class="small text-muted mt-1">Noise floor (best possible MAE on this synthetic data): [[ ui.num(active.metrics.oracle_mae, 2) ]].</div>
         <div v-if="active.metrics.feature_importance.length" class="small mt-2"><strong>Most influential inputs:</strong> [[ active.metrics.feature_importance.slice(0, 5).map(f => f.feature + ' (' + ui.num(f.importance * 100, 0) + '%)').join(', ') ]]</div>

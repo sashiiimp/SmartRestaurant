@@ -30,7 +30,7 @@
     <div class="pp-list" role="table" aria-label="Preparation plan">
       <div class="pp-head" role="row"><span role="columnheader">Item</span><span role="columnheader" class="num">Recommended</span><span role="columnheader">Planned</span>
         <span role="columnheader">Prepared</span><span role="columnheader" class="num">Remaining</span><span role="columnheader">[[ isFuture ? '' : 'Add prepared portions' ]]</span></div>
-      <div v-for="it in items" :key="it.menu_item_id" class="pp-item" :class="['is-' + rowState(it), { 'is-open': st(it.menu_item_id).changing || st(it.menu_item_id).confirm }]" role="rowgroup">
+      <div v-for="it in items" :key="it.menu_item_id" class="pp-item" :class="['is-' + rowState(it), { 'is-open': st(it.menu_item_id).changing || st(it.menu_item_id).confirm, 'is-same': same(it) }]" role="rowgroup">
         <div class="pp-row" role="row">
           <div class="pp-name" role="cell">
             <strong>[[ it.name ]]</strong>
@@ -46,6 +46,7 @@
               <span class="pp-plan"><span class="pp-n" :class="{ 'is-suggested': it.status === 'suggested' }">[[ planned(it) ]]</span><span class="pp-chip" :class="'is-' + decisionKey(it)" :title="decisionTitle(it)">[[ decisionLabel(it) ]]</span></span>
               <small v-if="it.status === 'overridden' && it.recommended_qty !== null" class="pp-sub" :title="it.override_reason ? 'Reason: ' + it.override_reason : null">was [[ it.recommended_qty ]][[ it.override_reason ? ' · ' + it.override_reason : '' ]]</small>
               <small v-else-if="moved(it)" class="pp-sub is-warn">recommendation now [[ it.recommended_qty ]]</small>
+              <small v-else-if="same(it)" class="pp-sub pp-fc" :title="calcText(it)">forecast [[ ui.num(it.forecast_qty, 0) ]]</small>
             </template>
             <span v-else class="pp-none">–</span></div>
           <div class="pp-cell" role="cell"><span class="pp-k">Prepared</span>

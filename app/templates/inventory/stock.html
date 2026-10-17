@@ -14,14 +14,15 @@
     <div class="col-6 col-md-2"><select class="form-select" aria-label="Status filter" v-model="status"><option value="">All statuses</option><option value="ok">OK</option><option value="low">Low</option><option value="out">Out</option></select></div>
   </div>
   <sr-loading v-if="loading"></sr-loading>
-  <div v-else class="table-responsive"><table class="table table-sm align-middle">
+  <!-- phones: each row stacks (m-stack): name and status, then the figures, then Edit -->
+  <div v-else class="table-responsive"><table class="table table-sm align-middle m-stack">
     <thead><tr><th>Ingredient</th><th class="text-end">Usable</th><th class="text-end">On hand</th><th class="text-end">Min</th><th class="text-end">Reorder at</th><th>Status</th><th>Last movement</th><th></th></tr></thead>
-    <tbody><tr v-for="r in shown" :key="r.id" :class="r.is_critical ? 'table-danger' : (r.status === 'low' ? 'table-warning' : '')">
-      <td>[[ r.name ]]</td><td class="text-end">[[ ui.qty(r.usable, r.unit) ]]</td>
-      <td class="text-end">[[ ui.qty(r.on_hand, r.unit) ]]<a v-if="r.expired > 0" class="cell-sub text-danger" href="/inventory/stock?tab=record" :title="'Not usable: record the expired ' + r.name + ' as stock wastage'">[[ ui.qty(r.expired, r.unit) ]] expired</a></td>
-      <td class="text-end">[[ ui.num(r.min_stock, 3) ]]</td><td class="text-end">[[ ui.num(r.reorder_level, 3) ]]</td>
-      <td><sr-status-badge :status="r.is_critical && r.status !== 'out' ? 'critical' : r.status"></sr-status-badge></td>
-      <td>[[ ui.date(r.last_movement_date) ]]</td><td><button class="btn btn-sm btn-outline-secondary" type="button" @click="edit(r)">Edit</button></td></tr></tbody></table></div>
+    <tbody><tr v-for="r in shown" :key="r.id" class="ms-row" :class="r.is_critical ? 'table-danger' : (r.status === 'low' ? 'table-warning' : '')">
+      <td class="ms-name">[[ r.name ]]</td><td class="text-end" data-label="Usable">[[ ui.qty(r.usable, r.unit) ]]</td>
+      <td class="text-end" data-label="On hand">[[ ui.qty(r.on_hand, r.unit) ]]<a v-if="r.expired > 0" class="cell-sub text-danger" href="/inventory/stock?tab=record" :title="'Not usable: record the expired ' + r.name + ' as stock wastage'">[[ ui.qty(r.expired, r.unit) ]] expired</a></td>
+      <td class="text-end" data-label="Min">[[ ui.num(r.min_stock, 3) ]]</td><td class="text-end" data-label="Reorder at">[[ ui.num(r.reorder_level, 3) ]]</td>
+      <td class="ms-status"><sr-status-badge :status="r.is_critical && r.status !== 'out' ? 'critical' : r.status"></sr-status-badge></td>
+      <td data-label="Last movement">[[ ui.date(r.last_movement_date) ]]</td><td class="ms-end"><button class="btn btn-sm btn-outline-secondary" type="button" @click="edit(r)">Edit</button></td></tr></tbody></table></div>
   <div class="card mt-3"><div class="card-body">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
       <div><h2 class="h6 mb-0">Data check</h2><div class="small text-muted">Stored stock vs recorded movements. Read-only.</div></div>

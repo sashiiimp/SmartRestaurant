@@ -78,7 +78,7 @@
         <sr-action-list :items="actions" empty="Forecast, recipes, stock and waste are within their limits."></sr-action-list>
       </div></div></section>
 
-      <!-- each role's work today, read-only: the kitchen plan, ingredients against it, purchasing and pre-orders -->
+      <!-- each role's work today, read-only: the kitchen plan, ingredients against it (with purchasing) and pre-orders -->
       <section class="col-12 col-xl-5" aria-labelledby="td-h"><div class="card h-100"><div class="card-body">
         <div class="card-head"><h2 id="td-h" class="h6">Restaurant today</h2></div>
         <ul class="status-list">
@@ -115,12 +115,10 @@
         <section class="card" aria-labelledby="qa-h"><div class="card-body">
           <h2 id="qa-h" class="h6">Quick access</h2>
           <nav class="quick-grid" aria-labelledby="qa-h">
+            <!-- tasks only; Menu items, Reports and Users & settings are one click away in the sidebar -->
             <a class="quick-link" href="/admin/catalog?tab=bom"><sr-icon name="book" :size="17"></sr-icon>Manage BOM</a>
-            <a class="quick-link" href="/admin/catalog"><sr-icon name="utensils" :size="17"></sr-icon>Menu items</a>
             <a class="quick-link" href="/admin/models?tab=runs"><sr-icon name="trending" :size="17"></sr-icon>Run forecast</a>
             <a class="quick-link" href="/admin/models?tab=data"><sr-icon name="database" :size="17"></sr-icon>Import sales data</a>
-            <a class="quick-link" href="/admin/monitor"><sr-icon name="bars" :size="17"></sr-icon>Reports</a>
-            <a class="quick-link" href="/admin/users"><sr-icon name="users" :size="17"></sr-icon>Users &amp; settings</a>
           </nav>
         </div></section>
 

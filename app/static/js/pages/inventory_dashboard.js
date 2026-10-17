@@ -4,7 +4,6 @@ SR.createApp({
   computed: {
     t() { return this.d.totals; },
     stockTotal() { return this.d ? this.d.counts.ok + this.d.counts.low + this.d.counts.out : 0; },
-    expiryTotal() { return this.d ? this.d.totals.expired_batches + this.d.totals.expiring_batches : 0; },
     // one table, built by the server: ingredients short over 7 days, most short first, then those below their
     // minimum stock and those already covered by open orders; the first 10 here, the rest on Ingredient demand
     needRows() { return this.d ? this.d.requirements.slice(0, 10) : []; },

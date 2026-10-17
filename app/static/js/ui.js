@@ -19,7 +19,17 @@ window.ui = {
     return new Date(iso + 'T00:00:00Z').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
   },
   dateTime(iso) { return iso ? new Date(iso).toLocaleString('en-GB', { timeZone: 'Asia/Colombo', dateStyle: 'medium', timeStyle: 'short' }) : ''; },
-  money(n) { return n === null || n === undefined ? '' : 'LKR ' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); },
+  // whole: a report total; from LKR 1,000 up it is shown without cents (LKR 7,732,960), smaller amounts keep them
+  money(n, whole = false) {
+    if (n === null || n === undefined) return '';
+    const d = whole && Math.abs(Number(n)) >= 1000 ? 0 : 2;
+    return 'LKR ' + Number(n).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+  },
+  // a report period in the app's date style: a day or week start as "Sat 19 Sep", a month as "Sep 2026"
+  period(p) {
+    if (/^\d{4}-\d{2}$/.test(p || '')) return new Date(p + '-01T00:00:00Z').toLocaleDateString('en-GB', { month: 'short', year: 'numeric', timeZone: 'UTC' });
+    return this.date(p);
+  },
   num(n, digits = 1) { return n === null || n === undefined ? '' : Number(n).toLocaleString('en-US', { maximumFractionDigits: digits }); },
   qty(n, unit) { return n === null || n === undefined ? '' : Number(n).toLocaleString('en-US', { maximumFractionDigits: 3 }) + (unit ? ' ' + unit : ''); },
   toast(message, type = 'success') {

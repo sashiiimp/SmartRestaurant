@@ -1,6 +1,0 @@
-{# The three parts of Forecasting, in the order they are used; the current tab is outlined. Display only. #}
-<ol class="steps" aria-label="How forecasting works">
-  <li><a class="step {{ 'is-current' if hub.tab == 'data' else '' }}" href="/admin/models?tab=data"><span><strong>Historical data</strong><small>Sales, promotions, holidays, weather</small></span></a></li>
-  <li><a class="step {{ 'is-current' if hub.tab == 'models' else '' }}" href="/admin/models?tab=models"><span><strong>ML models</strong><small>Train, compare, activate</small></span></a></li>
-  <li><a class="step {{ 'is-current' if hub.tab == 'runs' else '' }}" href="/admin/models?tab=runs"><span><strong>Forecast generation</strong><small>Next 7 days, daily or on demand</small></span></a></li>
-</ol>

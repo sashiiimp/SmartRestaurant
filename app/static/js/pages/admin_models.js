@@ -33,6 +33,8 @@ SR.createApp({
       catch (e) { ui.toast(ui.errorText(e), 'danger'); } finally { this.busy = ''; }
     },
     m(v, name) { return (v.metrics.comparison.find(c => c.model === name) || {}); },
+    // the models compared in one training run, lowest hold-out error first
+    byMae(list) { return [...(list || [])].sort((x, y) => (x.mae ?? Infinity) - (y.mae ?? Infinity)); },
     algoName(a) { return { xgboost: 'XGBoost', random_forest: 'Random Forest', naive_lag7: 'Same day last week', seasonal_mean4: '4-week average' }[a] || a; },
   },
 }).mount('#app');

@@ -75,11 +75,12 @@ SR.createApp({
         detail: 'Review the most wasted items with the kitchen.', action: 'Waste report', href: '/admin/monitor?tab=waste' });
       if (d.items_without_recipe.length) out.push({ key: 'bom', tone: 'warning', title: s(d.items_without_recipe.length, 'menu item has', 'menu items have') + ' no recipe',
         detail: d.items_without_recipe.join(', ') + ': ingredient needs count as zero until a recipe is added.', action: 'Add recipes', href: '/admin/catalog' });
-      const low = d.stock.out + d.stock.low;
+      // stock now and the 7-day shortfall are one line: the same ingredients, and the inventory manager acts on both
+      const low = d.stock.out + d.stock.low, short = d.inventory_alerts.filter(r => r.forecast);
       if (low) out.push({ key: 'low', tone: d.stock.out ? 'danger' : 'warning', title: s(low, 'ingredient is', 'ingredients are') + ' low or out of stock',
-        detail: names(d.stock.rows) + '. The inventory manager reorders.', action: 'Stock & expiry', href: '/admin/monitor?tab=stock' });
-      const short = d.inventory_alerts.filter(r => r.forecast);
-      if (short.length) out.push({ key: 'short', tone: 'info', title: s(short.length, 'ingredient runs', 'ingredients run') + ' short within 7 days',
+        detail: names(d.stock.rows) + '.' + (short.length ? ' ' + s(short.length, 'runs', 'run') + ' short within 7 days.' : '') + ' The inventory manager reorders.',
+        action: 'Stock & expiry', href: '/admin/monitor?tab=stock' });
+      else if (short.length) out.push({ key: 'short', tone: 'info', title: s(short.length, 'ingredient runs', 'ingredients run') + ' short within 7 days',
         detail: names(short) + ', from the forecast and recipes.', action: 'Ingredient demand', href: '/admin/monitor?tab=ingredients' });
       const expired = d.inventory_alerts.reduce((n, r) => n + r.expiry.filter(e => e.expired).length, 0);
       if (expired) out.push({ key: 'exp', tone: 'warning', title: s(expired, 'expired batch is', 'expired batches are') + ' still in stock',
@@ -124,12 +125,11 @@ SR.createApp({
         { key: 'prep', icon: 'clipboard', title: 'Kitchen preparation', href: null,
           caption: this.prep ? decided + ' of ' + items.length + ' items approved by the kitchen' : 'Recommended from the forecast',
           value: this.prep ? n(toMake) + ' portions' : (this.prep === false ? '–' : wait) },
+        // ingredients and purchasing in one row: today's shortfall against the plan, and what inventory has to order
         { key: 'bom', icon: 'book', title: 'Ingredients for today', href: '/admin/catalog?tab=bom',
-          caption: d.items_without_recipe.length ? d.items_without_recipe.length + ' menu items have no recipe' : 'Plan × recipes (BOM) against stock',
+          caption: d.items_without_recipe.length ? d.items_without_recipe.length + ' menu items have no recipe'
+            : (this.reorder ? (this.reorder.length ? this.reorder.length + ' to reorder by inventory' : 'Nothing to reorder') : 'Plan × recipes (BOM) against stock'),
           value: short === null ? (this.req === false ? '–' : wait) : (short ? short + ' short' : 'All covered'), tone: short ? 'danger' : (short === 0 ? 'success' : null) },
-        { key: 'buy', icon: 'cart', title: 'Purchasing', href: '/admin/monitor?tab=stock',
-          caption: d.stock.out + ' out of stock · ' + d.stock.low + ' low',
-          value: this.reorder ? (this.reorder.length ? this.reorder.length + ' to reorder' : 'Nothing to order') : (this.reorder === false ? '–' : wait), tone: this.reorder && this.reorder.length ? 'warning' : null },
         { key: 'po', icon: 'bag', title: 'Pre-orders, next 7 days', href: null,
           caption: po.count ? po.rows.slice(0, 2).map(p => p.quantity + ' × ' + p.item + ' ' + ui.date(p.target_date)).join(', ') + (po.count > 2 ? ', …' : '') : 'Confirmed pre-orders are already in the prep plan',
           value: po.count ? po.count + ' · ' + po.portions + ' portions' : 'None' },

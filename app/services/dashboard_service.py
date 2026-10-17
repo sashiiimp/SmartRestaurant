@@ -99,7 +99,8 @@ def inventory_dashboard(outlet_id: int, role: str = "inventory") -> dict:
     pos = inv.list_purchase_orders(outlet_id)
     return {"date": day.isoformat(), "counts": counts, "alerts": alerts["rows"][:8], "alert_counts": alerts["counts"],
             "reorder": reorder[:5], "need_vs_stock": need_vs_stock, "requirements": requirements,
-            "expiring": expiring[:10],
+            # batches that expire within 3 days and are still usable; the expired ones are counted in totals
+            "expiring": [b for b in expiring if not b["expired"]][:10],
             "pending_requests": inv.pending_request_count(outlet_id),
             # full counts behind the shortened lists above, so a figure never stops at the list length
             "totals": {"reorder": len(reorder), "requirements": len(requirements),

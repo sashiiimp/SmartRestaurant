@@ -41,11 +41,11 @@ SR.createApp({
       const base = { sales: '/api/v1/reports/sales', waste: '/api/v1/reports/waste' }[this.tab];
       return base + '?format=csv' + range + '&group_by=' + this.groupBy;
     },
-    salesLabels() { return this.sales ? this.sales.rows.map(r => r.period) : []; },
+    salesLabels() { return this.sales ? this.sales.rows.map(r => this.period(r.period)) : []; },
     salesData() { return this.sales ? [{ label: 'Portions sold', data: this.sales.rows.map(r => r.quantity) }] : []; },
     accLabels() { return this.acc && this.acc.series ? this.acc.series.map(r => ui.date(r.date)) : []; },
     accData() { return this.acc && this.acc.series ? [{ label: 'Forecast' + (this.itemId ? '' : ' (all items)'), data: this.acc.series.map(r => r.forecast) }, { label: 'Actual' + (this.itemId ? '' : ' (all items)'), data: this.acc.series.map(r => r.actual) }] : []; },
-    wasteLabels() { return this.waste ? this.waste.food.rows.map(r => r.period) : []; },
+    wasteLabels() { return this.waste ? this.waste.food.rows.map(r => this.period(r.period)) : []; },
     wasteData() { return this.waste ? [{ label: 'Food waste (LKR at selling price)', data: this.waste.food.rows.map(r => r.value) }] : []; },
     trendData() { return this.trend ? [{ label: 'Closing stock', data: this.trend.rows.map(r => r.closing) }] : []; },
     demandDates() { return Array.from({ length: 7 }, (_, i) => ui.addDays(this.demandStart, i)); },
@@ -66,6 +66,7 @@ SR.createApp({
     demandChart() { return [{ label: 'Forecast (portions, all items)', data: this.demandDayTotals }]; },
   },
   methods: {
+    period(p) { return (this.groupBy === 'week' && /^\d{4}-\d{2}-\d{2}$/.test(p) ? 'Week of ' : '') + ui.period(p); },
     async load() {
       this.loading = true; this.error = null;
       const p = { from: this.from, to: this.to };

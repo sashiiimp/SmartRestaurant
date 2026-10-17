@@ -36,6 +36,8 @@ SR.createApp({
     // planned = the decided quantity, or the suggestion while nothing is decided (null without a forecast)
     planned(it) { return it.final_qty !== null && it.final_qty !== undefined ? it.final_qty : (it.status === 'no_forecast' ? null : it.recommended_qty); },
     moved(it) { return it.status === 'accepted' && it.final_qty !== it.recommended_qty; },
+    // the plan is the recommendation: cards show one figure for both (the table keeps its two columns)
+    same(it) { return it.recommended_qty !== null && this.planned(it) !== null && Number(this.planned(it)) === Number(it.recommended_qty); },
     // Approved covers both ways of approving (by hand, or by the first prepared entry); the tooltip says which
     decisionKey(it) { return it.status === 'overridden' ? 'changed' : (it.status === 'accepted' ? 'approved' : it.status); },
     decisionLabel(it) { return { suggested: 'Suggested', approved: 'Approved', changed: 'Changed' }[this.decisionKey(it)] || ''; },

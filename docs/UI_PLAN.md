@@ -408,3 +408,28 @@ From the review of the live screens (SmartRestaurant_Live_UI_Review.pdf). Stagin
   kitchen's list.
 - **A4** On a phone the 14-day chart skips date labels (5 shown) instead of overlapping them; desktop keeps all 14.
 - **I5** The request filter is wide enough for "All requests".
+
+## 21. Final review fixes (17 Oct 2026, branch `final-review-fixes`)
+From the final UI review of the staging screens (release cd07c48). Phones first; no function removed.
+- **1, 2 Phone tables.** Ingredients & requests and Stock levels become one stacked row per ingredient below 768 px
+  (`m-stack`): name and status, then the figures with their labels, then the action (Ask inventory on short rows; Edit).
+  Nothing is hidden in a sideways scroll any more; the responsive smoke check now also fails when a stacked table
+  scrolls inside its own box.
+- **3 Purchasing on phones.** The order button is pinned to the bottom of the screen ("Create purchase order (3 items)")
+  next to the ticks. The missing-forecast warning is one line on every screen, with the items behind a toggle.
+- **4 Admin dashboard.** Low/out of stock and "run short within 7 days" are one Needs attention line; Restaurant today
+  has one ingredients row (shortfall, with what inventory has to reorder) instead of two; Quick access keeps the three
+  tasks that are not in the sidebar (Manage BOM, Run forecast, Import sales data). The Alerts card stays: the bell links
+  to it.
+- **5 Inventory dashboard.** Expiring soon lists only batches that are still usable and expire within 3 days; the
+  batches already expired are one line ("Already expired: 12 batches"), their action stays in Needs attention. The
+  Alerts card stays as the bell's target.
+- **6 Plan & prepare cards.** When the plan equals the recommendation, the card shows one Planned box ("forecast 100"
+  under it) instead of two equal boxes; the desktop table keeps both columns.
+- **7 BOM overview.** Recipes are closed by default and open from the item name ("Open all recipes" opens every one);
+  a search opens the items it finds.
+- **8 Forecasting.** The numbered step cards are removed (the tabs lead to the same three sections); the model
+  comparison is sorted by MAE, best first.
+- **9 Dates and totals.** Reports show periods in the app's date style ("Sat 19 Sep", "Week of …", "Sep 2026") in the
+  table and on the chart, and report totals from LKR 1,000 up without cents. Date pickers follow the browser's
+  language (dd/mm/yyyy in a Sri Lankan or UK browser), which the app does not override.

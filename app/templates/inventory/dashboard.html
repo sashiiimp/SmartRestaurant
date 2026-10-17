@@ -70,11 +70,13 @@
       <div class="col-12 col-xl-4 d-flex flex-column gap-3">
         <section class="card" aria-labelledby="ex-h"><div class="card-body">
           <div class="card-head"><h2 id="ex-h" class="h6">Expiring soon</h2><a href="/inventory/stock?tab=record">Batches</a></div>
-          <sr-empty v-if="!d.expiring.length" message="No batches expire in the next 3 days." icon="check"></sr-empty>
-          <ul v-else class="exp-list"><li v-for="b in d.expiring.slice(0, 5)" :key="b.id" :class="{ expired: b.expired }">
+          <!-- still usable, but expires within 3 days; batches already expired are one line (their action is in Needs attention) -->
+          <sr-empty v-if="!d.expiring.length" message="Nothing expires in the next 3 days." icon="check"></sr-empty>
+          <ul v-else class="exp-list"><li v-for="b in d.expiring.slice(0, 5)" :key="b.id">
             <span class="mini-main"><strong>[[ b.ingredient ]]</strong><small>[[ ui.qty(b.qty_remaining, b.unit) ]] · batch [[ b.batch_no ]]</small></span>
-            <span :class="b.expired ? 'sr-badge sr-badge-danger' : 'exp-date'">[[ b.expired ? 'Expired ' + ui.date(b.expiry_date) : ui.date(b.expiry_date) ]]</span></li></ul>
-          <a v-if="expiryTotal > 5" class="small fw-semibold" href="/inventory/stock?tab=record">See all [[ expiryTotal ]] batches</a>
+            <span class="exp-date">[[ ui.date(b.expiry_date) ]]</span></li></ul>
+          <p v-if="t.expired_batches" class="exp-gone">Already expired: [[ t.expired_batches ]] [[ t.expired_batches === 1 ? 'batch' : 'batches' ]], not usable</p>
+          <a v-if="t.expiring_batches > 5" class="small fw-semibold" href="/inventory/stock?tab=record">See all [[ t.expiring_batches ]] batches</a>
         </div></section>
         <section class="card flex-grow-1" id="alerts" aria-labelledby="al-h"><div class="card-body">
           <div class="card-head"><h2 id="al-h" class="h6">Alerts</h2>

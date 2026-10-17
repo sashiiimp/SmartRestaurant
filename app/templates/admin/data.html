@@ -1,7 +1,6 @@
 {% extends "hub.html" %}
 {% block title %}Historical data - SmartRestaurant{% endblock %}
 {% block panel %}
-{% include "admin/_forecast_steps.html" %}
 <div id="app" v-cloak>
   <h2 class="h5 mb-1">Historical data</h2>
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>

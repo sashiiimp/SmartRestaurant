@@ -267,7 +267,7 @@ def admin(browser):
     visit(page, "/admin", "a_dashboard", wait=".kpis")
     assert page.locator(".kpis .stat-tile").count() == 4, "admin headline figures: sales, forecast, ingredients, food waste"
     page.wait_for_selector(".status-list li:has-text('Kitchen preparation') .status-fig:has-text('portions')", timeout=8000)  # read from the prep plan
-    assert page.locator(".quick-grid a.quick-link").count() == 6, "quick access to the management pages"
+    assert page.locator(".quick-grid a.quick-link").count() == 3, "quick access to the three admin tasks not in the sidebar"
     page.wait_for_selector("h2:has-text('Forecasting performance')", timeout=8000)
     page.wait_for_selector("text=Hold-out error", timeout=8000)                        # read from the active model
     visit(page, "/admin/monitor", "a_monitor_sales", wait="canvas")
@@ -373,6 +373,11 @@ def responsive(browser):
                 over = page.evaluate("document.documentElement.scrollWidth - window.innerWidth")
                 if over > 1:
                     problems.append(f"{path} at {width}px: page scrolls sideways by {over}px")
+                # a stacked table (m-stack) must not hide columns in its own sideways scroll either
+                hidden = page.evaluate("[...document.querySelectorAll('.m-stack')].filter(t => t.closest('.table-responsive') && "
+                                       "t.closest('.table-responsive').scrollWidth > t.closest('.table-responsive').clientWidth + 1).length")
+                if width < 768 and hidden:
+                    problems.append(f"{path} at {width}px: {hidden} table(s) scroll sideways inside their box")
             ctx.close()
 
 

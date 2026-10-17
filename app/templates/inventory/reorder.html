@@ -5,12 +5,15 @@
   <h2 class="h5 mb-1">Reorder suggestions</h2>
   <p class="page-intro">Suggested = need over the lead time + safety (minimum) stock - usable stock - on order, rounded up to the pack size (at least the minimum order).</p>
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
-  <div v-if="rows.length" class="d-flex flex-wrap align-items-center gap-2 mb-2">
+  <div v-if="rows.length && !phone" class="d-flex flex-wrap align-items-center gap-2 mb-2">
     <button class="btn btn-primary" type="button" :disabled="!selected.length || busy" @click="createOrders">Create purchase order<span v-if="supplierCount > 1">s ([[ supplierCount ]] suppliers)</span></button>
     <span class="small text-muted">Tick ingredients to order: one draft order per supplier. Ingredients need a supplier.</span>
   </div>
   <div v-if="message" class="alert alert-danger py-2" role="alert">[[ message ]]</div>
-  <div v-if="noForecast.length" class="alert alert-warning py-2" role="note">Demand is missing for days without a forecast, so these quantities may be too low: [[ noForecast.map(i => i.name + ' (' + i.days + (i.days === 1 ? ' day)' : ' days)')).join(', ') ]]</div>
+  <!-- one line; which items and how many days stay one click away -->
+  <details v-if="noForecast.length" class="alert alert-warning py-2 nf-note" role="note"><summary>No forecast yet for some days in the lead time, so these quantities may be too low ([[ noForecast.length ]] menu [[ noForecast.length === 1 ? 'item' : 'items' ]]).</summary>
+    <div class="small mt-1">[[ noForecast.map(i => i.name + ' (' + i.days + (i.days === 1 ? ' day)' : ' days)')).join(', ') ]]. Run the forecast to include them.</div></details>
+  <p v-if="rows.length && phone" class="small text-muted mb-2">Tick ingredients to order: one draft order per supplier. Ingredients need a supplier.</p>
   <sr-loading v-if="loading"></sr-loading>
   <sr-empty v-else-if="!rows.length" :message="covered.length ? 'Nothing else needs ordering: open orders cover the rest.' : 'Nothing needs reordering right now.'"></sr-empty>
   <!-- phones: one card per ingredient, the suggested quantity first; same checkboxes and button as the table -->
@@ -30,6 +33,10 @@
     <tbody><tr v-for="r in rows" :key="r.ingredient_id"><td><input type="checkbox" class="form-check-input" :aria-label="'Select ' + r.name" :disabled="!r.supplier_id" :value="r.ingredient_id" v-model="selected"></td><td>[[ r.name ]]</td><td class="text-nowrap"><a v-if="!r.supplier" class="text-danger" href="/inventory/stock">No supplier: set one</a><template v-else>[[ r.supplier ]]</template></td><td class="text-end">[[ r.lead_time_days ]] d</td>
       <td class="text-end">[[ ui.num(r.need_over_lead_time, 2) ]]</td><td class="text-end">[[ ui.num(r.safety_stock, 2) ]]</td><td class="text-end">[[ ui.num(r.usable_stock, 2) ]]</td><td class="text-end">[[ ui.num(r.on_order, 2) ]]</td>
       <td class="text-end">[[ ui.num(r.raw_qty, 2) ]]</td><td class="text-end">[[ ui.num(r.pack_size, 2) ]]</td><td class="text-end col-key">[[ ui.qty(r.suggested_qty, r.unit) ]]</td></tr></tbody></table></div>
+  <!-- phones: the button stays at the bottom of the screen, next to the ticks -->
+  <div v-if="rows.length && phone" class="m-action-bar">
+    <button class="btn btn-primary w-100" type="button" :disabled="!selected.length || busy" @click="createOrders">[[ selected.length ? 'Create purchase order' + (supplierCount > 1 ? 's' : '') + ' (' + selected.length + (selected.length === 1 ? ' item)' : ' items)') : 'Tick ingredients to order' ]]</button>
+  </div>
   <!-- needed, but not suggested because open purchase orders already cover it (recommendation_service._reorder) -->
   <div v-if="!loading && covered.length" class="covered-note mt-3" role="note">
     <strong>Already on order, so not suggested</strong>

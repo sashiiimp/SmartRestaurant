@@ -453,16 +453,6 @@ body[data-role] .topbar::after { display: none; }
 .hub-head + #app > .page-intro:first-child { margin-top: 0; }
 .dash-section { margin: 1.4rem 0 .75rem; font-size: .78rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
 .card-head .count-chips { flex-wrap: nowrap; flex: none; }
-/* numbered workflow (kitchen dashboard, forecasting): each step links to the page where it happens */
-.steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12.5rem), 1fr)); gap: .6rem; list-style: none; margin: 0 0 1.1rem; padding: 0; counter-reset: step; }
-.steps > li { counter-increment: step; }
-.step { position: relative; display: grid; grid-template-columns: 2rem minmax(0, 1fr); gap: .65rem; align-items: start; height: 100%; padding: .75rem .85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--text); text-decoration: none; box-shadow: var(--shadow-sm); }
-a.step:hover { border-color: rgba(var(--accent-rgb), .45); background: var(--accent-soft); color: var(--text); }
-.step::before { content: counter(step); width: 2rem; height: 2rem; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: .85rem; color: var(--accent-strong); background: var(--accent-soft); }
-.step.is-done::before { content: "\2713"; color: #fff; background: var(--success); }
-.step.is-current { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(var(--accent-rgb), .12); }
-.step strong { display: block; font-size: .9rem; font-weight: 650; line-height: 1.3; }
-.step small { display: block; font-size: .78rem; color: var(--text-2); line-height: 1.35; margin-top: .1rem; }
 /* role access on phones: one entry per page or alert type, with the roles as badges */
 .role-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .5rem; }
 .role-list li { display: grid; gap: .25rem; padding: .6rem .75rem; border: 1px solid var(--border); border-radius: 10px; }
@@ -1199,3 +1189,56 @@ input[type="file"]::file-selector-button { background: var(--surface-3); color: 
 .ask-quiet:hover, .ask-quiet[aria-expanded="true"] { color: var(--text); text-decoration: underline; }
 /* a purchase order that exists only as a draft: in the system, not yet sent to the supplier */
 .is-draft, a.cell-sub.is-draft { color: var(--warning); font-weight: 600; }
+
+/* ---- 27 final review fixes (17 Oct 2026) ------------------------------------------------------------------------ */
+/* Phones and small tablets: a wide table (m-stack) becomes one stacked row per item, so no column or button is hidden
+   in a sideways scroll. ms-name and ms-status share the first line; cells with a data-label follow, three per line,
+   each with its label above; ms-act takes a line of its own, ms-end sits at the end of the last line. */
+@media (max-width: 767.98px) {
+  .m-stack thead { display: none; }
+  .m-stack, .m-stack tbody { display: block; }
+  .m-stack tr.ms-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem .6rem; padding: .7rem .8rem;
+    border-bottom: 1px solid var(--border); background: var(--bs-table-bg, transparent); align-items: start; }
+  .m-stack tr.ms-row > td { display: block; padding: 0 !important; border: 0; text-align: left !important; min-width: 0; white-space: normal; }
+  .m-stack tr.ms-row > td[data-label]::before { content: attr(data-label); display: block; font-size: .66rem; text-transform: uppercase; letter-spacing: .03em;
+    font-weight: 650; color: var(--muted); margin-bottom: .1rem; line-height: 1.2; }
+  .m-stack tr.ms-row > td.ms-name { grid-row: 1; grid-column: 1 / 3; font-weight: 650; align-self: center; }
+  .m-stack tr.ms-row > td.ms-status { grid-row: 1; grid-column: 3; justify-self: end; align-self: center; }
+  .m-stack tr.ms-row > td.ms-act { grid-column: 1 / -1; }
+  .m-stack tr.ms-row > td.ms-end { justify-self: end; align-self: center; grid-column: -2 / -1; }
+  .m-stack tr.ms-row > td:first-child { box-shadow: none; }
+  .m-stack tr.ms-row.table-danger { box-shadow: inset 3px 0 0 var(--danger); }
+  .m-stack tr.ms-row.table-warning { box-shadow: inset 3px 0 0 #d9931a; }
+  .m-stack .cell-sub { display: block; }
+  .m-stack tr.ms-row > td.ms-hide { display: none; }
+  .m-stack tr.ms-detail, .m-stack tr.ms-detail > td { display: block; padding: .1rem .8rem .75rem !important; }
+  .m-stack .ask-panel { position: static; width: auto; }
+}
+/* Purchasing on phones: the order button is pinned to the bottom of the screen while ingredients are listed */
+.m-action-bar { position: sticky; bottom: 0; z-index: 5; margin: .75rem -1rem 0; padding: .65rem 1rem calc(.65rem + env(safe-area-inset-bottom));
+  background: var(--surface); border-top: 1px solid var(--border); box-shadow: 0 -4px 12px rgba(16, 24, 40, .06); }
+/* a warning that fits one line, with its details behind a toggle */
+.nf-note summary { cursor: pointer; }
+.nf-note summary::marker { color: var(--warning); }
+/* Plan & prepare cards: when the plan equals the recommendation, one Planned box says so (the table keeps both columns) */
+.pp-fc { display: none; }
+@media (max-width: 1279.98px) {
+  .pp-item.is-same .pp-row > .pp-cell:nth-child(2) { display: none; }
+  .pp-item.is-same .pp-row { grid-template-areas: "name name name name" "plan plan prep rem" "act act act act"; }
+  .pp-item.is-same .pp-fc { display: block; }
+}
+@media (max-width: 575.98px) {
+  .pp-item.is-same .pp-row { grid-template-columns: minmax(0, 1.3fr) repeat(2, minmax(0, 1fr)); grid-template-areas: "name name name" "plan prep rem" "act act act"; }
+  .pp-item.is-same .pp-fc { white-space: normal; }
+}
+/* admin Quick access: three tasks, one per line */
+.quick-grid, .quick-grid:where(*) { grid-template-columns: 1fr; }
+/* inventory dashboard, Expiring soon: the batches already expired, as one quiet line under the upcoming ones */
+.exp-gone { margin: .6rem 0 0; font-size: .8rem; color: var(--danger); }
+/* BOM overview: each recipe opens from its name; the chevron turns when it is open */
+.bom-toggle { display: inline-flex; align-items: baseline; gap: .45rem; padding: 0; border: 0; background: none; color: inherit; text-align: left; }
+.bom-toggle:disabled { opacity: 1; cursor: default; }
+.bom-toggle:focus-visible { outline: 2px solid rgba(var(--accent-rgb), .45); outline-offset: 2px; border-radius: 4px; }
+.bom-chev { display: inline-block; font-size: .75rem; color: var(--muted); transition: transform .15s; }
+.bom-toggle[aria-expanded="true"] .bom-chev { transform: rotate(90deg); }
+.bom-all { padding: 0 .25rem; font-size: .8rem; }

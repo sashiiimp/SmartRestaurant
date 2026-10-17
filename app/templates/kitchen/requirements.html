@@ -11,16 +11,17 @@
     <p class="page-intro">Planned portions x recipe, against usable stock (expired stock not counted).</p>
     <div v-if="r.ingredients.length" class="count-chips mb-3"><span class="chip" :class="shortCount ? 'chip-critical' : 'chip-info'">[[ shortCount ]] short</span><span class="chip chip-info">[[ r.ingredients.length - shortCount ]] sufficient</span></div>
     <sr-empty v-if="!r.ingredients.length" message="No requirements yet: there is no plan for this date."></sr-empty>
-    <div v-else class="table-responsive"><table class="table table-sm align-middle">
+    <div v-else class="table-responsive"><table class="table table-sm align-middle m-stack">
       <thead><tr><th>Ingredient</th><th class="text-end">Required</th><th class="text-end">Usable stock</th><th>Status</th><th class="text-end">Short by</th><th></th></tr></thead>
-      <tbody><template v-for="i in sortedIngredients" :key="i.ingredient_id"><tr :class="i.status === 'short' ? 'table-danger' : ''">
-        <td>[[ i.name ]]</td><td class="text-end">[[ ui.qty(i.required, i.unit) ]]</td><td class="text-end">[[ ui.qty(i.usable_stock, i.unit) ]]</td>
-        <td><sr-status-badge :status="i.status"></sr-status-badge></td><td class="text-end">[[ i.short_by ? ui.qty(i.short_by, i.unit) : '' ]]</td>
-        <td class="text-nowrap text-end"><button v-if="i.status === 'short'" class="btn btn-sm btn-outline-danger" type="button" :aria-expanded="ask === i.ingredient_id ? 'true' : 'false'" @click="toggle(i)">Ask inventory</button>
+      <!-- phones: each row stacks (m-stack): name and status, then the three figures, then the action -->
+      <tbody><template v-for="i in sortedIngredients" :key="i.ingredient_id"><tr class="ms-row" :class="i.status === 'short' ? 'table-danger' : ''">
+        <td class="ms-name">[[ i.name ]]</td><td class="text-end" data-label="Required">[[ ui.qty(i.required, i.unit) ]]</td><td class="text-end" data-label="Usable stock">[[ ui.qty(i.usable_stock, i.unit) ]]</td>
+        <td class="ms-status"><sr-status-badge :status="i.status"></sr-status-badge></td><td class="text-end" :class="{ 'ms-hide': !i.short_by }" data-label="Short by">[[ i.short_by ? ui.qty(i.short_by, i.unit) : '' ]]</td>
+        <td class="text-nowrap text-end" :class="i.status === 'short' ? 'ms-act' : 'ms-end'"><button v-if="i.status === 'short'" class="btn btn-sm btn-outline-danger" type="button" :aria-expanded="ask === i.ingredient_id ? 'true' : 'false'" @click="toggle(i)">Ask inventory</button>
           <!-- enough in stock: the same two choices, as a quiet link so the short rows stand out -->
           <button v-else class="btn btn-sm btn-link ask-quiet" type="button" :aria-label="'Ask inventory about ' + i.name" :aria-expanded="ask === i.ingredient_id ? 'true' : 'false'" @click="toggle(i)">Ask</button></td></tr>
         <!-- one action, two choices: ask for the missing quantity (stock request) or say the stock is not what the system shows (shortage report) -->
-        <tr v-if="ask === i.ingredient_id" class="ask-row"><td colspan="6"><div class="ask-panel">
+        <tr v-if="ask === i.ingredient_id" class="ask-row ms-detail"><td colspan="6"><div class="ask-panel">
           <div class="ask-choice"><strong>Need more?</strong><small v-if="i.status === 'short'">Ask for the [[ ui.qty(i.short_by, i.unit) ]] that is missing.</small><small v-else>Ask for a quantity of [[ i.name ]].</small>
             <a class="btn btn-sm btn-outline-primary" :href="'/kitchen/requirements?tab=requests&ingredient=' + i.ingredient_id + (i.short_by ? '&qty=' + i.short_by : '')">Request stock</a></div>
           <div class="ask-choice"><strong>Stock does not match?</strong><small>The system shows [[ ui.qty(i.usable_stock, i.unit) ]] usable; tell Inventory what you found.</small>
