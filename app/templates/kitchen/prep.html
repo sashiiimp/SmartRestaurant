@@ -26,7 +26,7 @@
     <p v-if="isFuture" class="pp-info"><sr-icon name="info" :size="16"></sr-icon>You can review and change this plan now. Prepared portions are recorded on the day.</p>
     <p v-else-if="allDone" class="pp-info is-ok"><sr-icon name="check" :size="16"></sr-icon><span>Everything is prepared. After service, <a href="/kitchen/record">record served &amp; waste</a>.</span></p>
 
-    <!-- one list for every screen: a row on wide screens (1200 px and up), a card on narrower ones -->
+    <!-- one list for every screen: a row on wide screens (1280 px and up), a card on narrower ones -->
     <div class="pp-list" role="table" aria-label="Preparation plan">
       <div class="pp-head" role="row"><span role="columnheader">Item</span><span role="columnheader" class="num">Recommended</span><span role="columnheader">Planned</span>
         <span role="columnheader">Prepared</span><span role="columnheader" class="num">Remaining</span><span role="columnheader">[[ isFuture ? '' : 'Add prepared portions' ]]</span></div>
@@ -75,6 +75,7 @@
                 <li v-if="canDecide(it)"><button class="dropdown-item" type="button" @click="openChange(it)">Change plan</button></li>
                 <li v-if="canDecide(it) && acceptLabel(it)"><button class="dropdown-item" type="button" @click="decide(it, 'accept')">[[ acceptLabel(it) ]]</button></li>
                 <li v-if="!isFuture && it.prep_status !== 'done' && it.prepared_so_far > 0 && (!readyToFinish(it) || st(it.menu_item_id).adding)"><button class="dropdown-item" type="button" @click="finish(it)">Finish preparation</button></li>
+                <li v-if="canUndo(it)"><button class="dropdown-item" type="button" @click="askUndo(it)">Undo last entry ([[ it.last_entry.quantity ]])</button></li>
                 <li v-if="it.prep_status === 'done'"><button class="dropdown-item" type="button" @click="prepStatus(it, 'reopen')">Reopen</button></li>
                 <li><button class="dropdown-item" type="button" @click="toggleAvailable(it)">[[ it.is_available ? 'Mark unavailable' : 'Mark available' ]]</button></li>
               </ul>

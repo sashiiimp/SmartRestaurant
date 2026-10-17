@@ -20,6 +20,13 @@ def prepared():
                                   decide_first=rec.accept_on_first_prepared), status=201)
 
 
+@bp.route("/kitchen/prepared/<int:entry_id>", methods=["DELETE"])
+@roles_required("kitchen")
+def undo_prepared(entry_id):
+    # only the latest entry of an item, today, while the item is not finished (the service says why otherwise)
+    return ok(kit.undo_prepared(current_outlet_id(), entry_id, current_user.id))
+
+
 @bp.route("/kitchen/waste", methods=["POST"])
 @roles_required("kitchen")
 def waste():

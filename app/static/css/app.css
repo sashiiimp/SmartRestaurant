@@ -795,7 +795,7 @@ a.step:hover { border-color: rgba(var(--accent-rgb), .45); background: var(--acc
 .pp-info a { font-weight: 600; }
 
 .pp-list { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-sm); }
-.pp-head, .pp-row { display: grid; grid-template-columns: minmax(8rem, 1.4fr) 6.5rem minmax(7.5rem, 1fr) minmax(6rem, .8fr) 5.5rem minmax(17.5rem, 1.4fr); gap: .9rem; align-items: center; padding: 0 1.25rem; }
+.pp-head, .pp-row { display: grid; grid-template-columns: minmax(7rem, 1.4fr) 6.5rem minmax(7.5rem, 1fr) minmax(6rem, .8fr) 5.5rem minmax(13rem, 3.2fr); gap: .9rem; align-items: center; padding: 0 1.25rem; }
 .pp-head { min-height: 2.6rem; font-size: .75rem; font-weight: 600; color: var(--muted); background: var(--surface-2); border-bottom: 1px solid var(--border); border-radius: var(--radius) var(--radius) 0 0; }
 .pp-head .num, .pp-cell.num { text-align: right; }
 .pp-item + .pp-item { border-top: 1px solid var(--border); }
@@ -823,7 +823,7 @@ a.step:hover { border-color: rgba(var(--accent-rgb), .45); background: var(--acc
 .pp-chip.is-done { color: var(--success); background: var(--success-bg); border-color: var(--success-line); }
 .pp-bar { margin-top: .35rem; max-width: 9rem; }
 .progress-bar.is-suggested { background: var(--border-strong); }
-.pp-act { display: flex; align-items: center; justify-content: flex-end; gap: .5rem; min-width: 0; }
+.pp-act { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: .5rem; min-width: 0; }
 .pp-add { display: flex; gap: .4rem; flex: 1 1 auto; max-width: 15rem; }
 .pp-add .form-control { min-width: 0; width: 5.5rem; flex: 0 0 5.5rem; text-align: right; font-variant-numeric: tabular-nums; }
 .pp-add .btn { flex: 1 1 auto; white-space: nowrap; }
@@ -845,9 +845,16 @@ a.step:hover { border-color: rgba(var(--accent-rgb), .45); background: var(--acc
 .pp-item.is-done .pp-name strong, .pp-item.is-done .pp-n { color: var(--text-2); }
 .pp-item.is-none .pp-name strong { color: var(--text-2); }
 
-/* below 1200 px (the six columns no longer fit beside the menu) each item is a card: name and menu on top, four figures
+/* 1280-1439 px: the row is tight, so the action buttons are a little more compact (Add more, Finish and the menu stay
+   on one line); they may still wrap rather than be cut off */
+@media (min-width: 1280px) and (max-width: 1439.98px) {
+  .pp-act .btn { padding-inline: .65rem; font-size: .875rem; }
+  .pp-act .btn-icon-sm { padding-inline: .3rem; }
+}
+
+/* below 1280 px (the six columns no longer fit beside the menu) each item is a card: name and menu on top, four figures
    in a row, the entry form full width */
-@media (max-width: 1199.98px) {
+@media (max-width: 1279.98px) {
   .pp-list { background: transparent; border: 0; box-shadow: none; display: grid; gap: .75rem; }
   .pp-head { display: none; }
   .pp-item { background: var(--surface); border: 1px solid var(--border) !important; border-radius: var(--radius); box-shadow: var(--shadow-sm); }

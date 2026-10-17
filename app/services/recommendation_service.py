@@ -57,6 +57,10 @@ def get_prep_plan(outlet_id: int, day: date) -> dict:
     prepared = _day_totals(PreparationRecord, outlet_id, day, PreparationRecord.prep_date, PreparationRecord.quantity)
     served = {i: int(q) for i, q in (db.session.query(SalesRecord.menu_item_id, SalesRecord.quantity_sold)
                                      .filter(SalesRecord.outlet_id == outlet_id, SalesRecord.sale_date == day))}
+    last = {}    # the latest prepared entry per item: what Undo last entry removes (kitchen_service.undo_prepared)
+    for r in (PreparationRecord.query.filter_by(outlet_id=outlet_id, prep_date=day)
+              .order_by(PreparationRecord.menu_item_id, PreparationRecord.id.desc())):
+        last.setdefault(r.menu_item_id, {"entry_id": r.id, "quantity": r.quantity, "prepared_at": r.prepared_at.isoformat() + "Z"})
     active = fs.get_active_model(outlet_id)
     sources = _decision_sources(outlet_id, day, decisions)
     rows = []
@@ -75,7 +79,7 @@ def get_prep_plan(outlet_id: int, day: date) -> dict:
             "override_reason": d.override_reason if d else None,
             "decision_source": sources.get(item.id, "manual") if d else None,
             "prepared_so_far": prepared.get(item.id, 0), "served_so_far": served.get(item.id),
-            "prep_status": d.prep_status if d else None,
+            "prep_status": d.prep_status if d else None, "last_entry": last.get(item.id),
         })
     return {"date": day.isoformat(), "buffer_pct": float(buffer_pct),
             "model": f"{active.version_label} ({active.algorithm})" if active else None, "items": rows}

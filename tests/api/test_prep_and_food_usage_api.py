@@ -72,3 +72,47 @@ def test_first_prepared_entry_accepts_automatically_over_http(app, users):
     assert r.status_code == 201 and r.get_json()["data"]["auto_accepted"] == {"final_qty": 54}
     item = kitchen.get("/api/v1/recommendations/prep", query_string={"date": TODAY.isoformat()}).get_json()["data"]["items"][0]
     assert (item["status"], item["final_qty"], item["prep_status"], item["decision_source"]) == ("accepted", 54, "in_progress", "auto")
+
+
+def test_undo_last_prepared_entry_over_http(app, users):
+    """PREP-UNDO: only the latest entry of today is taken back, never a finished item's, never by other roles; the
+    removed figures go to the audit log and the plan keeps its approval."""
+    from app.models import AuditLog, PreparationRecord
+    burger = make_item(name="Chicken Burger", batch_size=6)
+    add_forecast(burger, TODAY, "47.3")
+    kitchen, admin = as_user(app, users, "kitchen"), as_user(app, users, "admin")
+    day = TODAY.isoformat()
+    body = {"menu_item_id": burger.id, "date": day}
+
+    def row():
+        return kitchen.get("/api/v1/recommendations/prep", query_string={"date": day}).get_json()["data"]["items"][0]
+    assert row()["last_entry"] is None
+    kitchen.post("/api/v1/kitchen/prepared", json={**body, "quantity": 12})
+    first = row()["last_entry"]["entry_id"]
+    kitchen.post("/api/v1/kitchen/prepared", json={**body, "quantity": 300})   # a typo for 30
+    last = row()["last_entry"]
+    assert last["quantity"] == 300 and last["entry_id"] != first
+    assert admin.delete(f"/api/v1/kitchen/prepared/{last['entry_id']}").status_code == 403
+    r = kitchen.delete(f"/api/v1/kitchen/prepared/{first}")              # not the latest any more
+    assert r.status_code == 409 and r.get_json()["error"]["code"] == "not_latest"
+    r = kitchen.delete(f"/api/v1/kitchen/prepared/{last['entry_id']}")
+    assert r.status_code == 200 and r.get_json()["data"] == {"menu_item_id": burger.id, "date": day, "removed": 300, "total_prepared": 12}
+    after = row()
+    assert (after["prepared_so_far"], after["last_entry"]["entry_id"], after["status"], after["prep_status"]) == (12, first, "accepted", "in_progress")
+    assert kitchen.delete(f"/api/v1/kitchen/prepared/{last['entry_id']}").status_code == 404
+    with app.app_context():
+        log = AuditLog.query.filter_by(action="prepared.undo").one()
+        assert log.detail["quantity"] == 300 and log.detail["entry_id"] == last["entry_id"]
+    # a finished item is reopened before an entry can be undone
+    assert kitchen.post("/api/v1/recommendations/prep/status", json={**body, "action": "done"}).status_code == 200
+    r = kitchen.delete(f"/api/v1/kitchen/prepared/{first}")
+    assert r.status_code == 409 and r.get_json()["error"]["code"] == "prep_done"
+    assert kitchen.post("/api/v1/recommendations/prep/status", json={**body, "action": "reopen"}).status_code == 200
+    assert kitchen.delete(f"/api/v1/kitchen/prepared/{first}").status_code == 200
+    assert row()["prepared_so_far"] == 0 and row()["last_entry"] is None
+    # an entry of an earlier day is history and stays
+    kitchen.post("/api/v1/kitchen/prepared", json={"menu_item_id": burger.id, "date": "2026-09-24", "quantity": 6})
+    with app.app_context():
+        old = PreparationRecord.query.filter_by(prep_date=date(2026, 9, 24)).one().id
+    r = kitchen.delete(f"/api/v1/kitchen/prepared/{old}")
+    assert r.status_code == 409 and r.get_json()["error"]["code"] == "not_today"

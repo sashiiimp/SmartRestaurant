@@ -360,7 +360,7 @@ API, permission, ML or database change. Every page keeps its buttons and API cal
 
 Front end only; the prep formula, the API calls and the auto-approval on the first entry are unchanged.
 
-- **One list for every screen** (a six-column row from 1200 px, a card below) instead of a table and a separate card
+- **One list for every screen** (a six-column row from 1280 px, a card below) instead of a table and a separate card
   template. Columns: Item, Recommended (with "forecast N"; the full calculation is the tooltip and is shown in the
   Change plan form), Planned (with Suggested / Approved / Changed), Prepared (with a bar), Remaining, Add prepared.
 - **Consistent figures:** Remaining = planned − prepared for an unfinished item, never below 0; portions above the plan
@@ -370,8 +370,13 @@ Front end only; the prep formula, the API calls and the auto-approval on the fir
   reached, Finish preparation becomes the main button and "Add more" opens the box; a finished item has only its ⋯ menu.
   Change plan, Use new N, finishing below the plan, Reopen and Mark unavailable are in the row's ⋯ menu.
 - **Over-preparation:** an entry that would take an item above its plan asks once in the row ("Adding 80 makes 80
-  prepared, 10 more than the plan of 70"), because an entry cannot be taken back; finishing below the plan also asks once.
-  Finishing at or above the plan needs no confirmation.
+  prepared, 10 more than the plan of 70"); finishing below the plan also asks once. Finishing at or above the plan
+  needs no confirmation.
+- **Undo last entry** (17 Oct 2026): the ⋯ menu offers "Undo last entry (N)" for the latest entry of an item today
+  while it is not finished (reopen a finished item first). An in-row confirm says what changes ("Remove the entry of 300
+  added at 12:02? Prepared goes from 312 to 12."). Only the latest entry can be undone, so one cook never removes
+  another's newer entry; the plan and its approval stay as they are and the removed entry stays in the audit log.
+- The six-column row starts at 1280 px (was 1200), where Add more, Finish preparation and ⋯ fit on one line.
 - Labels: "How?" removed; "Auto-accepted" and "Accepted" are both "Approved" (the tooltip says how); Done replaces
   Completed on the dashboard; the dashboard tile and table say Planned, like this page. When every item is done the page
   points to Served & waste. A future date shows one note instead of a message on every row.

@@ -100,6 +100,35 @@ def record_prepared(outlet_id: int, data: dict, actor_id: int | None = None, dec
             "auto_accepted": {"final_qty": auto.final_qty} if auto is not None else None}
 
 
+@inv._retry_on_conflict
+def undo_prepared(outlet_id: int, entry_id: int, actor_id: int | None = None) -> dict:
+    """Take back a mistaken prepared entry (for example 300 typed for 30). Only the latest entry of an item, only on the
+    current day, and only while the item is not finished (reopen it first). An entry that is no longer the latest
+    (someone added portions since) is refused, so one cook never removes another's newer entry. The removed figures
+    stay in the audit log; the plan and its approval are left as they are."""
+    e = PreparationRecord.query.filter_by(id=entry_id, outlet_id=outlet_id).first()
+    if not e:
+        raise NotFoundError("Prepared entry not found.")
+    if e.prep_date != today():
+        raise ConflictError("Only today's prepared entries can be undone.", code="not_today")
+    latest = (db.session.query(db.func.max(PreparationRecord.id))
+              .filter_by(outlet_id=outlet_id, menu_item_id=e.menu_item_id, prep_date=e.prep_date).scalar())
+    if latest != e.id:
+        raise ConflictError("More portions were added since. Reload to see the latest entry.", code="not_latest")
+    plan = Recommendation.query.filter_by(outlet_id=outlet_id, menu_item_id=e.menu_item_id, target_date=e.prep_date).first()
+    if plan is not None and plan.prep_status == "done":
+        raise ConflictError("Preparation of this item is finished. Reopen it first to undo an entry.", code="prep_done")
+    item = dm.get_menu_item(outlet_id, e.menu_item_id)
+    day, qty = e.prep_date, e.quantity
+    audit.record(outlet_id, actor_id, "prepared.undo", "menu_item", item.id,
+                 {"item": item.name, "date": day.isoformat(), "quantity": qty, "entry_id": e.id,
+                  "prepared_at": e.prepared_at.isoformat(), "recorded_by": e.created_by})
+    db.session.delete(e)
+    db.session.commit()
+    return {"menu_item_id": item.id, "date": day.isoformat(), "removed": qty,
+            "total_prepared": _prepared_total(outlet_id, item.id, day)}
+
+
 def record_served(outlet_id: int, data: dict, actor_id: int | None = None) -> dict:
     """K6: end-of-day served quantities. One sales record per item per day (C4); overwriting needs confirmation."""
     f = Fields(data)

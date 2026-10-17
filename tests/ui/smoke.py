@@ -113,6 +113,11 @@ def kitchen(browser):
     first.get_by_role("button", name="Finish preparation").click()      # below the plan it asks first, actual against planned
     assert "with 30 of" in first.locator(".pp-confirm").inner_text(), "finish confirmation shows actual vs planned"
     first.locator(".pp-confirm").get_by_role("button", name="Cancel").click()
+    first.locator(".pp-more > button").click()
+    first.get_by_role("button", name="Undo last entry (6)").click()      # a mistaken entry is taken back after a confirm
+    assert "Prepared goes from 30 to 24" in first.locator(".pp-confirm").inner_text(), "undo confirmation shows the new total"
+    first.locator(".pp-confirm").get_by_role("button", name="Undo entry").click()
+    page.wait_for_function("document.querySelector('.pp-item .pp-cell:nth-child(4) .pp-n').textContent.trim() === '24'", timeout=5000)
     visit(page, "/kitchen/prep", "k_prep_after", wait=".pp-item")
     acc, ovr = page.locator(".pp-chip.is-approved").count(), page.locator(".pp-chip.is-changed").count()
     assert (acc, ovr) == (1, 1), f"after reload: {acc} approved and {ovr} changed, expected 1 and 1"

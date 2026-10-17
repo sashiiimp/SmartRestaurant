@@ -76,6 +76,27 @@ SR.createApp({
       s.confirm = { title: 'Finish preparation of ' + it.name, yes: 'Finish preparation', go: () => this.prepStatus(it, 'done'),
         text: 'Finish ' + it.name + ' with ' + it.prepared_so_far + ' of ' + this.planned(it) + ' planned? ' + gap + ' fewer than planned.' };
     },
+    // Undo takes back the latest prepared entry of today (a typo, or the wrong item). A finished item is reopened first.
+    canUndo(it) { return this.isToday && !!it.last_entry && it.prep_status !== 'done'; },
+    askUndo(it) {
+      const s = this.st(it.menu_item_id), e = it.last_entry, left = (Number(it.prepared_so_far) || 0) - e.quantity;
+      s.changing = false; s.errors = {}; s.message = null;
+      const at = new Date(e.prepared_at).toLocaleTimeString('en-GB', { timeZone: 'Asia/Colombo', hour: '2-digit', minute: '2-digit' });
+      s.confirm = { title: 'Undo last entry for ' + it.name, yes: 'Undo entry', go: () => this.undo(it),
+        text: 'Remove the entry of ' + e.quantity + ' added at ' + at + '? Prepared goes from ' + it.prepared_so_far + ' to ' + left + '.' };
+    },
+    async undo(item) {
+      const s = this.st(item.menu_item_id); s.busy = true; s.errors = {}; s.message = null;
+      try {
+        const { data } = await api.delete('/kitchen/prepared/' + item.last_entry.entry_id);
+        s.confirm = null;
+        await this.refresh();
+        ui.toast(item.name + ': entry of ' + data.removed + ' removed, ' + data.total_prepared + ' prepared');
+      } catch (e) {
+        s.confirm = null; s.message = ui.errorText(e);
+        if (e.status === 409) await this.refresh();   // someone added since, or it was finished: show the latest state
+      } finally { s.busy = false; }
+    },
     st(id) {
       if (!this.state[id]) this.state[id] = { changing: false, confirm: null, adding: false, qty: '', reason: '', add: '', busy: false, errors: {}, message: null };
       return this.state[id];
@@ -103,7 +124,7 @@ SR.createApp({
         if (data.warnings && data.warnings.length) ui.toast(data.warnings[0], 'warning');
       } catch (e) { s.errors = e.fields || {}; s.message = Object.keys(s.errors).length ? null : ui.errorText(e); } finally { s.busy = false; }
     },
-    // An entry that takes the item above its plan is confirmed first (a typo such as 300 for 30 cannot be taken back);
+    // An entry that takes the item above its plan is confirmed first (a typo such as 300 for 30; Undo last entry can still take it back);
     // cooking more than planned is allowed and shows as extra.
     addPrepared(item) {
       const s = this.st(item.menu_item_id), n = Number(String(s.add).trim()), p = this.planned(item);
