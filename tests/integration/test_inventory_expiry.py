@@ -1,4 +1,4 @@
-"""Final UI review, 17 Oct 2026: the inventory dashboard lists only batches that are still usable under Expiring
+"""The inventory dashboard lists only batches that are still usable under Expiring
 soon; the batches already expired are counted, not listed (TESTING.md 4.2 world: chicken has a 5 kg expired batch)."""
 from datetime import timedelta
 

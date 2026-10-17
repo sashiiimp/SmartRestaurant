@@ -1,4 +1,4 @@
-/* Shared Vue components (UI_PLAN section 2). Templates use [[ ]] because Jinja owns {{ }}.
+/* Shared Vue components. Templates use [[ ]] because Jinja owns {{ }}.
    Visual design lives in css/app.css; nothing here changes data or behaviour. */
 window.SR = (function () {
   const css = (name, fallback) => (getComputedStyle(document.body).getPropertyValue(name) || '').trim() || fallback;

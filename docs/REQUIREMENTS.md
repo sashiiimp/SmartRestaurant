@@ -1,6 +1,6 @@
 # SmartRestaurant: Requirements
 
-Team ForeSight, CSE5015. Source of truth: `docs/proposal.pdf` (FR1-FR12, NFR1-NFR8, and the per-role function tables on pp. 4-7).
+Team ForeSight, CSE5015. Source of truth: the project proposal (FR1-FR12, NFR1-NFR8, and the per-role function tables on pp. 4-7).
 
 ## 0. Assumptions and flagged issues (read first)
 
@@ -8,7 +8,7 @@ Team ForeSight, CSE5015. Source of truth: `docs/proposal.pdf` (FR1-FR12, NFR1-NF
 
 | # | Assumption |
 |---|---|
-| A1 | **Schedule and capacity (confirmed).** Project started Sep Week 1. Hard deadline is **28 Sep 2026**. Today is 19 Sep, so **9 calendar days remain.** The proposal Gantt runs to Oct Week 2 and does not fit. Work is planned for **one builder**; the named team roles in the proposal are ignored. Every story below carries a priority so `PLAN.md` can cut to fit. |
+| A1 | **Schedule and capacity (confirmed).** Project started Sep Week 1. Hard deadline is **28 Sep 2026**. Today is 19 Sep, so **9 calendar days remain.** The proposal Gantt runs to Oct Week 2 and does not fit. Work is planned for **one builder**; the named team roles in the proposal are ignored. Every story below carries a priority so the project plan can cut to fit. |
 | A2 | **Priorities.** **P1** = the MVP demo loop (forecast, prep recommendation, ingredient requirement, shortage, alert, reorder). **P2** = completes the role's dashboard. **P3** = stretch, cut first. |
 | A3 | **Data (confirmed).** No real restaurant data: a documented synthetic dataset will be generated (see `ML_PLAN.md`) and labelled as synthetic in the UI, reports and viva. Real data can replace it through the same CSV import (FR2/FR3). Location for weather and holidays is **Colombo, Sri Lanka**. |
 | A4 | **"Sales" means quantity sold per menu item per day.** POS and payments are out of scope, so sales arrive by CSV import or by the kitchen's daily "served quantity" entry. Revenue = quantity x the unit price stored on that record. |
@@ -26,7 +26,7 @@ Team ForeSight, CSE5015. Source of truth: `docs/proposal.pdf` (FR1-FR12, NFR1-NF
 
 | # | Issue | Handling |
 |---|---|---|
-| I1 | Gantt (to Oct Week 2) is longer than the 28 Sep deadline. | See A1. `PLAN.md` will propose a cut list. |
+| I1 | Gantt (to Oct Week 2) is longer than the 28 Sep deadline. | See A1. the project plan will propose a cut list. |
 | I2 | No Gantt task for obtaining data, yet forecasting starts Sep Week 2 and needs it. | Synthetic-data generation becomes an explicit early task (A3). |
 | I3 | The function tables list 47 functions, far more than FR1-FR12 covers (users, menu, recipes, suppliers, POs, orders, pre-orders, kitchen requests). | All 47 are mapped to stories (Appendix A). Extras are P2/P3. |
 | I4 | "Pre-orders" conflicts with "POS excluded". | See A7. |
@@ -439,7 +439,7 @@ These describe behaviour of the forecasting, recommendation and alert services. 
 | P2 | C3 | A3, A6, A7, A10, A12, A13 | K4, K10, K11, K12, K13 | I10, I11, I12, I14, I15, I16 | none | 18 |
 | P3 | C5 | none | K8 | none | none | 2 |
 
-P1 alone is too much for one builder in the time left. **`PLAN.md` replaces P1/P2/P3 with scheduling tiers** (M1 core loop 26 stories, M2 12, S stretch 11, X postponed 7) and gives the final MVP scope, the cut list and the trim ladder.
+P1 alone is too much for one builder in the time left. **the project plan replaces P1/P2/P3 with scheduling tiers** (M1 core loop 26 stories, M2 12, S stretch 11, X postponed 7) and gives the final MVP scope, the cut list and the trim ladder.
 
 ## Appendix C. Questions and answers
 
@@ -452,6 +452,6 @@ P1 alone is too much for one builder in the time left. **`PLAN.md` replaces P1/P
 | 5 | Deployment (Docker, VPS) | Defaults accepted: Ubuntu, Docker Compose optional, local venv for dev |
 | 6 | ORM and auth | Defaults accepted: Flask-SQLAlchemy, Flask-Migrate, Flask-Login sessions with CSRF |
 | 7 | UI | Vue.js (A13) |
-| 8 | Scope and team | One builder; scope defaults stand, cuts set in `PLAN.md` |
+| 8 | Scope and team | One builder; scope defaults stand, cuts set in the project plan |
 
 Still open: who plays each role during the UAT walkthrough (I10), and whether the examiners expect pilot-restaurant UAT despite the synthetic data.

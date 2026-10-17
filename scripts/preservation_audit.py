@@ -1,4 +1,4 @@
-"""Inventory of every function the system offers, for the preservation checklist (docs/PRESERVATION_CHECKLIST.md).
+"""Inventory of every function the system offers, compared with a saved baseline by tests/api/test_preservation.py.
 
 Reads the code, not the database: routes with their methods and allowed roles, menu pages and their tabs, old
 addresses that redirect, CLI commands, the API calls each page script makes, and the buttons and action links each
@@ -8,9 +8,8 @@ page template shows. Read-only.
     python scripts/preservation_audit.py --write      also refresh tests/preservation_baseline.json
 
 tests/api/test_preservation.py compares the running code with the saved baseline: nothing in the baseline may
-disappear. The baseline is refreshed only when a change is intended and recorded in the checklist."""
+disappear. The baseline is refreshed only when a change is intended and approved."""
 import json
-import os
 import re
 import sys
 from pathlib import Path
@@ -78,12 +77,10 @@ def api_calls(script: str, template: str | None = None) -> list[str]:
 
 
 def inventory() -> dict:
-    os.environ.setdefault("APP_ENV", "dev")
-    os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
     from app import create_app
     from app.utils import navigation as nav
 
-    app = create_app()
+    app = create_app("test")   # routes and templates only; the database is never opened
     routes = []
     for rule in app.url_map.iter_rules():
         if rule.endpoint == "static":

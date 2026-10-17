@@ -142,7 +142,7 @@ smartrest/
 | + | **Auth & Users** (not in Gantt) | `auth_service`; models `User`, `Role`, `AuditLog` | `controllers/auth.py`, `api/users.py` | Login, user admin | none |
 | + | **Kitchen Operations** (not in Gantt) | `kitchen_service`; models `PreparationRecord`, `FoodWaste`, `Order`, `PreOrder` | `controllers/kitchen.py`, `api/kitchen.py` | Kitchen record forms | Data Management, Inventory |
 
-The Gantt omits Auth and Kitchen Operations, yet FR1, FR8 and most kitchen stories (K5-K7, K10-K13) need them. They're added here, and `PLAN.md` will schedule them.
+The Gantt omits Auth and Kitchen Operations, yet FR1, FR8 and most kitchen stories (K5-K7, K10-K13) need them. They're added here, and the project plan will schedule them.
 
 Dependency direction is strictly downward (no cycles):
 
@@ -324,7 +324,7 @@ Rules:
 ### 7.5 Frontend pattern (D3)
 
 - Each page template has a root `<div id="app">` and one script in `static/js/pages/`.
-- **Delimiter clash:** Jinja and Vue both use `{{ }}`. Vue is configured with `delimiters: ['[[', ']]']`, and the rule is documented in `docs/DEVELOPMENT.md`.
+- **Delimiter clash:** Jinja and Vue both use `{{ }}`. Vue is configured with `delimiters: ['[[', ']]']`.
 - `static/js/api.js` wraps `fetch`: adds the CSRF header, unwraps the envelope, and shows field errors from a `422`.
 - Charts use Chart.js. Rendering logic only; numbers come from the API, so a chart and its table always match.
 - Layout is Bootstrap 5 grid, so pages work at 360 px (NFR4). Bootstrap and Vue are vendored.
@@ -366,10 +366,10 @@ Rules:
 
 Accepted decisions from section 9: **eight services** (Auth & Users and Kitchen Operations added), the **import-rule test** is kept, and forecasts and alerts run by **CLI or admin button with no scheduler**.
 
-Changes to the model list (details in `DATABASE.md`): `Outlet`, `LoginAttempt`, `ForecastRun` and `PromotionItem` are added; `IngredientWastage` is dropped (ingredient wastage is a `wastage` stock movement, I13); `Order` and `StockRequest` are postponed (see `PLAN.md` section 4).
+Changes to the model list (details in `DATABASE.md`): `Outlet`, `LoginAttempt`, `ForecastRun` and `PromotionItem` are added; `IngredientWastage` is dropped (ingredient wastage is a `wastage` stock movement, I13); `Order` and `StockRequest` are postponed (see the project plan section 4).
 
 Alert refresh: because a service may not call a service above it in the graph (section 3), `InventoryService` cannot trigger `AlertService`. Alerts are re-evaluated by CLI, by the admin "Run now", and lazily when alerts or dashboards are read and the last evaluation is over 60 seconds old (`API.md` 3.5, `ML_PLAN.md` B4).
 
-Vue infrastructure (vendored libraries, `api.js`, shared components) is built on day 2, not day 0 (`PLAN.md` section 5).
+Vue infrastructure (vendored libraries, `api.js`, shared components) is built on day 2, not day 0 (the project plan section 5).
 
 `app/seed/` is a fifth module group next to `cli.py`: it may import `services` and `utils` (never `models` directly, so seeded data goes through the same validation as user data) and is called only from `cli.py`. `test_architecture.py` covers it.

@@ -1,4 +1,4 @@
-"""HTTP behaviour and RBAC of the Tier 2 functions (PLAN.md section 3A)."""
+"""HTTP behaviour and RBAC of the Tier 2 functions."""
 from datetime import date
 
 from tests.conftest import login

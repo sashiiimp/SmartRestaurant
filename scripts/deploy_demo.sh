@@ -4,10 +4,10 @@
 # Flask CLI commands must run as the same user, e.g.:
 #   runuser -u smartrest -- env FLASK_APP=wsgi.py .venv/bin/flask smartrest demo-reset
 case "$1" in
-  start|restart) systemctl restart smartrest-db smartrest-web
+  start|restart) systemctl restart smartrest-mysql smartrest-web
                  sleep 3; curl -s -o /dev/null -w "local check: HTTP %{http_code}\n" http://127.0.0.1:39500/login ;;
   reload) systemctl reload smartrest-web ;;
   stop) systemctl stop smartrest-web ;;
-  status) systemctl --no-pager status smartrest-web smartrest-db | grep -E "Active|●" ;;
+  status) systemctl --no-pager status smartrest-web smartrest-mysql | grep -E "Active|●" ;;
   *) echo "usage: $0 start|restart|reload|stop|status" ;;
 esac

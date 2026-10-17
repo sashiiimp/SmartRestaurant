@@ -1,7 +1,7 @@
 """PRES-1 .. PRES-5: nothing the system could do before the role dashboards (baseline = production d26b1e9) is lost.
 
-The baseline is tests/preservation_baseline.json, written by scripts/preservation_audit.py; the checklist that explains
-it is docs/PRESERVATION_CHECKLIST.md. Every item in the baseline must still exist. A dashboard may show an action in a
+The baseline is tests/preservation_baseline.json, written by scripts/preservation_audit.py. Every item in the baseline
+must still exist. A dashboard may show an action in a
 new way; MOVED lists those, each with where the same function is now, and the test checks that place."""
 import json
 from pathlib import Path
