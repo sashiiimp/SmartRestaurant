@@ -1,6 +1,6 @@
 # SmartRestaurant: Testing
 
-Read `REQUIREMENTS.md` (acceptance criteria, NFR table), `ARCHITECTURE.md` (layers, D8) and `ML_PLAN.md` (Part B rules) first. Tier labels (M1, M2, S) are defined in `PLAN.md`.
+Read `REQUIREMENTS.md` (acceptance criteria, NFR table), `ARCHITECTURE.md` (layers, D8) and `ML_PLAN.md` (Part B rules) first. Tier labels (M1, M2, S) are defined in the project plan.
 
 ## 1. Strategy
 
@@ -236,13 +236,12 @@ The Flask test client excludes network time; the demo machine is also checked by
 
 ## 7. Manual checks
 
-**Responsive and browser (NFR4).** For every M1 and M2 page: 360, 768 and 1280 px in Chrome; then the three kitchen pages, the inventory dashboard and the admin models page in Firefox and Edge. Pass = readable, no sideways page scroll, primary buttons reachable. Results go into `docs/TEST_LOG.md` (created during testing).
+**Responsive and browser (NFR4).** For every M1 and M2 page: 360, 768 and 1280 px in Chrome; then the three kitchen pages, the inventory dashboard and the admin models page in Firefox and Edge. Pass = readable, no sideways page scroll, primary buttons reachable. Results go into the test log (created during testing).
 
 **Security review (NFR5), 30 minutes.** No secrets in git (`git log -p | grep -i password`); `.env` ignored; cookie flags; every write path uses a service; no `|safe` in templates; `SEED_PASSWORD` not defaulted.
 
 ## 8. Scripted UAT (NFR1, I10 in REQUIREMENTS)
 
-*4 Oct 2026: a usability test with first-time users (task cards, SEQ, SUS, observer sheet, answer key and analysis script) is in `docs/usability/`; it measures NFR1 as defined in REQUIREMENTS.md with volunteers instead of the builder.*
 
 There is no pilot restaurant and no QA team. The builder runs each script on a clean seeded database, ideally with **one volunteer per role** who is not the builder; times are recorded. Pilot-restaurant UAT and SUS scoring are reported as **not done** (Appendix C, open point). Steps 1-6 of the kitchen script are the NFR1 timing task: target 5 minutes or less for a first-time user.
 
@@ -255,7 +254,7 @@ There is no pilot restaurant and no QA team. The builder runs each script on a c
 **A-UAT (admin)**
 1. Log in; dashboard tiles load. 2. Models: Train; the comparison table shows the baseline and both models; Activate the new version; Run forecast now. 3. Monitor: forecast vs actual and error metrics appear. 4. Data: import a sample sales CSV with one bad row: 1 rejected with a reason; confirm. 5. Catalog: change the Chicken Burger recipe; the kitchen requirement changes. 6. Users: create a kitchen user, deactivate it, confirm login is refused; try to deactivate the last admin: refused.
 
-**Defects.** Logged in `docs/TEST_LOG.md`: id, script step, severity (1 crash, wrong number or data loss, 2 wrong behaviour with workaround, 3 cosmetic), status. Severity 1 blocks the demo.
+**Defects.** Logged in the test log: id, script step, severity (1 crash, wrong number or data loss, 2 wrong behaviour with workaround, 3 cosmetic), status. Severity 1 blocks the demo.
 
 ## 9. Traceability (M1 stories to tests)
 
@@ -288,7 +287,7 @@ There is no pilot restaurant and no QA team. The builder runs each script on a c
 
 ## 11. Explicitly not done
 
-Load testing beyond section 6, penetration testing, accessibility audit with a screen reader, pilot-restaurant UAT, SUS scoring (the usability kit exists; sessions not yet run), and validation of forecast accuracy on real *Sri Lankan* restaurant data. (Browser automation has since been added, and the forecasting method was validated offline on external real datasets; see `ML_EVALUATION_REAL_DATA.md` on the staging branch.) These go in the report's limitations section.
+Load testing beyond section 6, penetration testing, accessibility audit with a screen reader, pilot-restaurant UAT, SUS scoring, and validation of forecast accuracy on real *Sri Lankan* restaurant data. (Browser automation has since been added, and the forecasting method was validated offline on external real datasets; see `ML_EVALUATION_REAL_DATA.md` on the staging branch.) These go in the report's limitations section.
 
 ## End-to-end decision chain (E2E-1, 14 Oct 2026)
 

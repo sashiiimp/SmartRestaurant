@@ -1,4 +1,4 @@
-"""Live UI review, 17 Oct 2026 (A1, A2, I1-I4): the numbers behind the screens, with the hand-calculated values of
+"""Alerts, reorder and stock views: the numbers behind the screens, with the hand-calculated values of
 the TESTING.md 4.2 / 4.3 world (chicken: 12 kg usable, 5 kg expired, need 15.48 today, 98.04 over 7 days)."""
 from datetime import timedelta
 from decimal import Decimal

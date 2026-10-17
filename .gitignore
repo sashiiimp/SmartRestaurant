@@ -4,7 +4,6 @@ __pycache__/
 .env
 instance/
 data/synthetic/
-.mariadb/
 backups/
 .pytest_cache/
 .coverage

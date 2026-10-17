@@ -1,8 +1,7 @@
 # UML diagrams
 
-Sources are Mermaid (`*.mmd`); `*.svg` and `*.png` (2x) are generated with `.venv/bin/python scripts/render_diagrams.py`
-(Playwright, from `requirements-dev.txt`). Edit the `.mmd` file, then re-render. All diagrams were checked against the
-code on 4 Oct 2026 (statuses from the model constraints, routes from the API controllers, arrows from the imports).
+Sources are Mermaid (`*.mmd`), with a rendered `*.png` beside each. The diagrams were checked against the code
+(statuses from the model constraints, routes from the API controllers, arrows from the imports).
 
 | File | Diagram | Shows |
 |---|---|---|

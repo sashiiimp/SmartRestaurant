@@ -228,7 +228,7 @@ input[type="file"]::file-selector-button { border: 0; background: var(--accent-s
 .nav-tabs .nav-link { border: 0; border-bottom: 2px solid transparent; border-radius: 0; margin-bottom: -1px; color: var(--muted); font-weight: 600; padding: .6rem 1rem; }
 .nav-tabs .nav-link:hover { color: var(--text); border-bottom-color: var(--border-strong); }
 .nav-tabs .nav-link.active { color: var(--accent); background: transparent; border-bottom-color: var(--accent); }
-/* Tabs, one standard (Oct 2026): the main sections of a page are a segmented bar (.hub-tabs, .sr-tabs, .nav-pills) with the
+/* Tabs, one standard: the main sections of a page are a segmented bar (.hub-tabs, .sr-tabs, .nav-pills) with the
    selected section filled in the accent colour; sub-sections inside one of them use the underlined .nav-tabs above. */
 .nav-pills, .sr-tabs, .hub-tabs { display: inline-flex; flex-wrap: wrap; gap: .25rem; padding: .25rem; max-width: 100%;
   background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-sm); }
@@ -309,7 +309,7 @@ input[type="file"]::file-selector-button { border: 0; background: var(--accent-s
 .doughnut-centre strong { font-size: 1.6rem; line-height: 1; letter-spacing: -.02em; }
 .doughnut-centre span { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
 
-/* simplified dashboards (Oct 2026): page header with actions, severity chips, compact lists, thin progress bars */
+/* dashboards: page header with actions, severity chips, compact lists, thin progress bars */
 .side-heading { margin: .9rem .8rem .3rem; font-size: .66rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--nav-text); opacity: .62; }
 #nav > .side-heading:first-child { margin-top: .2rem; }
 .dash-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: .75rem 1rem; margin-bottom: 1.1rem; }
@@ -364,7 +364,7 @@ input[type="file"]::file-selector-button { border: 0; background: var(--accent-s
   .plan-table > :not(caption) > * > * { padding-left: .4rem; padding-right: .4rem; }
 }
 
-/* ---- 10 login: see section 25 (redesign, Oct 2026) ------------------------------------------------------- */
+/* ---- 10 login: see section 25 ------------------------------------------------------------------------- */
 /* error pages */
 .state-page { max-width: 30rem; margin: 6vh auto; text-align: center; }
 .state-page .state-code { font-size: 4.2rem; font-weight: 800; letter-spacing: -.04em; line-height: 1; color: var(--accent); opacity: .9; }
@@ -391,8 +391,8 @@ input[type="file"]::file-selector-button { border: 0; background: var(--accent-s
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }
 
-/* ---- 12 administrator theme and dashboard (Oct 2026) ------------------------------------------------------- */
-/* Every role (since 14 Oct 2026): light sidebar, neutral grey canvas, green accent; the role colour marks the role chip and avatar. */
+/* ---- 12 administrator theme and dashboard ------------------------------------------------------------------ */
+/* Every role: light sidebar, neutral grey canvas, green accent; the role colour marks the role chip and avatar. */
 body[data-role] .sidebar { background: var(--surface) !important; border-right: 1px solid var(--border); }
 body[data-role] .brand, body[data-role] .brand:hover { color: var(--text); }
 body[data-role] .brand-mark { background: var(--accent); box-shadow: none; color: #fff; }
@@ -428,7 +428,7 @@ body[data-role] .topbar::after { display: none; }
   .admin-dash .stat-tile .card-body { padding: .85rem .9rem .9rem; }
   .admin-dash .stat-icon { display: none; }
 }
-/* dashboard (13 Oct 2026, second pass): pre-order list, alert history, forecast shortfall, stacked quick actions */
+/* dashboard: pre-order list, alert history, forecast shortfall, stacked quick actions */
 .hist-list { list-style: none; margin: 0; padding: 0; display: grid; }
 .hist-list li { padding: .5rem 0; border-bottom: 1px solid var(--border); display: grid; gap: .1rem; }
 .hist-list li:last-child { border-bottom: 0; }
@@ -437,7 +437,7 @@ body[data-role] .topbar::after { display: none; }
 .sr-tabs-sm { margin-bottom: .75rem; }
 .sr-tabs-sm .sr-tab { padding: .3rem .75rem; font-size: .82rem; }
 
-/* ---- 13 merged pages (Oct 2026) ------------------------------------------------------------------------------ */
+/* ---- 13 merged pages ----------------------------------------------------------------------------------------- */
 /* A merged page shows its sections as a segmented control, so it does not look like the underlined tabs inside a section */
 .hub-head { margin-bottom: 1rem; }
 .role-table th { font-size: .8rem; }
@@ -448,7 +448,7 @@ body[data-role] .topbar::after { display: none; }
   .hub-tab, .sr-tabs:not(.sr-tabs-sm) .sr-tab { flex: 1 1 auto; text-align: center; padding: .4rem .6rem; }
 }
 
-/* ---- 14 final UI pass (14 Oct 2026): page intros, dashboard flow line, recommended actions, workflow steps ------- */
+/* ---- 14 page intros, dashboard flow line, recommended actions ------------------------------------------------ */
 .page-intro { margin: .15rem 0 1rem; max-width: 62rem; font-size: .86rem; color: var(--muted); }
 .hub-head + #app > .page-intro:first-child { margin-top: 0; }
 .dash-section { margin: 1.4rem 0 .75rem; font-size: .78rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
@@ -488,11 +488,11 @@ body[data-role] .topbar::after { display: none; }
 .m-key span:not(.sr-badge) { font-size: .7rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 650; }
 .m-key strong { font-size: 1.15rem; font-weight: 750; color: var(--accent-strong); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
-/* ---- 15 (workflow strip removed in the Oct 2026 redesign; the admin dashboard shows "Restaurant today") ---------- */
+/* ---- 15 chart legend ---------------------------------------------------------------------------------------- */
 /* history + forecast chart legend chips */
 .dash-section.mt-0 { margin-top: 0; }
 
-/* ---- 16 role dashboards (Oct 2026) ------------------------------------------------------------------------------ */
+/* ---- 16 role dashboards ----------------------------------------------------------------------------------------- */
 /* "Needs attention": the issue, what the system recommends, one action. Severity is the dot and the left edge. */
 .act-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .5rem; }
 .act-item { display: flex; align-items: center; gap: .75rem; padding: .65rem .75rem; border: 1px solid var(--border); border-left: 3px solid var(--act, var(--info)); border-radius: 10px; background: var(--surface); }
@@ -524,7 +524,7 @@ body[data-role] .topbar::after { display: none; }
 .kpis .stat-tile .value { overflow-wrap: normal; word-break: normal; hyphens: none; }
 @media (max-width: 575.98px) { .kpis { gap: .5rem; } .kpis .stat-tile .value { font-size: 1.1rem; } .kpis .stat-tile .card-body { padding: .8rem .85rem; } }
 
-/* ---- 17 simplification (Oct 2026) ------------------------------------------------------------------------------- */
+/* ---- 17 ingredients & requests, kitchen requests ------------------------------------------------------------------------------- */
 /* Ingredients & requests: one "Ask inventory" action opens two choices under the row */
 .ask-row > td { background: var(--surface-2) !important; }
 .ask-panel { display: grid; gap: .75rem; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: .35rem 0; }
@@ -541,7 +541,7 @@ body[data-role] .topbar::after { display: none; }
 /* on phones the requirements table scrolls sideways; keep the two choices in view at the visible width */
 @media (max-width: 767.98px) { .ask-panel { position: sticky; left: .75rem; width: calc(100vw - 4.5rem); } }
 
-/* ---- 18 served & waste daily record (Oct 2026) ------------------------------------------------------------------ */
+/* ---- 18 served & waste daily record ----------------------------------------------------------------------------- */
 /* One row per item: prepared, served (typed in the row), wasted, other use and the balance. Waste and other use are
    recorded in a panel under the row. On phones each row becomes a card with the figures in one line of four. */
 .rec-status { list-style: none; display: flex; flex-wrap: wrap; gap: .4rem; margin: 0 0 .75rem; padding: 0; font-size: .8rem; font-weight: 600; }
@@ -610,7 +610,7 @@ body[data-role] .topbar::after { display: none; }
   .rec-save { padding: .6rem .75rem; } .rec-save .btn { flex: 1 1 auto; }
 }
 
-/* ---- 19 ingredient usage (Oct 2026) ----------------------------------------------------------------------------- */
+/* ---- 19 ingredient usage ---------------------------------------------------------------------------------------- */
 /* Expected (prepared x recipe, with its calculation one click away), the amount actually used with its unit, and the
    difference in the unit and in percent. Over expected is red, under is amber, equal is green. */
 .use-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem; margin-bottom: .75rem; }
@@ -674,7 +674,7 @@ body[data-role] .topbar::after { display: none; }
   .use-calc-list li { flex-wrap: wrap; gap: 0 .75rem; }
 }
 
-/* ---- 20 served includes collected pre-orders (Oct 2026) ---------------------------------------------------------- */
+/* ---- 20 served includes collected pre-orders --------------------------------------------------------------------- */
 .rec-hint { margin: 0 0 .6rem; font-size: .8rem; color: var(--text-2); }
 .rec-hint strong { color: var(--text); font-weight: 650; }
 .rec-table thead .th-sub { display: block; font-size: .62rem; font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--accent-strong); }
@@ -682,7 +682,7 @@ body[data-role] .topbar::after { display: none; }
 .rec-pre.is-below { color: var(--danger); font-weight: 650; }
 @media (max-width: 1199.98px) { .rec-pre { text-align: center; } }
 
-/* ---- 21 kitchen dashboard (Oct 2026) ------------------------------------------------------------------------------ */
+/* ---- 21 kitchen dashboard ----------------------------------------------------------------------------------------- */
 /* Two columns: what to do and today's plan on the left; shortages, pre-orders and alerts on the right (stacked on
    smaller screens). Suggested quantities look unapproved (muted, dashed); accepted or changed ones are firm. */
 .kd-main, .kd-side { display: flex; flex-direction: column; gap: 1rem; }
@@ -714,7 +714,7 @@ body[data-role] .topbar::after { display: none; }
 #alerts .card-head .btn-link { font-size: .82rem; font-weight: 600; text-decoration: none; }
 #alerts .kd-none + .kd-none, #alerts .alert-item + .kd-none, #alerts div + .kd-none { margin-top: .5rem; }
 
-/* ---- 22 kitchen dashboard polish (Oct 2026) ----------------------------------------------------------------------- */
+/* ---- 22 kitchen dashboard details -------------------------------------------------------------------------------------- */
 /* Two figure cards (recommended vs prepared); plan beside shortages and pre-orders on wide screens, alerts full width
    below. Approved quantities are solid, suggested ones dashed and muted, so the two never read alike. */
 .kd-attention { margin-bottom: 1rem; }
@@ -766,7 +766,7 @@ body[data-role] .topbar::after { display: none; }
   .short-table .kd-u { min-width: 0; margin-left: .15rem; }
 }
 
-/* ---- 23 plan & prepare (redesign 2, Oct 2026) ---------------------------------------------------------------------- */
+/* ---- 23 plan & prepare ------------------------------------------------------------------------------------------- */
 /* One list for every screen: a six-column row on wide screens, a card below 992 px. Suggested plans are muted with a
    dashed chip; approved ones are solid; actions follow the item's state (add while cooking, finish at the plan). */
 .pp-top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: .75rem 1.5rem; margin-bottom: 1rem; }
@@ -879,7 +879,7 @@ body[data-role] .topbar::after { display: none; }
   .pp-n { font-size: 1.05rem; }
 }
 
-/* ---- 24 menu & recipes (BOM) (Oct 2026) --------------------------------------------------------------------------- */
+/* ---- 24 menu & recipes (BOM) -------------------------------------------------------------------------------------- */
 /* BOM overview: one group of rows per menu item (name, batch, ingredient count, Edit recipe), then its ingredients. */
 .bom-search { max-width: 18rem; }
 .bom-table > :not(caption) > * > * { padding: .4rem .6rem; }
@@ -893,7 +893,7 @@ body[data-role] .topbar::after { display: none; }
 .ing-table td, .ing-table th { white-space: nowrap; }
 @media (max-width: 575.98px) { .bom-search { max-width: none; width: 100%; } .bom-head small { display: block; margin-left: 0; } }
 
-/* ---- 25 redesign (Oct 2026): one calm design system for every page ------------------------------------------------
+/* ---- 25 one calm design system for every page -----------------------------------------------------------------
    Inter (vendored, OFL) on a soft neutral canvas; white cards with a hairline border; green only for the main action,
    the active menu entry and "good" states. Secondary buttons and tabs are neutral, so colour always means something. */
 @font-face { font-family: "Inter"; font-style: normal; font-weight: 100 900; font-display: swap;
@@ -1160,7 +1160,7 @@ input[type="file"]::file-selector-button { background: var(--surface-3); color: 
 }
 /* desktop: the white sidebar column runs the full page height, also when the page is longer than the window */
 @media (min-width: 992px) { body[data-role] .app-shell { background: linear-gradient(90deg, var(--surface) calc(var(--sidebar-w) - 1px), var(--border) calc(var(--sidebar-w) - 1px), var(--border) var(--sidebar-w), transparent var(--sidebar-w)); } }
-/* kitchen dashboard on the redesign spacing */
+/* kitchen dashboard spacing */
 .kd-grid .card-body, .kd-attention .card-body { padding: 1.25rem 1.375rem; }
 .kd-plan thead th, .short-table thead th { font-size: .75rem; }
 .kd-plan { font-size: .875rem; }
@@ -1180,7 +1180,7 @@ input[type="file"]::file-selector-button { background: var(--surface-3); color: 
 .card .nav-pills .nav-item .nav-link { width: 100%; white-space: nowrap; }
 @media (max-width: 575.98px) { .card .nav-pills { display: grid; grid-template-columns: 1fr 1fr; } }
 
-/* ---- 26 live review fixes (17 Oct 2026) ------------------------------------------------------------------------ */
+/* ---- 26 purchasing notes, quiet actions, draft orders ------------------------------------------------------------------------ */
 /* Purchasing: ingredients needed but already covered by open purchase orders, so not suggested again */
 .covered-note { padding: .7rem .9rem; font-size: .85rem; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; }
 .covered-note ul { padding-left: 1.1rem; margin-top: .3rem; }
@@ -1190,7 +1190,7 @@ input[type="file"]::file-selector-button { background: var(--surface-3); color: 
 /* a purchase order that exists only as a draft: in the system, not yet sent to the supplier */
 .is-draft, a.cell-sub.is-draft { color: var(--warning); font-weight: 600; }
 
-/* ---- 27 final review fixes (17 Oct 2026) ------------------------------------------------------------------------ */
+/* ---- 27 phone layouts and page details ----------------------------------------------------------------------------------- */
 /* Phones and small tablets: a wide table (m-stack) becomes one stacked row per item, so no column or button is hidden
    in a sideways scroll. ms-name and ms-status share the first line; cells with a data-label follow, three per line,
    each with its label above; ms-act takes a line of its own, ms-end sits at the end of the last line. */

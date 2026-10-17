@@ -1,6 +1,6 @@
 # SmartRestaurant: API
 
-Read `ARCHITECTURE.md` (envelope, RBAC, MVC rules) and `DATABASE.md` (fields) first. This is the contract between the Vue pages and the Flask controllers. Tier labels are defined in `PLAN.md`: M1 core, M2 rest of MVP, S stretch.
+Read `ARCHITECTURE.md` (envelope, RBAC, MVC rules) and `DATABASE.md` (fields) first. This is the contract between the Vue pages and the Flask controllers. Tier labels are defined in the project plan: M1 core, M2 rest of MVP, S stretch.
 
 ## 1. Conventions
 
@@ -259,7 +259,7 @@ Ingredients whose result is 0 are omitted.
 
 ## 5. Page-to-API map
 
-Each page's data calls are listed in `UI_PLAN.md`. Page routes (HTML) return the shell and never the numbers, except where a service result is embedded through `{{ data|tojson }}`.
+Each page's data calls are listed in the UI plan. Page routes (HTML) return the shell and never the numbers, except where a service result is embedded through `{{ data|tojson }}`.
 
 ## 6. Alert visibility (service constant)
 

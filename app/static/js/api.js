@@ -1,4 +1,4 @@
-/* Thin fetch wrapper for /api/v1: CSRF header, envelope unwrapping, field errors (UI_PLAN section 2). */
+/* Thin fetch wrapper for /api/v1: CSRF header, envelope unwrapping, field errors. */
 window.api = (function () {
   function csrf() {
     const m = document.querySelector('meta[name="csrf-token"]');

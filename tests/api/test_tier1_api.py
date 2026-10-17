@@ -1,4 +1,4 @@
-"""HTTP behaviour and RBAC of the Tier 1 functions (PLAN.md section 3A)."""
+"""HTTP behaviour and RBAC of the Tier 1 functions."""
 from tests.factories import make_ingredient
 
 

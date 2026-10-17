@@ -1,6 +1,6 @@
 [Unit]
 Description=SmartRestaurant web app (gunicorn)
-# production runs on MySQL 8.4 since the 9 Oct 2026 cutover; MariaDB (smartrest-db) stays only as the rollback source
+# the database is MySQL 8.4 (deploy/systemd/smartrest-mysql.service)
 Requires=smartrest-mysql.service
 After=smartrest-mysql.service network.target
 
