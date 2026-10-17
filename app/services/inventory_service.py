@@ -201,6 +201,21 @@ def on_order_map(outlet_id: int) -> dict:
     return {i: q for i, q in rows if q and q > 0}
 
 
+def open_orders_by_ingredient(outlet_id: int) -> dict:
+    """The open purchase orders behind on_order_map, per ingredient: {id: [{"id", "status", "qty"}]} (same statuses).
+    A draft counts as on order, so the same stock is not suggested twice, but it has not been sent to the supplier."""
+    rows = (db.session.query(PurchaseOrderLine.ingredient_id, PurchaseOrder.id, PurchaseOrder.status,
+                             PurchaseOrderLine.qty_ordered - PurchaseOrderLine.qty_received)
+            .join(PurchaseOrder, PurchaseOrder.id == PurchaseOrderLine.purchase_order_id)
+            .filter(PurchaseOrder.outlet_id == outlet_id, PurchaseOrder.status.in_(("draft", "sent", "partially_received")))
+            .order_by(PurchaseOrder.id).all())
+    out = {}
+    for ing_id, po_id, status, left in rows:
+        if left and left > 0:
+            out.setdefault(ing_id, []).append({"id": po_id, "status": status, "qty": float(left)})
+    return out
+
+
 def stock_status(usable: _D, ing: Ingredient) -> tuple[str, bool]:
     """('ok'|'low'|'out', is_critical) from usable stock (DATABASE DB7, ML_PLAN B4)."""
     critical = usable <= ing.min_stock
@@ -220,7 +235,9 @@ def stock_levels(outlet_id: int, day: _date | None = None, active_only: bool = T
     for ing in list_ingredients(outlet_id, active_only):
         u = usable.get(ing.id, ZERO)
         status, critical = stock_status(u, ing)
-        out.append({**ingredient_dict(ing), "on_hand": float(on_hand.get(ing.id, ZERO)), "usable": float(u),
+        h = on_hand.get(ing.id, ZERO)
+        out.append({**ingredient_dict(ing), "on_hand": float(h), "usable": float(u),
+                    "expired": float(max(h - u, ZERO)),   # on hand but not usable: expired, awaiting a wastage record
                     "status": status, "is_critical": critical,
                     "last_movement_date": last[ing.id].isoformat() if ing.id in last else None})
     return out
@@ -611,6 +628,8 @@ def stock_request_dict(req: StockRequest, detail: bool = True) -> dict:
            "note": req.note, "reject_reason": req.reject_reason, "requested_by": _person(req.requested_by),
            "created_at": req.created_at.isoformat() + "Z", "decided_by": _person(req.decided_by),
            "decided_at": req.decided_at.isoformat() + "Z" if req.decided_at else None,
+           # still open after the day it was needed: shown as overdue on the lists and the dashboard
+           "overdue": bool(req.needed_date and req.status in OPEN_REQUEST and req.needed_date < today()),
            "line_count": len(lines), "summary": ", ".join(f"{l['ingredient']} {l['qty_requested']:g} {l['unit']}" for l in lines)}
     if detail:
         out["lines"] = lines

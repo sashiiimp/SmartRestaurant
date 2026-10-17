@@ -42,4 +42,5 @@ def ingredient_forecast():
 @roles_required("admin", "inventory")
 def reorder():
     view = rec.get_reorder_view(current_outlet_id())
-    return ok(view["rows"], {"total": len(view["rows"]), "items_without_forecast": view["items_without_forecast"]})
+    return ok(view["rows"], {"total": len(view["rows"]), "items_without_forecast": view["items_without_forecast"],
+                             "covered_by_orders": view["covered_by_orders"]})

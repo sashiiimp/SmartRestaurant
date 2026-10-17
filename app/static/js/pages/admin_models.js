@@ -1,6 +1,16 @@
 SR.createApp({
   data() { return { versions: [], runs: [], loading: true, error: null, busy: '', trainResult: null, ui }; },
-  computed: { active() { return this.versions.find(v => v.status === 'active') || null; } },
+  computed: {
+    active() { return this.versions.find(v => v.status === 'active') || null; },
+    // a version that is not active but scored a lower hold-out error. Each version is tested on the 56 days before it
+    // was trained, so the periods differ and the errors are not a like-for-like comparison: the page says so.
+    lowerOther() {
+      const a = this.active, mae = v => this.m(v, v.algorithm).mae;
+      if (!a || mae(a) == null) return null;
+      const best = this.versions.filter(v => v.status === 'trained' && mae(v) != null && mae(v) < mae(a)).sort((x, y) => mae(x) - mae(y))[0];
+      return best ? { v: best, mae: mae(best), activeMae: mae(a), samePeriod: best.holdout.start === a.holdout.start && best.holdout.end === a.holdout.end } : null;
+    },
+  },
   async mounted() { await this.load(); },
   methods: {
     async load() {

@@ -91,16 +91,18 @@ def inventory_dashboard(outlet_id: int, role: str = "inventory") -> dict:
     need_vs_stock = sorted(({"name": r["name"], "unit": r["unit"], "need": r["total_need"], "usable": r["usable_stock"]}
                             for r in forecast["ingredients"] if r["total_need"] > 0),
                            key=lambda r: r["usable"] - r["need"])[:10]
-    reorder = rec.get_reorder_suggestions(outlet_id, day)
+    view = rec.get_reorder_view(outlet_id, day)
+    reorder = view["rows"]
+    requirements = _requirements(forecast["ingredients"], reorder, view["covered_by_orders"], inv.open_orders_by_ingredient(outlet_id))
     expiring = inv.list_batches(outlet_id, expiring_within_days=3)
     open_requests = inv.list_stock_requests(outlet_id, "pending") + inv.list_stock_requests(outlet_id, "approved")
     pos = inv.list_purchase_orders(outlet_id)
     return {"date": day.isoformat(), "counts": counts, "alerts": alerts["rows"][:8], "alert_counts": alerts["counts"],
-            "reorder": reorder[:5], "need_vs_stock": need_vs_stock,
+            "reorder": reorder[:5], "need_vs_stock": need_vs_stock, "requirements": requirements,
             "expiring": expiring[:10],
             "pending_requests": inv.pending_request_count(outlet_id),
             # full counts behind the shortened lists above, so a figure never stops at the list length
-            "totals": {"reorder": len(reorder),
+            "totals": {"reorder": len(reorder), "requirements": len(requirements),
                        "at_risk": sum(1 for r in forecast["ingredients"] if r["total_need"] > r["usable_stock"]),
                        "expired_batches": sum(1 for b in expiring if b["expired"]),
                        "expiring_batches": sum(1 for b in expiring if not b["expired"]),
@@ -108,6 +110,31 @@ def inventory_dashboard(outlet_id: int, role: str = "inventory") -> dict:
                        "po_draft": sum(1 for p in pos if p["status"] == "draft"),
                        "po_awaiting": sum(1 for p in pos if p["status"] in ("sent", "partially_received"))},
             "requests": open_requests[:5]}
+
+
+def _requirements(fc_rows: list[dict], reorder: list[dict], covered: list[dict], orders: dict) -> list[dict]:
+    """The inventory dashboard's one table: every ingredient that runs short over the next 7 days or needs ordering,
+    with its 7-day need, usable stock, the reorder suggestion and what is already on order. why: 'short' (7-day need
+    above usable stock), 'below_minimum' (no shortfall, but usable stock under the safety level), 'on_order' (needed,
+    but the open purchase orders cover it). Most short first."""
+    fc = {r["ingredient_id"]: r for r in fc_rows}
+    sug = {r["ingredient_id"]: r for r in reorder}
+    cov = {r["ingredient_id"]: r for r in covered}
+    rows = []
+    for ing_id in set(sug) | set(cov) | {i for i, r in fc.items() if r["total_need"] > r["usable_stock"]}:
+        f, o, c = fc.get(ing_id), sug.get(ing_id), cov.get(ing_id)
+        src = f or o or c
+        need = float(f["total_need"]) if f else 0.0
+        usable = float(f["usable_stock"]) if f else float((o or c)["usable_stock"])
+        why = "short" if need > usable else ("on_order" if c and not o else "below_minimum")
+        rows.append({"ingredient_id": ing_id, "name": src["name"], "unit": src["unit"], "need": round(need, 3), "usable": usable,
+                     "covered_pct": 100 if need <= 0 else max(0, min(100, round(usable / need * 100))),
+                     "why": why, "suggestion": None if o is None else {
+                         "qty": o["suggested_qty"], "supplier": o["supplier"], "supplier_id": o["supplier_id"],
+                         "lead_time_days": o["lead_time_days"]},
+                     "on_order": sum(x["qty"] for x in orders.get(ing_id, [])), "orders": orders.get(ing_id, [])})
+    rows.sort(key=lambda r: (r["why"] != "short", r["usable"] - r["need"], r["name"]))
+    return rows
 
 
 # ---- reports (A8, A11) and the admin dashboard (A1) ------------------------------------------------

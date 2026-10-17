@@ -18,7 +18,7 @@
     <thead><tr><th>Ingredient</th><th class="text-end">Usable</th><th class="text-end">On hand</th><th class="text-end">Min</th><th class="text-end">Reorder at</th><th>Status</th><th>Last movement</th><th></th></tr></thead>
     <tbody><tr v-for="r in shown" :key="r.id" :class="r.is_critical ? 'table-danger' : (r.status === 'low' ? 'table-warning' : '')">
       <td>[[ r.name ]]</td><td class="text-end">[[ ui.qty(r.usable, r.unit) ]]</td>
-      <td class="text-end"><span :class="r.on_hand !== r.usable ? 'text-danger' : ''" :title="r.on_hand !== r.usable ? 'Includes expired stock' : ''">[[ ui.qty(r.on_hand, r.unit) ]]</span></td>
+      <td class="text-end">[[ ui.qty(r.on_hand, r.unit) ]]<a v-if="r.expired > 0" class="cell-sub text-danger" href="/inventory/stock?tab=record" :title="'Not usable: record the expired ' + r.name + ' as stock wastage'">[[ ui.qty(r.expired, r.unit) ]] expired</a></td>
       <td class="text-end">[[ ui.num(r.min_stock, 3) ]]</td><td class="text-end">[[ ui.num(r.reorder_level, 3) ]]</td>
       <td><sr-status-badge :status="r.is_critical && r.status !== 'out' ? 'critical' : r.status"></sr-status-badge></td>
       <td>[[ ui.date(r.last_movement_date) ]]</td><td><button class="btn btn-sm btn-outline-secondary" type="button" @click="edit(r)">Edit</button></td></tr></tbody></table></div>

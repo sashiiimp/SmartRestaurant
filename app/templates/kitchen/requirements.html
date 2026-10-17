@@ -16,7 +16,9 @@
       <tbody><template v-for="i in sortedIngredients" :key="i.ingredient_id"><tr :class="i.status === 'short' ? 'table-danger' : ''">
         <td>[[ i.name ]]</td><td class="text-end">[[ ui.qty(i.required, i.unit) ]]</td><td class="text-end">[[ ui.qty(i.usable_stock, i.unit) ]]</td>
         <td><sr-status-badge :status="i.status"></sr-status-badge></td><td class="text-end">[[ i.short_by ? ui.qty(i.short_by, i.unit) : '' ]]</td>
-        <td class="text-nowrap text-end"><button class="btn btn-sm" :class="i.status === 'short' ? 'btn-outline-danger' : 'btn-outline-secondary'" type="button" :aria-expanded="ask === i.ingredient_id ? 'true' : 'false'" @click="toggle(i)">Ask inventory</button></td></tr>
+        <td class="text-nowrap text-end"><button v-if="i.status === 'short'" class="btn btn-sm btn-outline-danger" type="button" :aria-expanded="ask === i.ingredient_id ? 'true' : 'false'" @click="toggle(i)">Ask inventory</button>
+          <!-- enough in stock: the same two choices, as a quiet link so the short rows stand out -->
+          <button v-else class="btn btn-sm btn-link ask-quiet" type="button" :aria-label="'Ask inventory about ' + i.name" :aria-expanded="ask === i.ingredient_id ? 'true' : 'false'" @click="toggle(i)">Ask</button></td></tr>
         <!-- one action, two choices: ask for the missing quantity (stock request) or say the stock is not what the system shows (shortage report) -->
         <tr v-if="ask === i.ingredient_id" class="ask-row"><td colspan="6"><div class="ask-panel">
           <div class="ask-choice"><strong>Need more?</strong><small v-if="i.status === 'short'">Ask for the [[ ui.qty(i.short_by, i.unit) ]] that is missing.</small><small v-else>Ask for a quantity of [[ i.name ]].</small>

@@ -206,7 +206,10 @@ window.SR = (function () {
           if (this.chart) this.chart.destroy();
           const colors = palette();
           const sets = (this.datasets || []).map((d, i) => ({ backgroundColor: colors[i % colors.length], borderRadius: 6, maxBarThickness: 34, borderSkipped: false, ...d }));
-          const x = { stacked: !!this.stacked, grid: { display: false }, ticks: (this.allLabels !== undefined && this.allLabels !== false) ? { autoSkip: false, maxRotation: 40, minRotation: 0 } : { maxRotation: 0, autoSkip: true, maxTicksLimit: 14 } };
+          // all-labels shows every day on a wide chart; on a narrow one (phones) 14 dates overlap, so some are skipped
+          const narrow = this.$el.clientWidth && this.$el.clientWidth < 520;
+          const every = (this.allLabels !== undefined && this.allLabels !== false) && !narrow;
+          const x = { stacked: !!this.stacked, grid: { display: false }, ticks: every ? { autoSkip: false, maxRotation: 40, minRotation: 0 } : { maxRotation: 0, autoSkip: true, maxTicksLimit: narrow ? 7 : 14 } };
           const y = yScale(this, this.stacked);
           this.chart = new Chart(this.$refs.canvas, {
             type: 'bar', data: { labels: this.labels, datasets: sets },

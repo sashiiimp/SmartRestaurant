@@ -38,7 +38,7 @@
         <sr-empty v-if="!d.requests.length" message="No open requests from the kitchen." icon="inbox"></sr-empty>
         <ul v-else class="mini-list">
           <li v-for="r in d.requests" :key="r.id">
-            <span class="mini-main"><strong>#[[ r.id ]] [[ r.summary ]]</strong><small>[[ r.requested_by ]][[ r.needed_date ? ' · needed by ' + ui.date(r.needed_date) : '' ]]</small></span>
+            <span class="mini-main"><strong>#[[ r.id ]] [[ r.summary ]]</strong><small>[[ r.requested_by ]][[ r.needed_date ? ' · needed by ' + ui.date(r.needed_date) : '' ]]<b v-if="r.overdue" class="text-danger"> · overdue</b></small></span>
             <sr-status-badge :status="r.status"></sr-status-badge>
           </li>
         </ul>
@@ -50,16 +50,22 @@
       <section class="col-12 col-xl-8" aria-labelledby="ir-h"><div class="card h-100"><div class="card-body">
         <div class="card-head"><div><h2 id="ir-h" class="h6">Ingredient requirements</h2><p class="card-sub">Next 7 days from the forecast and recipes, against usable stock</p></div><a href="/inventory/reorder">All [[ t.reorder ]] reorder suggestions</a></div>
         <sr-empty v-if="!needRows.length" message="Stock covers the next 7 days and nothing needs reordering." icon="check"></sr-empty>
+        <!-- one row per ingredient, built by the server (dashboard_service._requirements): the order column says what to
+             do, or why nothing is suggested (already on order, or no supplier set) -->
         <div v-else class="table-responsive"><table class="table table-sm align-middle mb-0 req-table">
           <thead><tr><th>Ingredient</th><th class="num d-none d-sm-table-cell">Need, 7 days</th><th class="num">In stock</th><th class="d-none d-md-table-cell">Covered</th><th class="num">Order</th><th class="d-none d-lg-table-cell">Supplier</th></tr></thead>
-          <tbody><tr v-for="r in needRows" :key="r.name">
-            <td class="fw-semibold">[[ r.name ]]<span class="cell-sub d-md-none">[[ r.need === null ? 'below minimum stock' : ui.qty(r.need, r.unit) + ' needed · ' + cover(r) + '% covered' ]]</span></td>
-            <td class="num d-none d-sm-table-cell">[[ r.need === null ? '–' : ui.qty(r.need) ]]<span class="u">[[ r.unit ]]</span></td>
+          <tbody><tr v-for="r in needRows" :key="r.ingredient_id">
+            <td class="fw-semibold">[[ r.name ]]<span v-if="r.why === 'below_minimum'" class="cell-sub">below minimum stock</span><span class="cell-sub d-sm-none">[[ ui.qty(r.need, r.unit) ]] needed · [[ r.covered_pct ]]% covered</span></td>
+            <td class="num d-none d-sm-table-cell">[[ ui.qty(r.need) ]]<span class="u">[[ r.unit ]]</span></td>
             <td class="num" :class="{ 'text-danger fw-semibold': Number(r.usable) <= 0 }">[[ ui.qty(r.usable) ]]<span class="u">[[ r.unit ]]</span></td>
-            <td class="d-none d-md-table-cell"><div v-if="r.need !== null" class="cover"><div class="progress" role="progressbar" :aria-label="r.name + ': ' + cover(r) + '% of the 7-day need is in stock'" :aria-valuenow="cover(r)" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" :class="cover(r) >= 100 ? 'bg-success' : (cover(r) < 50 ? 'bg-danger' : 'bg-warning')" :style="{ width: cover(r) + '%' }"></div></div><span>[[ cover(r) ]]%</span></div></td>
-            <td class="num fw-semibold">[[ r.order ? ui.qty(r.order.suggested_qty) : '–' ]]<span v-if="r.order" class="u">[[ r.unit ]]</span></td>
-            <td class="d-none d-lg-table-cell">[[ r.order ? r.order.supplier : '' ]]<span v-if="r.order" class="cell-sub">[[ r.order.lead_time_days ]] day lead time</span></td></tr></tbody></table></div>
-        <p v-if="t.at_risk > risks.length" class="table-note mb-0">The [[ risks.length ]] largest shortfalls are shown; all [[ t.at_risk ]] are on <a href="/inventory/reorder?tab=demand">Ingredient demand</a>.</p>
+            <td class="d-none d-md-table-cell"><div class="cover"><div class="progress" role="progressbar" :aria-label="r.name + ': ' + r.covered_pct + '% of the 7-day need is in stock'" :aria-valuenow="r.covered_pct" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" :class="r.covered_pct >= 100 ? 'bg-success' : (r.covered_pct < 50 ? 'bg-danger' : 'bg-warning')" :style="{ width: r.covered_pct + '%' }"></div></div><span>[[ r.covered_pct ]]%</span></div></td>
+            <td class="num fw-semibold"><template v-if="r.suggestion">[[ ui.qty(r.suggestion.qty) ]]<span class="u">[[ r.unit ]]</span></template>
+              <template v-else-if="r.on_order"><span class="text-muted">on order</span> [[ ui.qty(r.on_order) ]]<span class="u">[[ r.unit ]]</span></template><template v-else>–</template>
+              <a v-for="o in r.orders" :key="o.id" class="cell-sub" :class="{ 'is-draft': o.status === 'draft' }" :href="'/inventory/reorder?tab=orders&open=' + o.id">PO #[[ o.id ]] [[ o.status === 'draft' ? 'draft, not sent' : o.status.replace('_', ' ') ]]</a></td>
+            <td class="d-none d-lg-table-cell"><template v-if="r.suggestion && r.suggestion.supplier">[[ r.suggestion.supplier ]]<span class="cell-sub">[[ r.suggestion.lead_time_days ]] day lead time</span></template>
+              <a v-else-if="r.suggestion" class="text-danger" href="/inventory/stock">No supplier: set one</a>
+              <span v-else-if="r.why === 'on_order'" class="text-muted">Covered by open orders</span></td></tr></tbody></table></div>
+        <p v-if="t.requirements > needRows.length" class="table-note mb-0">The [[ needRows.length ]] largest shortfalls are shown; all [[ t.requirements ]] are on <a href="/inventory/reorder?tab=demand">Ingredient demand</a>.</p>
       </div></div></section>
       <div class="col-12 col-xl-4 d-flex flex-column gap-3">
         <section class="card" aria-labelledby="ex-h"><div class="card-body">

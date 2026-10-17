@@ -132,7 +132,7 @@ dashboard calls marked *moved* now come from the dashboard endpoint, and the sam
 **`/inventory`** (inventory/dashboard.html)
 
 - Actions: (alert list with Acknowledge), Record stock, Reorder
-- Data: GET /alerts, GET /dashboards/inventory, GET /recommendations/reorder (moved: the full count comes from `/dashboards/inventory`; Purchasing > Reorder still calls it), POST /alerts/<id>
+- Data: GET /alerts, GET /dashboards/inventory, GET /recommendations/reorder (moved: the full count, and since 17 Oct 2026 the whole Ingredient requirements table, come from `/dashboards/inventory`; Purchasing > Reorder still calls it), POST /alerts/<id>
 
 **`/inventory/reorder?tab=demand`** (inventory/forecast.html)
 

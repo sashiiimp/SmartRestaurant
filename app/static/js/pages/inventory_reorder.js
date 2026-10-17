@@ -1,7 +1,7 @@
 // phones get card lists instead of wide tables (only one is rendered)
 const PHONE = '(max-width: 575.98px)';
 SR.createApp({
-  data() { return { rows: [], noForecast: [], loading: true, error: null, message: null, selected: [], busy: false, phone: window.matchMedia(PHONE).matches, ui }; },
+  data() { return { rows: [], noForecast: [], covered: [], loading: true, error: null, message: null, selected: [], busy: false, phone: window.matchMedia(PHONE).matches, ui }; },
   computed: {
     orderable() { return this.rows.filter(r => r.supplier_id); },
     allSelected() { return this.orderable.length > 0 && this.selected.length === this.orderable.length; },
@@ -9,7 +9,7 @@ SR.createApp({
   },
   async mounted() {
     window.matchMedia(PHONE).addEventListener('change', e => { this.phone = e.matches; });
-    try { const r = await api.get('/recommendations/reorder'); this.rows = r.data; this.noForecast = (r.meta && r.meta.items_without_forecast) || []; }
+    try { const r = await api.get('/recommendations/reorder'); this.rows = r.data; this.noForecast = (r.meta && r.meta.items_without_forecast) || []; this.covered = (r.meta && r.meta.covered_by_orders) || []; }
     catch (e) { this.error = ui.errorText(e); } finally { this.loading = false; }
   },
   methods: {

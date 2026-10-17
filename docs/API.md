@@ -86,7 +86,7 @@ Abbreviations: **A** admin, **K** kitchen, **I** inventory. **(R)** means read-o
 | `GET /ingredients?active=` | A K I | M1 | I2 | master data, no stock |
 | `POST /ingredients` | I | M1 | I2 | 422 if `reorder_level < min_stock` |
 | `PATCH /ingredients/{id}` | I | M1 | I2, I4 | `unit` rejected once movements exist |
-| `GET /stock/levels` | A(R) K(R) I | M1 | I3 | per ingredient: `on_hand`, `usable`, `status` (`ok`/`low`/`out`), `is_critical`, `last_movement_date` |
+| `GET /stock/levels` | A(R) K(R) I | M1 | I3 | per ingredient: `on_hand`, `usable`, `expired` (on hand minus usable: expired stock awaiting a wastage record), `status` (`ok`/`low`/`out`), `is_critical`, `last_movement_date` |
 | `GET /stock/batches?ingredient_id=&expiring_within_days=` | A(R) I | M1 | I12 | sorted by expiry |
 | `GET /stock/movements?ingredient_id=&type=&from=&to=` | A(R) I | M1 | I3 | paged |
 | `GET /stock/consistency` | A(R) I | S | I16 | read-only data check: `mismatches` (sum of movements differs from batch stock), `batches_over_received`, `expired_with_stock`, and `consistent`; also `flask smartrest check-stock` |
@@ -94,7 +94,7 @@ Abbreviations: **A** admin, **K** kitchen, **I** inventory. **(R)** means read-o
 | `POST /stock/out` | I | M1 | I6 | `{ingredient_id, quantity, movement_date, reason}`; 422 `insufficient_stock` with `available` |
 | `POST /stock/wastage` | I | M1 | I13 | `{ingredient_id, quantity, movement_date, reason, batch_id?}` |
 | `POST /stock/adjustments` | I | S | I14 | `{ingredient_id, counted_quantity, movement_date?, note}`; `note` required. Posts `counted - on_hand` (on hand includes expired stock): a shortfall is drawn from the earliest-expiry batches first, a surplus becomes batch `ADJ-<date>` with no expiry. 422 when the difference is 0. Returns `on_hand_before`, `counted`, `difference`, `usable`. |
-| `GET /stock-requests?status=&detail=` | A I | S | I15 | kitchen requests, open ones first; `meta.pending` is the pending count |
+| `GET /stock-requests?status=&detail=` | A I | S | I15 | kitchen requests, open ones first; `meta.pending` is the pending count; each request has `overdue` (pending or approved, and needed before today; also on the kitchen's list) |
 | `GET /stock-requests/{id}` | A I | S | I15 | lines with requested, issued, outstanding and current usable stock |
 | `POST /stock-requests/{id}/approve` | I | S | I15 | pending to approved |
 | `POST /stock-requests/{id}/reject` | I | S | I15 | `{reason}` required; pending only |
@@ -135,7 +135,7 @@ Abbreviations: **A** admin, **K** kitchen, **I** inventory. **(R)** means read-o
 | `POST /recommendations/prep/status` | K | M2 (added 9 Oct 2026) | K4 | `{menu_item_id, date, action: "start"\|"done"\|"reopen"}`. Preparation workflow: `planned` -> `in_progress` -> `done`; `reopen` goes back from `done` to `in_progress`. Needs a decision for that item and date (422 `no_plan`); the date cannot be in the future; `done` needs a prepared quantity above 0 and returns `warnings` when prepared differs from the plan; any other transition is 409 `invalid_transition`. Recording the first prepared quantity starts preparation automatically |
 | `GET /recommendations/requirements?date=` | A(R) K I | M1 | K9, S3 | requirements and shortage flags for that day's plan |
 | `GET /recommendations/ingredient-forecast?from=&days=7` | A(R) I | M1 | I7 | per ingredient per day; `days` 1 to 31; `items_without_forecast` names menu items with no forecast on some days (their demand is missing) |
-| `GET /recommendations/reorder` | A(R) I | M1 | I9 | rows with the numbers behind each suggestion; `meta.items_without_forecast` names menu items with no forecast on some of the 7 days, whose demand is therefore missing from the quantities |
+| `GET /recommendations/reorder` | A(R) I | M1 | I9 | rows with the numbers behind each suggestion; `meta.items_without_forecast` names menu items with no forecast on some of the 7 days, whose demand is therefore missing from the quantities; `meta.covered_by_orders` lists ingredients that are needed (need over lead time + safety stock above usable) but not suggested because open purchase orders cover them, with those `orders [{id, status, qty}]` (a draft counts as on order but has not been sent) |
 | `POST /kitchen/prepared` | K | M1 | K5 | `{menu_item_id, date, quantity}`; returns the new running total |
 | `DELETE /kitchen/prepared/<id>` | K | M1 | K5 | undo a mistaken entry: only the latest entry of an item, today, while the item is not finished (409 `not_today`, `not_latest`, `prep_done`); returns `{menu_item_id, date, removed, total_prepared}`; the removed entry is kept in the audit log (`prepared.undo`). The prep plan's `last_entry` (`entry_id, quantity, prepared_at`) names the entry it would remove |
 | `POST /kitchen/waste` | K | M1 | K7 | `{menu_item_id, date, quantity, reason, note?}`; 200 with `warnings` when waste exceeds prepared |
@@ -162,12 +162,12 @@ Abbreviations: **A** admin, **K** kitchen, **I** inventory. **(R)** means read-o
 
 | Method and path | Roles | Tier | Story | Notes |
 |---|---|---|---|---|
-| `GET /alerts?status=open&type=&refresh=` | A K I | M1 | I8, S4 | filtered by role (section 6). Evaluates first if the last evaluation is over 60 s old, or when `refresh=true`. |
-| `POST /alerts/{id}/acknowledge` | A K I | M1 | I8 | only for alerts the role can see |
+| `GET /alerts?status=open&type=&refresh=` | A K I | M1 | I8, S4 | filtered by role (section 6). Evaluates first if the last evaluation is over 60 s old, or when `refresh=true`. For a role that sees both, an ingredient's stock alert and its projected stockout are one row (the stock alert, with the shortfall in its message and `merged_ids`). `meta.counts` = `critical`, `warning`, `info`, `total` over every unresolved alert, acknowledged or not (the bell, the badges and the list all show `total`), and `new` = not yet acknowledged (since 17 Oct 2026). |
+| `POST /alerts/{id}/acknowledge` | A K I | M1 | I8 | only for alerts the role can see; a stock alert also acknowledges the projected stockout shown in its row. An acknowledged alert stays listed and counted until its cause is fixed |
 | `POST /alerts/run` | A | M1 | S4 | manual run, returns counts opened/closed |
 | `GET /dashboards/admin?range=7\|30` | A | M2 | A1 | Period = the last 7 or 30 days ending yesterday. Besides the totals: `waste_rate {prepared, wasted, pct}` (pct = wasted / prepared x 100, null if nothing prepared), `waste_threshold_pct`, `coverage {days, days_with_sales, latest_sales_date}`, `forecast_next7` (7 rows `{date, qty, items}`; qty null = no forecast), `menu_items_active`, `stock {ingredients, out, low, rows}` (out first, then by usable / reorder level), `inventory_alerts` (one row per ingredient with an open stock, forecast-shortfall or expiry alert, or not ok: `status`, `usable`, `forecast {date, short_by}`, `expiry [{batch_no, qty, date, expired}]`, `severity`, `alert_ids`), `pre_orders` (confirmed, next 7 days: `rows`, `count`, `portions`, `by_item`), `recent_activity` (latest 10 stored events: `{time, kind, action, name, user, detail}`). `forecast_next7_total` is the sum of the 7 `forecast_next7` values. Opening it runs the alert check like `GET /alerts`. |
 | `GET /dashboards/kitchen?date=` | K, A(R) | M1 | K1 | |
-| `GET /dashboards/inventory` | I, A(R) | M1 | I1 | |
+| `GET /dashboards/inventory` | I, A(R) | M1 | I1 | `requirements`: one row per ingredient that runs short over the next 7 days or needs ordering, most short first: `need` (7 days), `usable`, `covered_pct`, `why` (`short`, `below_minimum`, `on_order`), `suggestion {qty, supplier, supplier_id, lead_time_days}` or null, `on_order` and `orders [{id, status, qty}]`; `totals.requirements` is the full count |
 | `GET /reports/sales?from=&to=&group_by=day\|week\|month&item_id=` | A | M2 | A8 | rows plus totals plus top/bottom items |
 | `GET /reports/waste?from=&to=&group_by=` | A | M2 | A11 | `food` and `ingredient` returned as two separate sections (assumption A6 in REQUIREMENTS); since 13 Oct 2026 `food.by_item` gives per menu item `planned` (decided plans only, else null), `prepared`, `sold`, `wasted`, `waste_pct` (wasted / prepared x 100), `days_prepared` and a `suggestion` when the rate is above the waste-risk limit (advice only; no forecast or plan is changed) |
 | `GET /reports/stock-levels` | A | S (built 21 Sep) | A10, A13 | snapshot of every ingredient today (same rows as `/stock/levels`); `format=csv` |

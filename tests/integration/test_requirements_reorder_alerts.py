@@ -220,7 +220,8 @@ def test_acknowledge_only_for_visible_alerts(stock_world):
     with pytest.raises(NotFoundError):
         al.acknowledge(1, alert["id"], "kitchen")
     assert al.acknowledge(1, alert["id"], "inventory")["status"] == "acknowledged"
-    assert al.list_alerts(1, "inventory")["counts"]["critical"] == 0      # acknowledged alerts leave the open count
+    counts = al.list_alerts(1, "inventory")["counts"]
+    assert counts["critical"] == 1 and counts["new"] == 0                  # still unresolved (counted), no longer new
     assert len(al.list_alerts(1, "inventory")["rows"]) == 1                # but stay listed until the condition clears
 
 

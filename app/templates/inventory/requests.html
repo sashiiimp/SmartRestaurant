@@ -5,7 +5,7 @@
   <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <h1 class="h4 m-0">Kitchen requests</h1>
     <div class="d-flex gap-2 align-items-center"><label for="rq-status" class="form-label m-0 small">Show</label>
-      <select id="rq-status" class="form-select form-select-sm" style="max-width: 15rem" v-model="status" @change="load"><option value="">All requests</option><option value="pending">Pending</option><option value="approved">Approved</option><option value="issued">Issued</option><option value="rejected">Rejected</option><option value="cancelled">Cancelled</option></select></div>
+      <select id="rq-status" class="form-select form-select-sm" style="min-width: 10.5rem; max-width: 15rem" v-model="status" @change="load"><option value="">All requests</option><option value="pending">Pending</option><option value="approved">Approved</option><option value="issued">Issued</option><option value="rejected">Rejected</option><option value="cancelled">Cancelled</option></select></div>
   </div>
   <p class="page-intro">Approve a request first, then issue the stock. Issuing records the stock leaving the store, earliest expiry first; expired stock is never issued.</p>
   <div v-if="error" class="alert alert-danger" role="alert">[[ error ]]</div>
@@ -13,7 +13,7 @@
   <div v-if="req" class="card mb-3"><div class="card-body">
     <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
       <div><h2 class="h6 mb-1">Request #[[ req.id ]] <sr-status-badge :status="req.status"></sr-status-badge></h2>
-        <div class="small text-muted">from [[ req.requested_by ]] &middot; [[ ui.dateTime(req.created_at) ]]<span v-if="req.needed_date"> &middot; needed by [[ ui.date(req.needed_date) ]]</span><span v-if="req.note"> &middot; [[ req.note ]]</span></div>
+        <div class="small text-muted">from [[ req.requested_by ]] &middot; [[ ui.dateTime(req.created_at) ]]<span v-if="req.needed_date" :class="{ 'text-danger fw-semibold': req.overdue }"> &middot; needed by [[ ui.date(req.needed_date) ]][[ req.overdue ? ' (overdue)' : '' ]]</span><span v-if="req.note"> &middot; [[ req.note ]]</span></div>
         <!-- two separate, recorded steps: approval first, then the issue that moves stock -->
         <ol class="req-steps" aria-label="Request steps">
           <li :class="req.status === 'pending' ? 'is-now' : (['approved', 'issued'].includes(req.status) ? 'is-done' : 'is-off')">1 Approve<small v-if="req.decided_by && req.status !== 'pending' && req.status !== 'cancelled'"> · [[ req.decided_by ]]</small></li>
@@ -53,7 +53,7 @@
   <div v-else class="table-responsive"><table class="table table-sm align-middle">
     <thead><tr><th>Request</th><th>From</th><th>Items</th><th>Needed by</th><th>Status</th><th></th></tr></thead>
     <tbody><tr v-for="r in rows" :key="r.id" :class="req && req.id === r.id ? 'table-active' : ''">
-      <td class="text-nowrap">#[[ r.id ]] <span class="text-muted small">[[ ui.dateTime(r.created_at) ]]</span></td><td>[[ r.requested_by ]]</td><td>[[ r.summary ]]</td><td>[[ ui.date(r.needed_date) ]]</td>
+      <td class="text-nowrap">#[[ r.id ]] <span class="text-muted small">[[ ui.dateTime(r.created_at) ]]</span></td><td>[[ r.requested_by ]]</td><td>[[ r.summary ]]</td><td class="text-nowrap">[[ ui.date(r.needed_date) ]]<span v-if="r.overdue" class="sr-badge sr-badge-danger ms-1">Overdue</span></td>
       <td><sr-status-badge :status="r.status"></sr-status-badge><small v-if="next(r)" class="d-block text-muted">next: [[ next(r) ]]</small></td>
       <td><button class="btn btn-sm" :class="next(r) ? 'btn-outline-primary' : 'btn-outline-secondary'" type="button" @click="openReq(r.id)">Open</button></td></tr></tbody></table></div>
 </div>

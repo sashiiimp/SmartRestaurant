@@ -30,6 +30,11 @@ def _fmt(x) -> str:
     return f"{x.normalize():f}"
 
 
+def _qty(x) -> str:
+    """A float quantity as people write it: 66, 5.6, 0.25 (never 66.00)."""
+    return f"{round(float(x), 2):g}"
+
+
 def _desired(outlet_id: int) -> list[dict]:
     """The set of alert conditions that are true right now."""
     day = today()
@@ -61,7 +66,7 @@ def _desired(outlet_id: int) -> list[dict]:
                 out.append({**base, "alert_type": "projected_stockout", "target_date": type(day).fromisoformat(d),
                             "severity": "critical" if days_away <= 1 else "warning",
                             "dedupe_key": f"projected_stockout:ingredient:{ing.id}",
-                            "message": f"{ing.name} will run short on {d} (short by {row['short_by']:.2f} {ing.unit})",
+                            "message": f"{ing.name} will run short on {d} (short by {_qty(row['short_by'])} {ing.unit})",
                             "details": {"first_shortfall_date": d, "short_by": row["short_by"], "usable": row["usable_stock"]}})
 
     warn_days = settings.get_int(outlet_id, "expiry_warning_days")
@@ -239,12 +244,43 @@ def list_alerts(outlet_id: int, role: str, status: str | None = "open", alert_ty
     if alert_type:
         q = q.filter(Alert.alert_type == alert_type)
     order = db.case((Alert.severity == "critical", 0), (Alert.severity == "warning", 1), else_=2)
-    rows = [a for a in q.order_by(order, Alert.created_at.desc()).all() if role in VISIBLE_TO.get(a.alert_type, ())]
+    rows = _merge_stock_rows([alert_dict(a) for a in q.order_by(order, Alert.created_at.desc()).all()
+                              if role in VISIBLE_TO.get(a.alert_type, ())])
+    rows.sort(key=lambda r: SEVERITY_RANK.get(r["severity"], 2))   # a merged row can rise to critical; stable, so newest first stays
+    # one number everywhere (bell, badges, Open tab, "Show all"): every unresolved alert, acknowledged or not.
+    # Acknowledging marks an alert as seen; it stays counted until its cause is fixed. "new" = not yet acknowledged.
     counts = {"critical": 0, "warning": 0, "info": 0}
-    for a in rows:
-        if a.status == "open":
-            counts[a.severity] += 1
-    return {"rows": [alert_dict(a) for a in rows], "counts": counts}
+    for r in rows:
+        if r["status"] in ("open", "acknowledged"):
+            counts[r["severity"]] += 1
+    counts["total"] = counts["critical"] + counts["warning"] + counts["info"]
+    counts["new"] = sum(1 for r in rows if r["status"] == "open")
+    return {"rows": rows, "counts": counts}
+
+
+STOCK_TYPES = ("critical_stock", "low_stock")
+SEVERITY_RANK = {"critical": 0, "warning": 1, "info": 2}
+
+
+def _merge_stock_rows(rows: list[dict]) -> list[dict]:
+    """An ingredient that is low or out now and also runs short in the plan has two alerts. For a role that sees both,
+    show one row: the stock alert, with the projected shortfall added to its message. A role that sees only the
+    projected alert (the kitchen) keeps it as it is. Nothing is closed or hidden in the database."""
+    stock = {r["entity_id"]: r for r in rows if r["alert_type"] in STOCK_TYPES and r["entity_type"] == "ingredient"}
+    out = []
+    for r in rows:
+        main = stock.get(r["entity_id"]) if r["alert_type"] == "projected_stockout" and r["entity_type"] == "ingredient" else None
+        if main is None:
+            out.append(r)
+            continue
+        d = r["details"] or {}
+        main["message"] += f"; short by {_qty(d.get('short_by', 0))} on {d.get('first_shortfall_date') or r['target_date']}"
+        main["merged_ids"] = main.get("merged_ids", []) + [r["id"]]
+        if r["severity"] == "critical":
+            main["severity"] = "critical"
+        if r["status"] == "open":
+            main["status"] = "open"
+    return out
 
 
 def acknowledge(outlet_id: int, alert_id: int, role: str, user_id: int | None = None) -> dict:
@@ -253,6 +289,12 @@ def acknowledge(outlet_id: int, alert_id: int, role: str, user_id: int | None = 
         raise NotFoundError("Alert not found.")
     if a.status == "closed":
         raise ValidationError("That alert is already closed.", code="conflict")
-    a.status, a.acknowledged_by, a.acknowledged_at = "acknowledged", user_id, utcnow()
+    now = utcnow()
+    a.status, a.acknowledged_by, a.acknowledged_at = "acknowledged", user_id, now
+    if a.alert_type in STOCK_TYPES and a.entity_type == "ingredient":
+        # the stock row also shows that ingredient's projected shortfall (_merge_stock_rows): acknowledge both together
+        for p in Alert.query.filter_by(outlet_id=outlet_id, alert_type="projected_stockout", entity_type="ingredient",
+                                       entity_id=a.entity_id, status="open"):
+            p.status, p.acknowledged_by, p.acknowledged_at = "acknowledged", user_id, now
     db.session.commit()
     return alert_dict(a)

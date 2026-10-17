@@ -366,17 +366,18 @@ def get_reorder_suggestions(outlet_id: int, start: date | None = None) -> list[d
 def get_reorder_view(outlet_id: int, start: date | None = None) -> dict:
     """The reorder suggestions plus the menu items that had no forecast on some of the days, whose ingredient demand
     is therefore missing from the suggested quantities."""
-    rows, no_forecast = _reorder(outlet_id, start)
-    return {"rows": rows, "items_without_forecast": _no_forecast_list(no_forecast)}
+    rows, no_forecast, covered = _reorder(outlet_id, start)
+    return {"rows": rows, "items_without_forecast": _no_forecast_list(no_forecast), "covered_by_orders": covered}
 
 
-def _reorder(outlet_id: int, start: date | None = None) -> tuple[list[dict], dict]:
+def _reorder(outlet_id: int, start: date | None = None) -> tuple[list[dict], dict, list[dict]]:
     start = start or today()
     horizon = 7
     per_ing, _unknown, no_forecast = _daily_needs(outlet_id, start, horizon)
     usable, on_order = inv.usable_map(outlet_id, today()), inv.on_order_map(outlet_id)
     default_lead = settings.get_int(outlet_id, "default_lead_time_days")
-    out = []
+    orders = inv.open_orders_by_ingredient(outlet_id)
+    out, covered = [], []
     for ing in inv.list_ingredients(outlet_id, active_only=True):
         lead = ing.default_supplier.lead_time_days if ing.default_supplier else default_lead
         lead = min(max(lead, 1), horizon)
@@ -385,6 +386,11 @@ def _reorder(outlet_id: int, start: date | None = None) -> tuple[list[dict], dic
         have, ordered = usable.get(ing.id, ZERO), on_order.get(ing.id, ZERO)
         raw = need_l + ing.min_stock - have - ordered
         if raw <= 0:
+            if ordered > 0 and need_l + ing.min_stock - have > 0:
+                # needed, but the open orders already cover it: said on the page instead of silently left out
+                covered.append({"ingredient_id": ing.id, "name": ing.name, "unit": ing.unit,
+                                "need_over_lead_time": float(need_l), "safety_stock": float(ing.min_stock),
+                                "usable_stock": float(have), "on_order": float(ordered), "orders": orders.get(ing.id, [])})
             continue
         pack = ing.pack_size
         suggested = max(_ceil_div(raw, pack) * pack, _ceil_div(ing.reorder_qty, pack) * pack)
@@ -396,4 +402,5 @@ def _reorder(outlet_id: int, start: date | None = None) -> tuple[list[dict], dic
                     "pack_size": float(pack), "min_order_qty": float(ing.reorder_qty),
                     "suggested_qty": float(suggested)})
     out.sort(key=lambda r: r["name"])
-    return out, no_forecast
+    covered.sort(key=lambda r: r["name"])
+    return out, no_forecast, covered

@@ -1189,3 +1189,13 @@ input[type="file"]::file-selector-button { background: var(--surface-3); color: 
 .card .nav-pills .nav-item { flex: 1 1 auto; }
 .card .nav-pills .nav-item .nav-link { width: 100%; white-space: nowrap; }
 @media (max-width: 575.98px) { .card .nav-pills { display: grid; grid-template-columns: 1fr 1fr; } }
+
+/* ---- 26 live review fixes (17 Oct 2026) ------------------------------------------------------------------------ */
+/* Purchasing: ingredients needed but already covered by open purchase orders, so not suggested again */
+.covered-note { padding: .7rem .9rem; font-size: .85rem; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; }
+.covered-note ul { padding-left: 1.1rem; margin-top: .3rem; }
+/* Ingredients & requests: the action on a sufficient row is a quiet link; short rows keep the red button */
+.ask-quiet { color: var(--muted); text-decoration: none; padding-inline: .5rem; }
+.ask-quiet:hover, .ask-quiet[aria-expanded="true"] { color: var(--text); text-decoration: underline; }
+/* a purchase order that exists only as a draft: in the system, not yet sent to the supplier */
+.is-draft, a.cell-sub.is-draft { color: var(--warning); font-weight: 600; }

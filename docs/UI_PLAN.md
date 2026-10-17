@@ -380,3 +380,31 @@ Front end only; the prep formula, the API calls and the auto-approval on the fir
 - Labels: "How?" removed; "Auto-accepted" and "Accepted" are both "Approved" (the tooltip says how); Done replaces
   Completed on the dashboard; the dashboard tile and table say Planned, like this page. When every item is done the page
   points to Served & waste. A future date shows one note instead of a message on every row.
+
+## 20. Live review fixes (17 Oct 2026, branch `ui-review-fixes`)
+
+From the review of the live screens (SmartRestaurant_Live_UI_Review.pdf). Staging only until approved.
+
+- **A1 One alert number.** The bell, the severity badges, the Open tab and "Show all" all count every unresolved alert,
+  acknowledged or not (they disagreed: 25 vs 34). Acknowledging marks an alert as seen and dims it; it stays counted
+  until its cause is fixed.
+- **A2 One row per ingredient.** An ingredient that is low or out now and also short in the plan was two alerts; for
+  admin and inventory it is now one row ("Chicken is critically low: 0 kg usable (minimum 20); short by 55.68 on Sat 17
+  Oct"), acknowledged together. The kitchen, which sees only the projected alert, is unchanged. Quantities in alert
+  messages lose padded decimals (66 pcs, not 66.00 pcs).
+- **I1 Nothing left out silently.** An ingredient whose need is covered by an open purchase order is not suggested again
+  (unchanged rule; a draft counts as on order), but it is now named: Purchasing lists it under "Already on order, so not
+  suggested" with the order and its status ("PO #1 draft, not sent to the supplier yet"); the dashboard row shows "on
+  order 200" and the draft; Needs attention says which shortage the draft covers. An ingredient without a supplier says
+  "No supplier: set one".
+- **I4 Real figures in every row.** The Ingredient requirements table is built by the server, so every row carries its
+  7-day need (rows past the first ten used to show "–"); "below minimum stock" is said on desktop as on phones.
+- **A3** Forecasting says the selection reason is from that version's own training run, shows each version's hold-out
+  period, and points out a trained version with a lower error, noting when it was tested on a different period.
+- **K1** Ingredients & requests: "Ask inventory" only on short rows; sufficient rows have a quiet "Ask" with the same
+  two choices (Request stock, Report shortage).
+- **I2** Stock levels: "540 pcs expired" under On hand, linking to Record stock (wastage).
+- **I3** A request still open after its needed-by day is marked Overdue on the inventory list, the dashboard and the
+  kitchen's list.
+- **A4** On a phone the 14-day chart skips date labels (5 shown) instead of overlapping them; desktop keeps all 14.
+- **I5** The request filter is wide enough for "All requests".

@@ -1,22 +1,15 @@
 SR.createApp({
-  data() { return { d: null, alerts: [], reorderAll: null, today: ui.todayIso(), loading: true, error: null, ui }; },
+  data() { return { d: null, alerts: [], today: ui.todayIso(), loading: true, error: null, ui }; },
   async mounted() { await this.load(); },
   computed: {
     t() { return this.d.totals; },
     stockTotal() { return this.d ? this.d.counts.ok + this.d.counts.low + this.d.counts.out : 0; },
     expiryTotal() { return this.d ? this.d.totals.expired_batches + this.d.totals.expiring_batches : 0; },
-    // the ingredients whose 7-day need is above usable stock, most short first (the full list is on Ingredient demand)
-    risks() { return this.d ? this.d.need_vs_stock.filter(r => Number(r.need) > Number(r.usable)) : []; },
-    // one table: each ingredient short over 7 days with its reorder suggestion, then suggestions for ingredients that are
-    // below their minimum stock without a 7-day shortfall (display only; matched by name, both lists come from the server)
-    needRows() {
-      if (!this.d) return [];
-      const all = this.reorderAll || this.d.reorder, order = new Map(all.map(r => [r.name, r]));
-      const rows = this.risks.map(r => ({ ...r, order: order.get(r.name) || null }));
-      const shown = new Set(rows.map(r => r.name));
-      all.filter(r => !shown.has(r.name)).forEach(r => rows.push({ name: r.name, unit: r.unit, need: null, usable: r.usable_stock, order: r }));
-      return rows;
-    },
+    // one table, built by the server: ingredients short over 7 days, most short first, then those below their
+    // minimum stock and those already covered by open orders; the first 10 here, the rest on Ingredient demand
+    needRows() { return this.d ? this.d.requirements.slice(0, 10) : []; },
+    // open drafts that cover a shortage: ordered in the system but not yet sent to the supplier
+    draftCovers() { return this.d ? this.d.requirements.filter(r => r.orders.some(o => o.status === 'draft')).map(r => r.name) : []; },
     // What needs attention, what the system recommends, and the page that handles it. Plain rules over the counts
     // above; nothing is calculated anew.
     actions() {
@@ -30,7 +23,7 @@ SR.createApp({
       if (t.reorder) out.push({ key: 'reorder', tone: d.counts.out ? 'danger' : 'warning', title: s(t.reorder, 'ingredient needs', 'ingredients need') + ' reordering',
         detail: 'Create purchase orders with the suggested quantities.', action: 'Reorder', href: '/inventory/reorder' });
       if (t.po_draft) out.push({ key: 'draft', tone: 'info', title: s(t.po_draft, 'purchase order is', 'purchase orders are') + ' still a draft',
-        detail: 'Mark it as sent once it is ordered from the supplier.', action: 'Purchase orders', href: '/inventory/reorder?tab=orders' });
+        detail: 'Mark it as sent once it is ordered from the supplier.' + (this.draftCovers.length ? ' It covers a shortage of ' + this.draftCovers.join(', ') + '.' : ''), action: 'Purchase orders', href: '/inventory/reorder?tab=orders' });
       if (t.po_awaiting) out.push({ key: 'receive', tone: 'info', title: s(t.po_awaiting, 'purchase order awaits', 'purchase orders await') + ' delivery',
         detail: 'Receive the stock when it arrives, with its expiry date.', action: 'Receive', href: '/inventory/reorder?tab=orders' });
       if (t.expiring_batches) out.push({ key: 'soon', tone: 'warning', title: s(t.expiring_batches, 'batch expires', 'batches expire') + ' within 3 days',
@@ -44,10 +37,7 @@ SR.createApp({
       try { this.d = (await api.get('/dashboards/inventory')).data; } catch (e) { this.d = null; this.error = ui.errorText(e); } finally { this.loading = false; }
       // After the dashboard (never in parallel) so the alert check runs once.
       if (this.d) { try { this.alerts = (await api.get('/alerts', { status: 'open' })).data; } catch (e) { this.alerts = this.d.alerts; } }
-      // every reorder suggestion (the dashboard carries the first five), so each ingredient row shows its own suggestion
-      if (this.d) { try { this.reorderAll = (await api.get('/recommendations/reorder')).data; } catch (e) { this.reorderAll = null; } }
     },
-    cover(r) { return Number(r.need) ? Math.max(0, Math.min(100, Math.round(Number(r.usable) / Number(r.need) * 100))) : 100; },
     async ack(a) { try { await api.post('/alerts/' + a.id + '/acknowledge'); await this.load(); } catch (e) { ui.toast(ui.errorText(e), 'danger'); } },
   },
 }).mount('#app');
